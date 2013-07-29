@@ -1,0 +1,15 @@
+output
+output-*/
+build
+config.h
+Debug
+Release
+*.opensdf
+*.sdf
+*.sln
+*.suo
+*.user
+ipch
+.gdbinit
+log.txt
+log.*.txt
