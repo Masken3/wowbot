@@ -72,10 +72,23 @@ static void sendAndReceiveDump(Socket sock, const char* buf, size_t size) {
 }
 
 static void authenticate(Socket sock) {
-	char buf[1 + sizeof(sAuthLogonProof_C)];
-	buf[0] = CMD_AUTH_LOGON_PROOF;
-	//sAuthLogonProof_C* p = (sAuthLogonProof_C*)(buf+1);
-	sendAndReceiveDump(sock, buf, sizeof(buf));
+	{
+		char buf[1024];
+		sAuthLogonChallenge_C* p = (sAuthLogonChallenge_C*)buf;
+		memset(p, 0, sizeof(*p));
+		p->cmd = CMD_AUTH_LOGON_CHALLENGE;
+		p->I_len = sizeof(CONFIG_ACCOUNT_NAME);
+		p->size = sizeof(*p) + (p->I_len - 1) - 4;
+		strcpy((char*)p->I, CONFIG_ACCOUNT_NAME);
+		sendAndReceiveDump(sock, buf, p->size + 4);
+		return;
+	}
+	{
+		char buf[1 + sizeof(sAuthLogonProof_C)];
+		buf[0] = CMD_AUTH_LOGON_PROOF;
+		//sAuthLogonProof_C* p = (sAuthLogonProof_C*)(buf+1);
+		sendAndReceiveDump(sock, buf, sizeof(buf));
+	}
 }
 
 // will result in silence unless the server considers us "authed".
