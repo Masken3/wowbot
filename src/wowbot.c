@@ -3,9 +3,11 @@
 #include "AuthCodes.h"
 #include "AuthSocketStructs.h"
 #include "AuthCalc.h"
+#include "log.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <assert.h>
 
 #define CONFIG_CHAR_RACE dorf
 #define CONFIG_CHAR_CLASS warrior
@@ -46,12 +48,12 @@ int main(void) {
 	LOG("Connected.\n");
 
 	authenticate(sock);
-	return 0;
 	dumpRealmList(sock);
 
 	return 0;
 }
 
+#if 0
 static void sendAndReceiveDump(Socket sock, const char* buf, size_t size) {
 	int res;
 	res = send(sock, buf, size, 0);
@@ -73,19 +75,12 @@ static void sendAndReceiveDump(Socket sock, const char* buf, size_t size) {
 		return;
 	} while (res > 0);
 }
+#endif
 
-static void sendAndReceiveExact(Socket sock, const char* src, size_t srcSize,
-	void* dst, size_t dstSize)
-{
+static void receiveExact(Socket sock, void* dst, size_t dstSize) {
 	int remain = dstSize;
 	char* dstP = (char*)dst;
 	int res;
-	res = send(sock, src, srcSize, 0);
-	if(SOCKET_ERROR == res)
-	{
-		LOG("send() returned error code %d\n", SOCKET_ERRNO);
-		exit(1);
-	}
 	LOG("recv...\n");
 	do {
 		res = recv(sock, dstP, remain, 0);
@@ -103,6 +98,19 @@ static void sendAndReceiveExact(Socket sock, const char* src, size_t srcSize,
 	} while (remain > 0);
 }
 
+static void sendAndReceiveExact(Socket sock, const char* src, size_t srcSize,
+	void* dst, size_t dstSize)
+{
+	int res;
+	res = send(sock, src, srcSize, 0);
+	if(SOCKET_ERROR == res)
+	{
+		LOG("send() returned error code %d\n", SOCKET_ERRNO);
+		exit(1);
+	}
+	receiveExact(sock, dst, dstSize);
+}
+
 static void authenticate(Socket sock) {
 	sAuthLogonChallenge_S lcs;
 	sAuthLogonProof_C lpc;
@@ -116,7 +124,7 @@ static void authenticate(Socket sock) {
 		lcc->cmd = CMD_AUTH_LOGON_CHALLENGE;
 		lcc->I_len = sizeof(CONFIG_ACCOUNT_NAME);
 		lcc->size = sizeof(*lcc) + (lcc->I_len - 1) - 4;
-		lcc->build = htons(5875);	// client version 1.12.1
+		lcc->build = 5875;	// client version 1.12.1
 		strcpy((char*)lcc->I, CONFIG_ACCOUNT_NAME);
 		sendAndReceiveExact(sock, buf, lcc->size + 4, &lcs, sizeof(lcs));
 	}
@@ -134,10 +142,37 @@ static void authenticate(Socket sock) {
 
 // will result in silence unless the server considers us "authed".
 static void dumpRealmList(Socket sock) {
+	sAuthRealmHeader_S rhs;
 	char buf[6];
 	buf[0] = CMD_REALM_LIST;
 	LOG("dumpRealmList send...\n");
-	sendAndReceiveDump(sock, buf, sizeof(buf));
+	sendAndReceiveExact(sock, buf, sizeof(buf), &rhs, sizeof(rhs));
+	DUMPINT(rhs.size);
+	DUMPINT(rhs.count);
+	{
+		int rlSize = rhs.size-5;
+		char* rlBuf = (char*)malloc(rlSize);
+		char* ptr = rlBuf;
+		receiveExact(sock, rlBuf, rlSize);
+		for(int i=0; i<rhs.count; i++) {
+			sAuthRealmEntry1_S* e1;
+			sAuthRealmEntry2_S* e2;
+			const char* name;
+			const char* address;
+			e1 = (sAuthRealmEntry1_S*)ptr;
+			ptr += sizeof(sAuthRealmEntry1_S);
+			name = ptr;
+			ptr += strlen(ptr) + 1;
+			address = ptr;
+			ptr += strlen(ptr) + 1;
+			e2 = (sAuthRealmEntry2_S*)ptr;
+			ptr += sizeof(sAuthRealmEntry2_S);
+			assert(ptr - rlBuf <= rlSize);
+
+			LOG("%i: %s (%s) p%f c%i t%i i%i f%02x\n", i, name, address,
+				e2->popLevel, e2->charCount, e2->timezone, e1->icon, e1->flags);
+		}
+	}
 }
 
 static Socket connectNewSocket(const char* address, ushort port) {

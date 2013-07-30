@@ -61,14 +61,68 @@ typedef struct AUTH_LOGON_PROOF_S
 	uint8   error;
 	uint8   M2[20];
 	uint32  accountFlags;                                   // see enum AccountFlags
-	uint32  surveyId;                                       // SurveyId
-	uint16  unkFlags;                                       // some flags (AccountMsgAvailable = 0x01)
 } sAuthLogonProof_S;
+
+typedef struct AUTH_REALM_HEADER_S
+{
+	uint8   cmd;
+	uint16  size;
+	uint32 unk;
+	uint8 count;
+} sAuthRealmHeader_S;
+
+typedef struct AUTH_REALM_FOOTER_S
+{
+	uint16 unk2;
+} sAuthRealmFooter_S;
+
+// Realm entry has three parts:
+// entry1, 2 zero-terminated strings (name & address), entry2.
+
+typedef struct AUTH_REALM_ENTRY1_S
+{
+	uint32 icon;
+	uint8 flags;
+} sAuthRealmEntry1_S;
+
+// name
+// address
+
+typedef struct AUTH_REALM_ENTRY2_S
+{
+	float popLevel;
+	uint8 charCount;
+	uint8 timezone;
+	uint8 unk;
+} sAuthRealmEntry2_S;
 
 #if defined( __GNUC__ )
 #pragma pack()
 #else
 #pragma pack(pop)
 #endif
+
+enum AccountTypes
+{
+	SEC_PLAYER         = 0,
+	SEC_MODERATOR      = 1,
+	SEC_GAMEMASTER     = 2,
+	SEC_ADMINISTRATOR  = 3,
+	SEC_CONSOLE        = 4,	// must be always last in list, accounts must have less security level always also
+};
+
+// Used in mangosd/realmd
+enum RealmFlags
+{
+	REALM_FLAG_NONE         = 0x00,
+	REALM_FLAG_INVALID      = 0x01,
+	REALM_FLAG_OFFLINE      = 0x02,
+	REALM_FLAG_SPECIFYBUILD = 0x04,	// client will show realm version in RealmList screen in form "RealmName (major.minor.revision.build)"
+	REALM_FLAG_UNK1         = 0x08,
+	REALM_FLAG_UNK2         = 0x10,
+	REALM_FLAG_NEW_PLAYERS  = 0x20,
+	REALM_FLAG_RECOMMENDED  = 0x40,
+	REALM_FLAG_FULL         = 0x80,
+};
 
 #endif	//AUTHSOCKETSTRUCTS_H
