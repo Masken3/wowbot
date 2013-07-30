@@ -3,9 +3,9 @@
 require File.expand_path 'rules/cExe.rb'
 
 work = ExeWork.new do
-	@SOURCES = ['src']
-	@EXTRA_INCLUDES = ['src', 'server-code']
-	@LIBRARIES = ['wsock32']
+	@SOURCES = ['src', 'server-code/Auth']
+	@EXTRA_INCLUDES = ['src', 'server-code', 'server-code/Auth']
+	@LIBRARIES = ['wsock32', 'crypto', 'gdi32']
 	@NAME = 'import'
 end
 

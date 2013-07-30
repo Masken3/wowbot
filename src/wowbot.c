@@ -2,6 +2,7 @@
 #include "socket.h"
 #include "AuthCodes.h"
 #include "AuthSocketStructs.h"
+#include "AuthCalc.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <inttypes.h>
@@ -45,6 +46,7 @@ int main(void) {
 	LOG("Connected.\n");
 
 	authenticate(sock);
+	return 0;
 	dumpRealmList(sock);
 
 	return 0;
@@ -68,26 +70,65 @@ static void sendAndReceiveDump(Socket sock, const char* buf, size_t size) {
 			printf("Connection closed\n");
 		else
 			printf("recv failed: %d\n", SOCKET_ERRNO);
+		return;
 	} while (res > 0);
 }
 
+static void sendAndReceiveExact(Socket sock, const char* src, size_t srcSize,
+	void* dst, size_t dstSize)
+{
+	int remain = dstSize;
+	char* dstP = (char*)dst;
+	int res;
+	res = send(sock, src, srcSize, 0);
+	if(SOCKET_ERROR == res)
+	{
+		LOG("send() returned error code %d\n", SOCKET_ERRNO);
+		exit(1);
+	}
+	LOG("recv...\n");
+	do {
+		res = recv(sock, dstP, remain, 0);
+		if (res > 0) {
+			printf("Bytes received: %d\n", res);
+			remain -= res;
+			dstP += res;
+			continue;
+		}
+		if (res == 0)
+			printf("Connection closed\n");
+		else
+			printf("recv failed: %d\n", SOCKET_ERRNO);
+		exit(1);
+	} while (remain > 0);
+}
+
 static void authenticate(Socket sock) {
+	sAuthLogonChallenge_S lcs;
+	sAuthLogonProof_C lpc;
+	sAuthLogonProof_S lps;
+	byte M2[20];
+	// send & receive challenge
 	{
 		char buf[1024];
-		sAuthLogonChallenge_C* p = (sAuthLogonChallenge_C*)buf;
-		memset(p, 0, sizeof(*p));
-		p->cmd = CMD_AUTH_LOGON_CHALLENGE;
-		p->I_len = sizeof(CONFIG_ACCOUNT_NAME);
-		p->size = sizeof(*p) + (p->I_len - 1) - 4;
-		strcpy((char*)p->I, CONFIG_ACCOUNT_NAME);
-		sendAndReceiveDump(sock, buf, p->size + 4);
-		return;
+		sAuthLogonChallenge_C* lcc = (sAuthLogonChallenge_C*)buf;
+		memset(lcc, 0, sizeof(*lcc));
+		lcc->cmd = CMD_AUTH_LOGON_CHALLENGE;
+		lcc->I_len = sizeof(CONFIG_ACCOUNT_NAME);
+		lcc->size = sizeof(*lcc) + (lcc->I_len - 1) - 4;
+		lcc->build = htons(5875);	// client version 1.12.1
+		strcpy((char*)lcc->I, CONFIG_ACCOUNT_NAME);
+		sendAndReceiveExact(sock, buf, lcc->size + 4, &lcs, sizeof(lcs));
 	}
+	// calculate proof
+
+	CalculateLogonProof(&lcs, &lpc, CONFIG_ACCOUNT_NAME, CONFIG_ACCOUNT_PASSWORD, M2);
+	// send proof
 	{
-		char buf[1 + sizeof(sAuthLogonProof_C)];
-		buf[0] = CMD_AUTH_LOGON_PROOF;
-		//sAuthLogonProof_C* p = (sAuthLogonProof_C*)(buf+1);
-		sendAndReceiveDump(sock, buf, sizeof(buf));
+		lpc.cmd = CMD_AUTH_LOGON_PROOF;
+		sendAndReceiveExact(sock, (char*)&lpc, sizeof(lpc), &lps, sizeof(lps));
+		LOG("proof received. cmd %02x, code %02x\n", lps.cmd, lps.error);
+		LOG("M2 %smatch.", memcmp(M2, lps.M2, 20) ? "mis" : "");
 	}
 }
 

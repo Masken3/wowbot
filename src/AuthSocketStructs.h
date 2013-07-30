@@ -1,7 +1,7 @@
-#include <stdint.h>
-typedef uint8_t uint8;
-typedef uint16_t uint16;
-typedef uint32_t uint32;
+#ifndef AUTHSOCKETSTRUCTS_H
+#define AUTHSOCKETSTRUCTS_H
+
+#include "Common.h"
 
 // copied from AuthSocket.cpp
 
@@ -30,6 +30,21 @@ typedef struct AUTH_LOGON_CHALLENGE_C
 	uint8   I[1];
 } sAuthLogonChallenge_C;
 
+typedef struct
+{
+	uint8   cmd;
+	uint8   error;
+	uint8   unk2;
+	uint8   B[32];
+	uint8   g_len;
+	uint8   g[1];
+	uint8   N_len;
+	uint8   N[32];
+	uint8   s[32];
+	uint8   unk3[16];
+	uint8   unk4;
+} sAuthLogonChallenge_S;
+
 typedef struct AUTH_LOGON_PROOF_C
 {
 	uint8   cmd;
@@ -40,8 +55,20 @@ typedef struct AUTH_LOGON_PROOF_C
 	uint8   securityFlags;                                  // 0x00-0x04
 } sAuthLogonProof_C;
 
+typedef struct AUTH_LOGON_PROOF_S
+{
+	uint8   cmd;
+	uint8   error;
+	uint8   M2[20];
+	uint32  accountFlags;                                   // see enum AccountFlags
+	uint32  surveyId;                                       // SurveyId
+	uint16  unkFlags;                                       // some flags (AccountMsgAvailable = 0x01)
+} sAuthLogonProof_S;
+
 #if defined( __GNUC__ )
 #pragma pack()
 #else
 #pragma pack(pop)
 #endif
+
+#endif	//AUTHSOCKETSTRUCTS_H
