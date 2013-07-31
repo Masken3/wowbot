@@ -4,29 +4,25 @@
 #include "AuthSocketStructs.h"
 #include "AuthCalc.h"
 #include "log.h"
+#include "world.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include <assert.h>
 
-#define CONFIG_CHAR_RACE dorf
-#define CONFIG_CHAR_CLASS warrior
-#define CONFIG_CHAR_GENDER male
-
 #define DEFAULT_WORLDSERVER_PORT 8085                       //8129
 #define DEFAULT_REALMSERVER_PORT 3724
-
-#define LOG printf
 
 typedef uint16_t ushort;
 typedef uint8_t byte;
 
 static Socket connectNewSocket(const char* address, ushort port);
-static void dumpRealmList(Socket sock);
+static char* dumpRealmList(Socket sock, const char* targetRealmName);
 static void authenticate(Socket sock);
+static Socket connectToWorld(Socket authSock, const char* realmName);
 
 int main(void) {
-	Socket sock;
+	Socket authSock, worldSock;
 
 #ifdef WIN32
 	{
@@ -41,14 +37,19 @@ int main(void) {
 #endif
 
 	LOG("Connecting...\n");
-	sock = connectNewSocket(CONFIG_SERVER_ADDRESS, DEFAULT_REALMSERVER_PORT);
-	if(sock == INVALID_SOCKET) {
+	authSock = connectNewSocket(CONFIG_SERVER_ADDRESS, DEFAULT_REALMSERVER_PORT);
+	if(authSock == INVALID_SOCKET) {
 		exit(1);
 	}
 	LOG("Connected.\n");
 
-	authenticate(sock);
-	dumpRealmList(sock);
+	authenticate(authSock);
+	if(1) {//config.realmName) {
+		worldSock = connectToWorld(authSock, "Plain");
+		runWorld(worldSock);
+	} else {
+		dumpRealmList(authSock, NULL);
+	}
 
 	return 0;
 }
@@ -77,40 +78,6 @@ static void sendAndReceiveDump(Socket sock, const char* buf, size_t size) {
 }
 #endif
 
-static void receiveExact(Socket sock, void* dst, size_t dstSize) {
-	int remain = dstSize;
-	char* dstP = (char*)dst;
-	int res;
-	LOG("recv...\n");
-	do {
-		res = recv(sock, dstP, remain, 0);
-		if (res > 0) {
-			printf("Bytes received: %d\n", res);
-			remain -= res;
-			dstP += res;
-			continue;
-		}
-		if (res == 0)
-			printf("Connection closed\n");
-		else
-			printf("recv failed: %d\n", SOCKET_ERRNO);
-		exit(1);
-	} while (remain > 0);
-}
-
-static void sendAndReceiveExact(Socket sock, const char* src, size_t srcSize,
-	void* dst, size_t dstSize)
-{
-	int res;
-	res = send(sock, src, srcSize, 0);
-	if(SOCKET_ERROR == res)
-	{
-		LOG("send() returned error code %d\n", SOCKET_ERRNO);
-		exit(1);
-	}
-	receiveExact(sock, dst, dstSize);
-}
-
 static void authenticate(Socket sock) {
 	sAuthLogonChallenge_S lcs;
 	sAuthLogonProof_C lpc;
@@ -129,19 +96,18 @@ static void authenticate(Socket sock) {
 		sendAndReceiveExact(sock, buf, lcc->size + 4, &lcs, sizeof(lcs));
 	}
 	// calculate proof
-
 	CalculateLogonProof(&lcs, &lpc, CONFIG_ACCOUNT_NAME, CONFIG_ACCOUNT_PASSWORD, M2);
 	// send proof
 	{
 		lpc.cmd = CMD_AUTH_LOGON_PROOF;
 		sendAndReceiveExact(sock, (char*)&lpc, sizeof(lpc), &lps, sizeof(lps));
 		LOG("proof received. cmd %02x, code %02x\n", lps.cmd, lps.error);
-		LOG("M2 %smatch.", memcmp(M2, lps.M2, 20) ? "mis" : "");
+		LOG("M2 %smatch.\n", memcmp(M2, lps.M2, 20) ? "mis" : "");
 	}
 }
 
 // will result in silence unless the server considers us "authed".
-static void dumpRealmList(Socket sock) {
+static char* dumpRealmList(Socket sock, const char* targetRealmName) {
 	sAuthRealmHeader_S rhs;
 	char buf[6];
 	buf[0] = CMD_REALM_LIST;
@@ -158,7 +124,7 @@ static void dumpRealmList(Socket sock) {
 			sAuthRealmEntry1_S* e1;
 			sAuthRealmEntry2_S* e2;
 			const char* name;
-			const char* address;
+			char* address;
 			e1 = (sAuthRealmEntry1_S*)ptr;
 			ptr += sizeof(sAuthRealmEntry1_S);
 			name = ptr;
@@ -169,10 +135,41 @@ static void dumpRealmList(Socket sock) {
 			ptr += sizeof(sAuthRealmEntry2_S);
 			assert(ptr - rlBuf <= rlSize);
 
-			LOG("%i: %s (%s) p%f c%i t%i i%i f%02x\n", i, name, address,
-				e2->popLevel, e2->charCount, e2->timezone, e1->icon, e1->flags);
+			if(targetRealmName) {
+				if(!strcmp(name, targetRealmName)) {
+					// memory leak, but it's only one small buffer, so we don't care.
+					return address;
+				}
+			} else {
+				LOG("%i: %s (%s) p%f c%i t%i i%i f%02x\n", i, name, address,
+					e2->popLevel, e2->charCount, e2->timezone, e1->icon, e1->flags);
+			}
 		}
+		free(rlBuf);
 	}
+	return NULL;
+}
+
+static Socket connectToWorld(Socket authSock, const char* realmName) {
+	char* colon;
+	int port;
+	const char* host;
+	Socket worldSock;
+	char* address = dumpRealmList(authSock, realmName);
+	if(!address) {
+		LOG("realm not found!\n");
+		exit(1);
+	}
+	colon = strchr(address, ':');
+	if(!colon) {
+		port = DEFAULT_WORLDSERVER_PORT;
+	} else {
+		*colon = 0;
+		strtol(colon + 1, NULL, 10);
+	}
+	host = address;
+	worldSock = connectNewSocket(host, port);
+	return worldSock;
 }
 
 static Socket connectNewSocket(const char* address, ushort port) {
@@ -189,6 +186,8 @@ static Socket connectNewSocket(const char* address, ushort port) {
 		LOG("socket() returned error code %d\n", SOCKET_ERRNO);
 		return INVALID_SOCKET;
 	}
+
+	LOG("connecting to %s:%i...\n", address, port);
 
 	// disable Nagle's
 	v = 1;
