@@ -4,6 +4,7 @@
 #include "WorldCrypt.h"
 #include "Opcodes.h"
 #include "worldMsgHandlers/hAuth.h"
+#include "worldMsgHandlers/hChar.h"
 
 static void handleServerPacket(WorldSession*, ServerPktHeader, char* buf);
 
@@ -16,7 +17,7 @@ void runWorld(WorldSession* session) {
 		decryptHeader(session, &sph);
 		//sph.cmd = ntohs(sph.cmd); // cmd is not swapped
 		sph.size = ntohs(sph.size);
-		LOG("Packet: cmd 0x%x, size %i\n", sph.cmd, sph.size);
+		//LOG("Packet: cmd 0x%x, size %i\n", sph.cmd, sph.size);
 		receiveExact(sock, buf, sph.size - 2);
 		if(sph.cmd == SMSG_LOGOUT_COMPLETE) {
 			LOG("SMSG_LOGOUT_COMPLETE\n");
@@ -29,11 +30,13 @@ void runWorld(WorldSession* session) {
 #define HANDLERS(m)\
 	m(SMSG_AUTH_CHALLENGE)\
 	m(SMSG_AUTH_RESPONSE)\
+	m(SMSG_CHAR_ENUM)\
+	m(SMSG_CHAR_CREATE)\
 
 static void handleServerPacket(WorldSession* session, ServerPktHeader sph, char* buf) {
 #define CASE_HANDLER(name) case name: h##name(session, buf, sph.size - 2); break;
 	const char* s = opcodeString(sph.cmd);
-	LOG("serverPacket %s\n", s);
+	LOG("serverPacket %s (%i)\n", s, sph.size);
 	switch(sph.cmd) {
 		HANDLERS(CASE_HANDLER);
 		default:

@@ -2,13 +2,15 @@
 #include "config.h"
 #include "Common.h"
 #include "world.h"
-#include "hAuth.h"
 #include "Opcodes.h"
 #include <openssl/sha.h>
 #include <assert.h>
 #include "WorldCrypt.h"
 #include "worldHandlers.h"
 #include "log.h"
+#include "SharedDefines.h"
+
+#include "hAuth.h"
 
 #if defined( __GNUC__ )
 #pragma pack(1)
@@ -73,6 +75,8 @@ void hSMSG_AUTH_CHALLENGE(WorldSession* session, char* buf, uint16 size) {
 void hSMSG_AUTH_RESPONSE(WorldSession* session, char* buf, uint16 size) {
 	if(buf[0] == AUTH_OK) {
 		LOG("AUTH_OK!\n");
+		// at this point, we can request the list of toons.
+		sendWorld(session, CMSG_CHAR_ENUM, NULL, 0);
 	} else {
 		LOG("Auth error code 0x%02x\n", buf[0]);
 	}

@@ -114,7 +114,7 @@ static char* dumpRealmList(Socket sock, const char* targetRealmName) {
 	buf[0] = CMD_REALM_LIST;
 	LOG("dumpRealmList send...\n");
 	sendAndReceiveExact(sock, buf, sizeof(buf), &rhs, sizeof(rhs));
-	DUMPINT(rhs.size);
+	//DUMPINT(rhs.size);
 	DUMPINT(rhs.count);
 	{
 		int rlSize = rhs.size-5;

@@ -3,12 +3,15 @@
 #include "WorldSocketStructs.h"
 #include "WorldCrypt.h"
 #include "worldHandlers.h"
+#include "log.h"
+#include "Opcodes.h"
 
 struct Crypto {
 	AuthCrypt ac;
 };
 
 void sendWorld(WorldSession* session, uint32 opcode, const void* src, uint16 size) {
+	LOG("send %s (%i)\n", opcodeString(opcode), size);
 	ClientPktHeader c = { htons(size + 4), opcode };
 	session->crypto->ac.EncryptSend((uint8*)&c, sizeof(c));
 	sendExact(session->sock, (char*)&c, sizeof(c));

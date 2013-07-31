@@ -8,106 +8,66 @@ extern "C"
 #endif
 void sendWorld(WorldSession*, uint32 opcode, const void* src, uint16 size);
 
-enum ResponseCodes
+enum EquipmentSlots                                         // 19 slots
 {
-	RESPONSE_SUCCESS                                       = 0x00,
-	RESPONSE_FAILURE                                       = 0x01,
-	RESPONSE_CANCELLED                                     = 0x02,
-	RESPONSE_DISCONNECTED                                  = 0x03,
-	RESPONSE_FAILED_TO_CONNECT                             = 0x04,
-	RESPONSE_CONNECTED                                     = 0x05,
-	RESPONSE_VERSION_MISMATCH                              = 0x06,
+	EQUIPMENT_SLOT_START        = 0,
+	EQUIPMENT_SLOT_HEAD         = 0,
+	EQUIPMENT_SLOT_NECK         = 1,
+	EQUIPMENT_SLOT_SHOULDERS    = 2,
+	EQUIPMENT_SLOT_BODY         = 3,
+	EQUIPMENT_SLOT_CHEST        = 4,
+	EQUIPMENT_SLOT_WAIST        = 5,
+	EQUIPMENT_SLOT_LEGS         = 6,
+	EQUIPMENT_SLOT_FEET         = 7,
+	EQUIPMENT_SLOT_WRISTS       = 8,
+	EQUIPMENT_SLOT_HANDS        = 9,
+	EQUIPMENT_SLOT_FINGER1      = 10,
+	EQUIPMENT_SLOT_FINGER2      = 11,
+	EQUIPMENT_SLOT_TRINKET1     = 12,
+	EQUIPMENT_SLOT_TRINKET2     = 13,
+	EQUIPMENT_SLOT_BACK         = 14,
+	EQUIPMENT_SLOT_MAINHAND     = 15,
+	EQUIPMENT_SLOT_OFFHAND      = 16,
+	EQUIPMENT_SLOT_RANGED       = 17,
+	EQUIPMENT_SLOT_TABARD       = 18,
+	EQUIPMENT_SLOT_END          = 19
+};
 
-	CSTATUS_CONNECTING                                     = 0x07,
-	CSTATUS_NEGOTIATING_SECURITY                           = 0x08,
-	CSTATUS_NEGOTIATION_COMPLETE                           = 0x09,
-	CSTATUS_NEGOTIATION_FAILED                             = 0x0A,
-	CSTATUS_AUTHENTICATING                                 = 0x0B,
+enum InventorySlots                                         // 4 slots
+{
+	INVENTORY_SLOT_BAG_START    = 19,
+	INVENTORY_SLOT_BAG_END      = 23
+};
 
-	AUTH_OK                                                = 0x0C,
-	AUTH_FAILED                                            = 0x0D,
-	AUTH_REJECT                                            = 0x0E,
-	AUTH_BAD_SERVER_PROOF                                  = 0x0F,
-	AUTH_UNAVAILABLE                                       = 0x10,
-	AUTH_SYSTEM_ERROR                                      = 0x11,
-	AUTH_BILLING_ERROR                                     = 0x12,
-	AUTH_BILLING_EXPIRED                                   = 0x13,
-	AUTH_VERSION_MISMATCH                                  = 0x14,
-	AUTH_UNKNOWN_ACCOUNT                                   = 0x15,
-	AUTH_INCORRECT_PASSWORD                                = 0x16,
-	AUTH_SESSION_EXPIRED                                   = 0x17,
-	AUTH_SERVER_SHUTTING_DOWN                              = 0x18,
-	AUTH_ALREADY_LOGGING_IN                                = 0x19,
-	AUTH_LOGIN_SERVER_NOT_FOUND                            = 0x1A,
-	AUTH_WAIT_QUEUE                                        = 0x1B,
-	AUTH_BANNED                                            = 0x1C,
-	AUTH_ALREADY_ONLINE                                    = 0x1D,
-	AUTH_NO_TIME                                           = 0x1E,
-	AUTH_DB_BUSY                                           = 0x1F,
-	AUTH_SUSPENDED                                         = 0x20,
-	AUTH_PARENTAL_CONTROL                                  = 0x21,
-	AUTH_LOCKED_ENFORCED                                   = 0x02, /// Unsure
+enum InventoryPackSlots                                     // 16 slots
+{
+	INVENTORY_SLOT_ITEM_START   = 23,
+	INVENTORY_SLOT_ITEM_END     = 39
+};
 
-	REALM_LIST_IN_PROGRESS                                 = 0x22,
-	REALM_LIST_SUCCESS                                     = 0x23,
-	REALM_LIST_FAILED                                      = 0x24,
-	REALM_LIST_INVALID                                     = 0x25,
-	REALM_LIST_REALM_NOT_FOUND                             = 0x26,
+enum BankItemSlots                                          // 28 slots
+{
+	BANK_SLOT_ITEM_START        = 39,
+	BANK_SLOT_ITEM_END          = 63
+};
 
-	ACCOUNT_CREATE_IN_PROGRESS                             = 0x27,
-	ACCOUNT_CREATE_SUCCESS                                 = 0x28,
-	ACCOUNT_CREATE_FAILED                                  = 0x29,
+enum BankBagSlots                                           // 7 slots
+{
+	BANK_SLOT_BAG_START         = 63,
+	BANK_SLOT_BAG_END           = 69
+};
 
-	CHAR_LIST_RETRIEVING                                   = 0x2A,
-	CHAR_LIST_RETRIEVED                                    = 0x2B,
-	CHAR_LIST_FAILED                                       = 0x2C,
+enum BuyBackSlots                                           // 12 slots
+{
+	// stored in m_buybackitems
+	BUYBACK_SLOT_START          = 69,
+	BUYBACK_SLOT_END            = 81
+};
 
-	CHAR_CREATE_IN_PROGRESS                                = 0x2D,
-	CHAR_CREATE_SUCCESS                                    = 0x2E,
-	CHAR_CREATE_ERROR                                      = 0x2F,
-	CHAR_CREATE_FAILED                                     = 0x30,
-	CHAR_CREATE_NAME_IN_USE                                = 0x31,
-	CHAR_CREATE_DISABLED                                   = 0x3A,
-	CHAR_CREATE_PVP_TEAMS_VIOLATION                        = 0x33,
-	CHAR_CREATE_SERVER_LIMIT                               = 0x34,
-	CHAR_CREATE_ACCOUNT_LIMIT                              = 0x35,
-	CHAR_CREATE_SERVER_QUEUE                               = 0x30,/// UNSURE
-	CHAR_CREATE_ONLY_EXISTING                              = 0x30,/// UNSURE
-
-	CHAR_DELETE_IN_PROGRESS                                = 0x38,
-	CHAR_DELETE_SUCCESS                                    = 0x39,
-	CHAR_DELETE_FAILED                                     = 0x3A,
-	CHAR_DELETE_FAILED_LOCKED_FOR_TRANSFER                 = 0x3A,/// UNSURE
-	CHAR_DELETE_FAILED_GUILD_LEADER                        = 0x3A,/// UNSURE
-
-	CHAR_LOGIN_IN_PROGRESS                                 = 0x3B,
-	CHAR_LOGIN_SUCCESS                                     = 0x3C,
-	CHAR_LOGIN_NO_WORLD                                    = 0x3D,
-	CHAR_LOGIN_DUPLICATE_CHARACTER                         = 0x3E,
-	CHAR_LOGIN_NO_INSTANCES                                = 0x3F,
-	CHAR_LOGIN_FAILED                                      = 0x40,
-	CHAR_LOGIN_DISABLED                                    = 0x41,
-	CHAR_LOGIN_NO_CHARACTER                                = 0x42,
-	CHAR_LOGIN_LOCKED_FOR_TRANSFER                         = 0x40, /// UNSURE
-	CHAR_LOGIN_LOCKED_BY_BILLING                           = 0x40, /// UNSURE
-
-	CHAR_NAME_SUCCESS                                      = 0x50,
-	CHAR_NAME_FAILURE                                      = 0x4F,
-	CHAR_NAME_NO_NAME                                      = 0x43,
-	CHAR_NAME_TOO_SHORT                                    = 0x44,
-	CHAR_NAME_TOO_LONG                                     = 0x45,
-	CHAR_NAME_INVALID_CHARACTER                            = 0x46,
-	CHAR_NAME_MIXED_LANGUAGES                              = 0x47,
-	CHAR_NAME_PROFANE                                      = 0x48,
-	CHAR_NAME_RESERVED                                     = 0x49,
-	CHAR_NAME_INVALID_APOSTROPHE                           = 0x4A,
-	CHAR_NAME_MULTIPLE_APOSTROPHES                         = 0x4B,
-	CHAR_NAME_THREE_CONSECUTIVE                            = 0x4C,
-	CHAR_NAME_INVALID_SPACE                                = 0x4D,
-	CHAR_NAME_CONSECUTIVE_SPACES                           = 0x4E,
-	CHAR_NAME_RUSSIAN_CONSECUTIVE_SILENT_CHARACTERS        = 0x4E,/// UNSURE
-	CHAR_NAME_RUSSIAN_SILENT_CHARACTER_AT_BEGINNING_OR_END = 0x4E,/// UNSURE
-	CHAR_NAME_DECLENSION_DOESNT_MATCH_BASE_NAME            = 0x4E,/// UNSURE
+enum KeyRingSlots                                           // 32 slots
+{
+	KEYRING_SLOT_START          = 81,
+	KEYRING_SLOT_END            = 97
 };
 
 #endif	//WORLDHANDLERS_H
