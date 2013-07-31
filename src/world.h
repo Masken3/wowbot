@@ -2,7 +2,17 @@
 #define WORLD_H
 
 #include "socket.h"
+#include "Common.h"
 
-void runWorld(Socket);
+// Session crypty state.
+struct Crypto;
+
+typedef struct WorldSession {
+	Socket sock;
+	uint8 key[40];	// session crypto key
+	struct Crypto* crypto;
+} WorldSession;
+
+void runWorld(WorldSession*);
 
 #endif	//WORLD_H

@@ -22,6 +22,7 @@ private:
 public:
 	BigNumber A;
 	Sha1Digest M1, M2;
+	uint8 K[40];
 
 	// sets A.
 	SRP(BigNumber _N, BigNumber _g) : g(_g), N(_N), k(3) {
@@ -101,7 +102,6 @@ public:
 		memcpy(S2h, sha.GetDigest(), SHA_DIGEST_LENGTH);
 
 		// Shared session key generation by interleaving the previously generated hashes
-		uint8 K[40];
 		for(int i=0; i<20; i++) {
 			K[i*2] = S1h[i];
 			K[i*2+1] = S2h[i];
@@ -177,7 +177,7 @@ public:
 };
 
 void CalculateLogonProof(sAuthLogonChallenge_S* lcs, sAuthLogonProof_C* lpc,
-	const char* username, const char* password, uint8* M2)
+	const char* username, const char* password, uint8* M2, uint8* K)
 {
 	BigNumber g, N, B, salt;
 	g.SetDword(lcs->g[0]);
@@ -200,6 +200,7 @@ void CalculateLogonProof(sAuthLogonChallenge_S* lcs, sAuthLogonProof_C* lpc,
 	memcpy(lpc->A, srp.A.AsByteArray(32), 32);
 	memcpy(lpc->M1, srp.M1, 20);
 	memcpy(M2, srp.M2, 20);
+	memcpy(K, srp.K, 40);
 
 #if 0
 	printf("A: ");

@@ -22,6 +22,10 @@ typedef int Socket;
 
 #define ST(func)
 
-void receiveExact(Socket sock, void* dst, size_t dstSize);
-void sendAndReceiveExact(Socket sock, const char* src, size_t srcSize,
+void receiveExact(Socket, void* dst, size_t dstSize);
+void sendAndReceiveExact(Socket, const char* src, size_t srcSize,
 	void* dst, size_t dstSize);
+#ifdef __cplusplus
+extern "C"
+#endif
+void sendExact(Socket, const char* src, size_t srcSize);

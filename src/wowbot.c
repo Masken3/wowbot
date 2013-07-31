@@ -17,12 +17,13 @@ typedef uint16_t ushort;
 typedef uint8_t byte;
 
 static Socket connectNewSocket(const char* address, ushort port);
-static char* dumpRealmList(Socket sock, const char* targetRealmName);
-static void authenticate(Socket sock);
-static Socket connectToWorld(Socket authSock, const char* realmName);
+static char* dumpRealmList(Socket, const char* targetRealmName);
+static void authenticate(Socket, WorldSession*);
+static void connectToWorld(WorldSession*, Socket authSock, const char* realmName);
 
 int main(void) {
-	Socket authSock, worldSock;
+	Socket authSock;
+	WorldSession session;
 
 #ifdef WIN32
 	{
@@ -43,10 +44,10 @@ int main(void) {
 	}
 	LOG("Connected.\n");
 
-	authenticate(authSock);
+	authenticate(authSock, &session);
 	if(1) {//config.realmName) {
-		worldSock = connectToWorld(authSock, "Plain");
-		runWorld(worldSock);
+		connectToWorld(&session, authSock, "Plain");
+		runWorld(&session);
 	} else {
 		dumpRealmList(authSock, NULL);
 	}
@@ -78,7 +79,7 @@ static void sendAndReceiveDump(Socket sock, const char* buf, size_t size) {
 }
 #endif
 
-static void authenticate(Socket sock) {
+static void authenticate(Socket sock, WorldSession* session) {
 	sAuthLogonChallenge_S lcs;
 	sAuthLogonProof_C lpc;
 	sAuthLogonProof_S lps;
@@ -96,7 +97,7 @@ static void authenticate(Socket sock) {
 		sendAndReceiveExact(sock, buf, lcc->size + 4, &lcs, sizeof(lcs));
 	}
 	// calculate proof
-	CalculateLogonProof(&lcs, &lpc, CONFIG_ACCOUNT_NAME, CONFIG_ACCOUNT_PASSWORD, M2);
+	CalculateLogonProof(&lcs, &lpc, CONFIG_ACCOUNT_NAME, CONFIG_ACCOUNT_PASSWORD, M2, session->key);
 	// send proof
 	{
 		lpc.cmd = CMD_AUTH_LOGON_PROOF;
@@ -150,26 +151,25 @@ static char* dumpRealmList(Socket sock, const char* targetRealmName) {
 	return NULL;
 }
 
-static Socket connectToWorld(Socket authSock, const char* realmName) {
+static void connectToWorld(WorldSession* session, Socket authSock, const char* realmName) {
 	char* colon;
 	int port;
 	const char* host;
-	Socket worldSock;
 	char* address = dumpRealmList(authSock, realmName);
 	if(!address) {
 		LOG("realm not found!\n");
 		exit(1);
 	}
+	DUMPSTR(address);
 	colon = strchr(address, ':');
 	if(!colon) {
 		port = DEFAULT_WORLDSERVER_PORT;
 	} else {
 		*colon = 0;
-		strtol(colon + 1, NULL, 10);
+		port = strtol(colon + 1, NULL, 10);
 	}
 	host = address;
-	worldSock = connectNewSocket(host, port);
-	return worldSock;
+	session->sock = connectNewSocket(host, port);
 }
 
 static Socket connectNewSocket(const char* address, ushort port) {

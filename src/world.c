@@ -1,15 +1,19 @@
 #include "world.h"
 #include "log.h"
 #include "WorldSocketStructs.h"
+#include "WorldCrypt.h"
 #include "Opcodes.h"
+#include "worldMsgHandlers/hAuth.h"
 
-static void handleServerPacket(Socket sock, ServerPktHeader, char* buf);
+static void handleServerPacket(WorldSession*, ServerPktHeader, char* buf);
 
-void runWorld(Socket sock) {
+void runWorld(WorldSession* session) {
+	Socket sock = session->sock;
 	do {
 		char buf[1024 * 64];	// large enough for theoretical max packet size.
 		ServerPktHeader sph;
 		receiveExact(sock, &sph, sizeof(sph));
+		decryptHeader(session, &sph);
 		//sph.cmd = ntohs(sph.cmd); // cmd is not swapped
 		sph.size = ntohs(sph.size);
 		LOG("Packet: cmd 0x%x, size %i\n", sph.cmd, sph.size);
@@ -18,10 +22,27 @@ void runWorld(Socket sock) {
 			LOG("SMSG_LOGOUT_COMPLETE\n");
 			break;
 		}
-		handleServerPacket(sock, sph, buf);
+		handleServerPacket(session, sph, buf);
 	} while(1);
 }
 
-static void handleServerPacket(Socket sock, ServerPktHeader sph, char* buf) {
+#define HANDLERS(m)\
+	m(SMSG_AUTH_CHALLENGE)\
+	m(SMSG_AUTH_RESPONSE)\
 
+static void handleServerPacket(WorldSession* session, ServerPktHeader sph, char* buf) {
+#define CASE_HANDLER(name) case name: h##name(session, buf, sph.size - 2); break;
+	const char* s = opcodeString(sph.cmd);
+	LOG("serverPacket %s\n", s);
+	switch(sph.cmd) {
+		HANDLERS(CASE_HANDLER);
+		default:
+		{
+			if(s) {
+				LOG("Unhandled opcode %s\n", s);
+			} else {
+				LOG("Unknown opcode 0x%x\n", sph.cmd);
+			}
+		}
+	}
 }
