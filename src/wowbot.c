@@ -9,6 +9,9 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <assert.h>
+#include <lua.h>
+#include <lauxlib.h>
+#include <lualib.h>
 
 #define DEFAULT_WORLDSERVER_PORT 8085                       //8129
 #define DEFAULT_REALMSERVER_PORT 3724
@@ -24,12 +27,32 @@ static void connectToWorld(WorldSession*, Socket authSock, const char* realmName
 int main(void) {
 	Socket authSock;
 	WorldSession session;
+	lua_State* L;
+	int res;
+
+	L = luaL_newstate();
+	luaL_openlibs(L);
+	res = luaL_loadfile(L, "src/wowbot.lua");
+	if(res != LUA_OK) {
+		LOG("LUA load error!\n");
+		LOG("%s\n", lua_tostring(L, -1));
+		exit(1);
+	}
+	res = lua_pcall(L, 0, 0, 0);
+	if(res != LUA_OK) {
+		LOG("LUA run error!\n");
+		LOG("%s\n", lua_tostring(L, -1));
+		exit(1);
+	}
+	session.L = L;
+
+	worldCheckLua(&session);
 
 #ifdef WIN32
 	{
 		// Initialize Winsock
 		WSADATA wsaData;
-		int res = WSAStartup(MAKEWORD(2,2), &wsaData);
+		res = WSAStartup(MAKEWORD(2,2), &wsaData);
 		if (res != 0) {
 			printf("WSAStartup failed: %d\n", res);
 			exit(1);

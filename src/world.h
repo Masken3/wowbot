@@ -11,8 +11,11 @@ typedef struct WorldSession {
 	Socket sock;
 	uint8 key[40];	// session crypto key
 	struct Crypto* crypto;
+	struct lua_State* L;
 } WorldSession;
 
 void runWorld(WorldSession*);
+
+void worldCheckLua(WorldSession*);
 
 #endif	//WORLD_H

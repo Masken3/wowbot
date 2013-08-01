@@ -90,6 +90,10 @@ static void createToon(WorldSession* session) {
 	sendWorld(session, CMSG_CHAR_CREATE, buf, sizeof(TOON_NAME) + sizeof(c));
 }
 
+static void enterWorld(WorldSession* session, uint64 guid) {
+	sendWorld(session, CMSG_PLAYER_LOGIN, &guid, sizeof(guid));
+}
+
 void hSMSG_CHAR_ENUM(WorldSession* session, char* buf, uint16 size) {
 	uint8 num = buf[0];
 	LOG("%i toons:\n", num);
@@ -110,7 +114,7 @@ void hSMSG_CHAR_ENUM(WorldSession* session, char* buf, uint16 size) {
 			LOG("%i: 0x%" PRIx64 " %s r%i c%i g%i\n",
 				i, guid, name, e->race, e->_class, e->gender);
 			if(i == 0) {
-				//enterWorld(session, guid);
+				enterWorld(session, guid);
 			}
 		}
 	}
