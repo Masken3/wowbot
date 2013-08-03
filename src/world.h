@@ -8,7 +8,9 @@
 struct Crypto;
 
 typedef struct WorldSession {
+	Socket authSock;
 	Socket sock;
+	char* worldServerAddress;
 	uint8 key[40];	// session crypto key
 	struct Crypto* crypto;
 	struct lua_State* L;

@@ -13,3 +13,4 @@ ipch
 .gdbinit
 log.txt
 log.*.txt
+config.lua

@@ -6,30 +6,67 @@
 #include "worldMsgHandlers/hAuth.h"
 #include "worldMsgHandlers/hChar.h"
 #include "dumpPacket.h"
+#include "auth.h"
 
 #include <lua.h>
 #include <assert.h>
 
 #include "movementFlags.h"
 
+#define DEFAULT_WORLDSERVER_PORT 8085
+
 static void handleServerPacket(WorldSession*, ServerPktHeader, char* buf);
 
-void runWorld(WorldSession* session) {
+static int runWorld2(WorldSession* session) {
 	Socket sock = session->sock;
 	do {
 		char buf[1024 * 64];	// large enough for theoretical max packet size.
 		ServerPktHeader sph;
-		receiveExact(sock, &sph, sizeof(sph));
+		if(receiveExact(sock, &sph, sizeof(sph)) <= 0)
+			return 0;
 		decryptHeader(session, &sph);
 		//sph.cmd = ntohs(sph.cmd); // cmd is not swapped
 		sph.size = ntohs(sph.size);
 		//LOG("Packet: cmd 0x%x, size %i\n", sph.cmd, sph.size);
-		receiveExact(sock, buf, sph.size - 2);
+		if(receiveExact(sock, buf, sph.size - 2) <= 0)
+			return 0;
 		if(sph.cmd == SMSG_LOGOUT_COMPLETE) {
 			LOG("SMSG_LOGOUT_COMPLETE\n");
-			break;
+			return 1;
 		}
 		handleServerPacket(session, sph, buf);
+	} while(1);
+}
+
+static void connectToWorld(WorldSession* session, const char* realmName) {
+	char* colon;
+	int port;
+	const char* host;
+	const char* address;
+	if(!session->worldServerAddress)
+		session->worldServerAddress = dumpRealmList(session->authSock, realmName);
+	address = session->worldServerAddress;
+	if(!address) {
+		LOG("realm not found!\n");
+		exit(1);
+	}
+	DUMPSTR(address);
+	colon = strchr(address, ':');
+	if(!colon) {
+		port = DEFAULT_WORLDSERVER_PORT;
+	} else {
+		*colon = 0;
+		port = strtol(colon + 1, NULL, 10);
+	}
+	host = address;
+	session->sock = connectNewSocket(host, port);
+}
+
+void runWorld(WorldSession* session) {
+	do {
+		connectToWorld(session, "Plain");
+		if(runWorld2(session))
+			return;
 	} while(1);
 }
 
@@ -146,6 +183,11 @@ static void pSMSG_MONSTER_MOVE(pLUA_ARGS) {
 		MM(byte, type);
 		switch(type) {
 		case MonsterMoveNormal: break;
+			// Unknown packet type; server doesn't have code for sending it, yet server sends it!
+		case MonsterMoveStop:
+			LOG("SMSG_MONSTER_MOVE/MonsterMoveStop:\n");
+			dumpPacket(buf, bufSize);
+			return;
 		case MonsterMoveFacingTarget: M(Guid, target); break;
 		case MonsterMoveFacingAngle: M(float, angle); break;
 		case MonsterMoveFacingSpot: M(Vector3, spot); break;
@@ -154,7 +196,7 @@ static void pSMSG_MONSTER_MOVE(pLUA_ARGS) {
 	}
 	{
 		MM(uint32, flags);
-		M(int32, splineLength);
+		M(int32, duration);
 		if(flags & Mask_CatmullRom) {
 			MM(uint32, count);
 			MA(Vector3, points, count);
@@ -183,11 +225,10 @@ static void handleServerPacket(WorldSession* session, ServerPktHeader sph, char*
 		LUA_HANDLERS(CASE_LUA_HANDLER);
 		default:
 		{
-			LSP;
 			if(s) {
-				LOG("Unhandled opcode %s\n", s);
+				LOG("Unhandled opcode %s (%i)\n", s, sph.size);
 			} else {
-				LOG("Unknown opcode 0x%x\n", sph.cmd);
+				LOG("Unknown opcode 0x%x (%i)\n", sph.cmd, sph.size);
 			}
 		}
 	}

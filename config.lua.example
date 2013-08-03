@@ -1,0 +1,38 @@
+AUTH_ADDRESS = "auth.example.com"
+REALM_NAME = "ExampleRealm"
+TOONS = {
+	{
+		accountName = "wowbot",
+		password = "password",
+		toonName = "Warrior",
+		class = WARRIOR,
+		race = GNOME,
+		gender = MALE,
+		professions = { MINING, ENGINEERING },
+	},
+	{
+		class = PRIEST,
+		race = DWARF,
+		gender = FEMALE,
+		professions = { TAILORING, ENCHANTING },
+	},
+	{
+		class = PALADIN,
+		race = DWARF,
+		professions = { BLACKSMITHING, HERBALISM },
+	},
+	{
+		class = ROGUE,
+		race = GNOME,
+		gender = FEMALE,
+		professions = { SKINNING, LEATHERWORKING, COOKING },
+	},
+--	player
+--	leaving herbalism to a bot because I don't want or need to do gathering myself.
+--	{
+--		class = WARLOCK,
+--		race = GNOME,
+--		gender = FEMALE,
+--		professions = { ALCHEMY },
+--	},
+}

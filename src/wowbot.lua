@@ -11,7 +11,7 @@ function dump(o)
 	end
 end
 function hSMSG_MONSTER_MOVE(p)
-	print("SMSG_MONSTER_MOVE", dump(p));
+	--print("SMSG_MONSTER_MOVE", dump(p));
 end
 function hMSG_MOVE_HEARTBEAT(buf)
 	print("MSG_MOVE_HEARTBEAT",#buf);
