@@ -79,9 +79,11 @@ void runWorld(WorldSession* session) {
 #define LUA_HANDLERS(m)\
 	m(SMSG_MONSTER_MOVE)\
 
-	/*m(MSG_MOVE_HEARTBEAT)\
+#define IGNORED_PACKET_TYPES(m)\
+	m(MSG_MOVE_HEARTBEAT)\
 	m(SMSG_COMPRESSED_UPDATE_OBJECT)\
-	m(SMSG_UPDATE_OBJECT)\*/
+	m(SMSG_UPDATE_OBJECT)\
+	m(SMSG_SET_PROFICIENCY)\
 
 static void checkLuaFunction(lua_State* L, const char* name) {
 	LOG("checking for Lua function %s...\n", name);
@@ -183,11 +185,12 @@ static void pSMSG_MONSTER_MOVE(pLUA_ARGS) {
 		MM(byte, type);
 		switch(type) {
 		case MonsterMoveNormal: break;
-			// Unknown packet type; server doesn't have code for sending it, yet server sends it!
-		case MonsterMoveStop:
-			LOG("SMSG_MONSTER_MOVE/MonsterMoveStop:\n");
-			dumpPacket(buf, bufSize);
-			return;
+
+			// Weird packet type; server doesn't have code for sending it, yet server sends it!
+			// Anyway, analysis shows that it has no data beyond the "type" byte,
+			// so return; here works well.
+		case MonsterMoveStop: return;
+
 		case MonsterMoveFacingTarget: M(Guid, target); break;
 		case MonsterMoveFacingAngle: M(float, angle); break;
 		case MonsterMoveFacingSpot: M(Vector3, spot); break;
@@ -211,6 +214,7 @@ static void pSMSG_MONSTER_MOVE(pLUA_ARGS) {
 static void handleServerPacket(WorldSession* session, ServerPktHeader sph, char* buf) {
 #define LSP LOG("serverPacket %s (%i)\n", s, sph.size)
 #define CASE_HANDLER(name) case name: LSP; h##name(session, buf, sph.size - 2); break;
+#define CASE_IGNORED_HANDLER(name) case name: break;
 
 #define CASE_LUA_HANDLER(name) case name:\
 	lua_getglobal(L, "h" #name);\
@@ -223,6 +227,7 @@ static void handleServerPacket(WorldSession* session, ServerPktHeader sph, char*
 	switch(sph.cmd) {
 		HANDLERS(CASE_HANDLER);
 		LUA_HANDLERS(CASE_LUA_HANDLER);
+		IGNORED_PACKET_TYPES(CASE_IGNORED_HANDLER);
 		default:
 		{
 			if(s) {
