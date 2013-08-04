@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "types.h"
 
 #if defined(WIN32) || defined(_WIN32_WCE)
 //#include <windows.h>
@@ -33,8 +34,5 @@ void sendAndReceiveExact(Socket, const char* src, size_t srcSize,
 extern "C"
 #endif
 void sendExact(Socket, const char* src, size_t srcSize);
-
-typedef uint16_t ushort;
-typedef uint8_t byte;
 
 Socket connectNewSocket(const char* address, ushort port) __attribute__ ((warn_unused_result));

@@ -20,7 +20,7 @@ work = ExeWork.new do
 	@SOURCE_TASKS = [o]
 	@REQUIREMENTS = [o]
 	@EXTRA_INCLUDES = ['build', 'src', 'server-code', 'server-code/Auth']
-	@LIBRARIES = ['wsock32', 'crypto', 'gdi32', 'lua']
+	@LIBRARIES = ['wsock32', 'crypto', 'gdi32', 'lua', 'z']
 	@NAME = 'wowbot'
 end
 

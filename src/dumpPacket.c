@@ -1,4 +1,5 @@
 #include <inttypes.h>
+#include <stdio.h>
 #include "log.h"
 #include "dumpPacket.h"
 
@@ -15,4 +16,11 @@ void dumpPacket(char* buf, size_t bufSize) {
 		}
 	}
 	LOG("\n");
+}
+
+void dumpBinaryFile(const char* filename, void* buf, size_t bufSize) {
+	FILE* f = fopen(filename, "wb");
+	fwrite(buf, bufSize, 1, f);
+	fclose(f);
+	LOG("dumped file %s\n", filename);
 }
