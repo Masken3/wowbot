@@ -3,6 +3,7 @@
 #include <zlib.h>
 #include <stdint.h>
 //#include <assert.h>
+#include <string.h>
 
 #include "movementFlags.h"
 #include "updateBlockFlags.h"
@@ -12,6 +13,13 @@
 #include "world.h"
 #include "log.h"
 #include "dumpPacket.h"
+
+#ifdef WIN32
+static size_t strnlen(const char* str, size_t maxlen) {
+	const char* p = (char*)memchr(str, 0, maxlen);
+	return p - str;
+}
+#endif
 
 static void crash(void) {
 	*(int*)NULL = 0;
@@ -90,6 +98,13 @@ typedef struct Vector3 {
 
 #define lua_vpush_PackedGuid { uint64 guid = readPackGUID((byte**)&ptr, PL_REMAIN);\
 	lua_pushlstring(L, (char*)&guid, 8); }
+
+typedef const char* string;
+#define lua_vpush_string {\
+	int len = strnlen(ptr, PL_REMAIN);\
+	assert(len < PL_REMAIN);\
+	lua_pushlstring(L, ptr, len);\
+	ptr += len; }
 
 static uint64 readPackGUID(byte** src, int remain) {
 	uint64 guid = 0;
@@ -314,4 +329,9 @@ void pSMSG_COMPRESSED_UPDATE_OBJECT(pLUA_ARGS) {
 
 	pSMSG_UPDATE_OBJECT(session, (char*)inflatedBuf, pSize);
 	free(zs.next_out);
+}
+
+void pSMSG_GROUP_INVITE(pLUA_ARGS) {
+	PL_START;
+	MV(string, name);	// name of the player who invited us.
 }

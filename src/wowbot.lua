@@ -12,7 +12,7 @@ function dump(o)
 end
 
 function hSMSG_MONSTER_MOVE(p)
-	print("SMSG_MONSTER_MOVE", dump(p));
+	--print("SMSG_MONSTER_MOVE", dump(p));
 end
 function hMSG_MOVE_HEARTBEAT(p)
 	print("MSG_MOVE_HEARTBEAT", dump(p));
@@ -22,4 +22,7 @@ function hSMSG_COMPRESSED_UPDATE_OBJECT(p)
 end
 function hSMSG_UPDATE_OBJECT(p)
 	--print("SMSG_UPDATE_OBJECT", dump(p));
+end
+function hSMSG_GROUP_INVITE(p)
+	print("SMSG_GROUP_INVITE", dump(p));
 end
