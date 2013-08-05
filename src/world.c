@@ -75,13 +75,8 @@ void runWorld(WorldSession* session) {
 	m(SMSG_CHAR_ENUM)\
 	m(SMSG_CHAR_CREATE)\
 
-#define LUA_HANDLERS(m)\
-	m(SMSG_MONSTER_MOVE)\
-	m(SMSG_COMPRESSED_UPDATE_OBJECT)\
-
 #define IGNORED_PACKET_TYPES(m)\
 	m(MSG_MOVE_HEARTBEAT)\
-	m(SMSG_UPDATE_OBJECT)\
 	m(SMSG_SET_PROFICIENCY)\
 
 static void checkLuaFunction(lua_State* L, const char* name) {

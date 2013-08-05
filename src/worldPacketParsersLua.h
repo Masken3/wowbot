@@ -5,10 +5,15 @@
 
 typedef struct WorldSession WorldSession;
 
-#define pLUA_ARGS WorldSession* session, char* buf, uint16 bufSize
+#define LUA_HANDLERS(m)\
+	m(SMSG_MONSTER_MOVE)\
+	m(SMSG_UPDATE_OBJECT)\
+	m(SMSG_COMPRESSED_UPDATE_OBJECT)\
 
-void pSMSG_MONSTER_MOVE(pLUA_ARGS);
-void pSMSG_UPDATE_OBJECT(pLUA_ARGS);
-void pSMSG_COMPRESSED_UPDATE_OBJECT(pLUA_ARGS);
+#define pLUA_ARGS WorldSession* session, const char* buf, uint16 bufSize
+
+#define DECLARE_LUA_HANDLER(name) void p##name(pLUA_ARGS);
+
+LUA_HANDLERS(DECLARE_LUA_HANDLER);
 
 #endif	//WORLDPACKETPARSERSLUA_H

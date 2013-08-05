@@ -18,6 +18,7 @@ static void crash(void) {
 }
 
 #define assert(a) if(!(a)) { LOG("assert(%s) failed\n", #a); crash(); }
+#define MLOG(...) //LOG
 
 // These macros parse data from a server packet into a Lua table,
 // which is on top of the Lua stack.
@@ -52,30 +53,40 @@ typedef struct Vector3 {
 	lua_push_float;\
 	lua_settable(L, -3);\
 
+#define _M_NAME(prefix, type, name, cur) lua_pushstring(L, #name);\
+	MLOG(prefix " %s %s @ %x\n", #type, #name, (cur - buf))
+
+#define _BASE_MA(type, name, count, push, doSize)\
+	MLOG("MA %s %s %i @ %x\n", #type, #name, count, PL_PARSED);\
+	{ uint32 c = (count); doSize;\
+	lua_pushstring(L, #name);\
+	lua_createtable(L, c, 0);\
+	for(uint32 _i=1; _i<=c; _i++) { push; lua_rawseti(L, -2, _i); }\
+	lua_settable(L, -3); }
+
 // member
 #define M(type, name) { PL_SIZE(sizeof(type));\
-	lua_pushstring(L, #name);\
+	_M_NAME("M", type, name, cur);\
 	lua_push_##type;\
 	lua_settable(L, -3); }
 // member, with local copy
 #define MM(type, name) type name; M(type, name); name = local_##type(ptr - sizeof(type))
 // member array
-#define MA(type, name, count) { uint32 c = (count); PL_SIZE(sizeof(type) * c);\
-	lua_pushstring(L, #name);\
-	lua_createtable(L, c, 0);\
-	for(uint32 i=1; i<=c; i++) { lua_push_##type; lua_rawseti(L, -2, i); }\
-	lua_settable(L, -3); }
+#define MA(type, name, count)\
+	_BASE_MA(type, name, count, lua_push_##type, PL_SIZE(sizeof(type) * c))
+// member array, with local copy
+#define MMA(type, name, count) type name[count];\
+	_BASE_MA(type, name, count,\
+	name[_i-1] = local_##type(cur); lua_push_##type; cur += sizeof(type),\
+	PL_SIZE(sizeof(type) * c))
 // member, variable length
 #define MV(type, name)\
-	lua_pushstring(L, #name);\
+	_M_NAME("MV", type, name, ptr);\
 	lua_vpush_##type;\
 	lua_settable(L, -3);
 // member array, variable element length
-#define MAV(type, name, count) { uint32 c = (count);\
-	lua_pushstring(L, #name);\
-	lua_createtable(L, c, 0);\
-	for(uint32 _i=1; _i<=c; _i++) { lua_vpush_##type; lua_rawseti(L, -2, _i); }\
-	lua_settable(L, -3); }
+#define MAV(type, name, count)\
+	_BASE_MA(type, name, count, lua_vpush_##type, )
 
 #define lua_vpush_PackedGuid { uint64 guid = readPackGUID((byte**)&ptr, PL_REMAIN);\
 	lua_pushlstring(L, (char*)&guid, 8); }
@@ -84,8 +95,8 @@ static uint64 readPackGUID(byte** src, int remain) {
 	uint64 guid = 0;
 	byte* ptr = *src;
 	const uint8 guidmark = *(*src)++;
-	if(remain < 10)
-		dumpPacket((char*)ptr, remain);
+	//if(remain < 10)
+		//dumpPacket((char*)ptr, remain);
 	assert(guidmark != 0);
 	for(int i = 0; i < 8; ++i) {
 		if(guidmark & (1) << i) {
@@ -101,10 +112,10 @@ static uint64 readPackGUID(byte** src, int remain) {
 }
 
 // helpers
-#define PL_START lua_State* L = session->L; char* ptr = buf; lua_newtable(L); assert(PL_REMAIN == bufSize)
+#define PL_START lua_State* L = session->L; const char* ptr = buf; lua_newtable(L); assert(PL_REMAIN == bufSize)
 #define PL_PARSED (ptr - buf)	// number of parsed bytes
 #define PL_REMAIN (bufSize - PL_PARSED)	// number of unparsed bytes
-#define PL_SIZE(size) char* cur = ptr; assert((size) <= (size_t)PL_REMAIN); ptr += (size)
+#define PL_SIZE(size) const char* cur = ptr; assert((size) <= (size_t)PL_REMAIN); ptr += (size)
 
 void pSMSG_MONSTER_MOVE(pLUA_ARGS) {
 	PL_START;
@@ -142,17 +153,102 @@ void pSMSG_MONSTER_MOVE(pLUA_ARGS) {
 	}
 }
 
+// sub-parser
+static void spMovementUpdate(lua_State* L, const char** src, const char* buf, int bufSize) {
+	const char* ptr = *src;
+	BOOL isOnTransport = FALSE;
+	BOOL isFalling = FALSE;
+	BOOL isAscending = FALSE;
+	MM(byte, updateFlags);
+	if(updateFlags & UPDATEFLAG_LIVING) {
+		MM(uint32, moveFlags);
+		isOnTransport = moveFlags & MOVEFLAG_ONTRANSPORT;
+		isFalling = moveFlags & MOVEFLAG_FALLING;
+		isAscending = moveFlags & MOVEFLAG_ASCENDING;
+		assert(!isFalling);
+		M(uint32, msTime);
+	}
+	if(updateFlags & UPDATEFLAG_HAS_POSITION) {
+		if(isOnTransport) {
+			M(Vector3, transportPos);
+			M(float, transportOrientation);
+
+			M(Guid, transportGuid);
+			M(Vector3, transportOffset);
+			M(float, transportOffsetOrientation);
+		} else {
+			M(Vector3, pos);
+			M(float, orientation);
+		}
+	}
+
+	if (updateFlags & UPDATEFLAG_LIVING)                    // 0x20
+	{
+		M(float, unk1);
+
+		// Unit speeds
+		M(float, walkSpeed);
+		M(float, runSpeed);
+		M(float, runBackSpeed);
+		M(float, swimSpeed);
+		M(float, swimBackSpeed);
+		M(float, turnRate);
+
+		if (isAscending)
+		{
+			M(uint32, unk2);
+			M(uint32, unk3);
+			M(uint32, unk4);
+			M(uint32, unk5);
+			{
+				MM(uint32, posCount);
+				MA(Vector3, positions, posCount + 1);
+			}
+		}
+	}
+
+	if (updateFlags & UPDATEFLAG_ALL) {
+		M(uint32, unk6);
+	}
+
+	if (updateFlags & UPDATEFLAG_TRANSPORT) {
+		M(uint32, transportTime);
+	}
+	*src = ptr;
+}
+
+static void spValuesUpdate(lua_State* L, const char** src, const char* buf, int bufSize) {
+	const char* ptr = *src;
+	int count = 0;
+	MM(byte, updateMaskBlockCount);
+	{
+		MMA(uint32, updateMask, updateMaskBlockCount);
+		// Count the 1-bits in updateMask. That is the count of the uint32 values that follow.
+		for(byte i=0; i<updateMaskBlockCount; i++) {
+			int pc = __builtin_popcount(updateMask[i]);
+			MLOG("0x%08x: pc %i\n", updateMask[i], pc);
+			assert(count >= 0);
+			count += pc;
+		}
+	}
+	assert(count > 0);
+	MA(uint32, values, count);
+	*src = ptr;
+}
+
 void pSMSG_UPDATE_OBJECT(pLUA_ARGS) {
 	PL_START;
-	dumpPacket(buf, bufSize);
+	//dumpBinaryFile("pSMSG_UPDATE_OBJECT.bin", buf, bufSize);
 	{
 		MM(uint32, blockCount);
 		M(byte, hasTransport);
 
 		lua_pushstring(L, "blocks");
 		lua_createtable(L, blockCount, 0);
+		MLOG("%i blocks\n", blockCount);
 		for(uint32 i=1; i<=blockCount; i++) {
 			MM(byte, type);
+			MLOG("block type %i @ %x bytes\n", type, PL_PARSED);
 			lua_createtable(L, 0, 0);
 			switch(type) {
 			case UPDATETYPE_OUT_OF_RANGE_OBJECTS:
@@ -161,11 +257,22 @@ void pSMSG_UPDATE_OBJECT(pLUA_ARGS) {
 					MAV(PackedGuid, guids, count);
 				}
 				break;
-			case UPDATETYPE_NEAR_OBJECTS:
-			case UPDATETYPE_VALUES:
-			case UPDATETYPE_MOVEMENT:
 			case UPDATETYPE_CREATE_OBJECT:
 			case UPDATETYPE_CREATE_OBJECT2:
+				MV(PackedGuid, guid);
+				M(byte, objectTypeId);
+				spMovementUpdate(L, &ptr, buf, bufSize);
+				spValuesUpdate(L, &ptr, buf, bufSize);
+				break;
+			case UPDATETYPE_VALUES:
+				MV(PackedGuid, guid);
+				spValuesUpdate(L, &ptr, buf, bufSize);
+				break;
+			case UPDATETYPE_MOVEMENT:
+				M(Guid, guid);
+				spMovementUpdate(L, &ptr, buf, bufSize);
+				break;
+			case UPDATETYPE_NEAR_OBJECTS:
 			default:
 				LOG("Unknown update block type %i\n", type);
 				exit(1);

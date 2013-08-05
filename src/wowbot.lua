@@ -18,8 +18,8 @@ function hMSG_MOVE_HEARTBEAT(p)
 	print("MSG_MOVE_HEARTBEAT", dump(p));
 end
 function hSMSG_COMPRESSED_UPDATE_OBJECT(p)
-	print("SMSG_COMPRESSED_UPDATE_OBJECT", dump(p));
+	--print("SMSG_COMPRESSED_UPDATE_OBJECT", dump(p));
 end
 function hSMSG_UPDATE_OBJECT(p)
-	print("SMSG_UPDATE_OBJECT", dump(p));
+	--print("SMSG_UPDATE_OBJECT", dump(p));
 end

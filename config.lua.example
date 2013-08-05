@@ -2,7 +2,7 @@ AUTH_ADDRESS = "auth.example.com"
 REALM_NAME = "ExampleRealm"
 TOONS = {
 	{
-		accountName = "wowbot",
+		accountName = "wowbot1",
 		password = "password",
 		toonName = "Warrior",
 		class = WARRIOR,
@@ -11,21 +11,27 @@ TOONS = {
 		professions = { MINING, ENGINEERING },
 	},
 	{
+		accountName = "wowbot2",
+		password = "password",
 		class = PRIEST,
 		race = DWARF,
 		gender = FEMALE,
 		professions = { TAILORING, ENCHANTING },
 	},
 	{
+		accountName = "wowbot3",
+		password = "password",
 		class = PALADIN,
 		race = DWARF,
 		professions = { BLACKSMITHING, HERBALISM },
 	},
 	{
+		accountName = "wowbot4",
+		password = "password",
 		class = ROGUE,
 		race = GNOME,
 		gender = FEMALE,
-		professions = { SKINNING, LEATHERWORKING, COOKING },
+		professions = { SKINNING, LEATHERWORKING, COOKING, FISHING },
 	},
 --	player
 --	leaving herbalism to a bot because I don't want or need to do gathering myself.
@@ -35,4 +41,7 @@ TOONS = {
 --		gender = FEMALE,
 --		professions = { ALCHEMY },
 --	},
+
+-- skipping first aid because we've got two healers.
+-- was gonna skip fishing, but it's needed for some alchemy recipes.
 }

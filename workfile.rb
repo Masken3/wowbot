@@ -19,6 +19,9 @@ work = ExeWork.new do
 	o = OpcodesTask.new
 	@SOURCE_TASKS = [o]
 	@REQUIREMENTS = [o]
+	@SPECIFIC_CFLAGS = {
+		'worldPacketParsersLua.c' => ' -Wno-vla',
+	}
 	@EXTRA_INCLUDES = ['build', 'src', 'server-code', 'server-code/Auth']
 	@LIBRARIES = ['wsock32', 'crypto', 'gdi32', 'lua', 'z']
 	@NAME = 'wowbot'
