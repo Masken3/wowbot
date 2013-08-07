@@ -115,15 +115,21 @@ void worldCheckLua(WorldSession* session) {
 	lua_State* L = session->L;
 #define CHECK_LUA_HANDLER(name) checkLuaFunction(L, "h" #name);
 	LUA_HANDLERS(CHECK_LUA_HANDLER);
-	MOVEMENT_OPCODES(CHECK_LUA_HANDLER);
+	CHECK_LUA_HANDLER(Movement);
 }
 
 static void handleServerPacket(WorldSession* session, ServerPktHeader sph, char* buf) {
 #define LSP LOG("serverPacket %s (%i)\n", s, sph.size)
 #define CASE_HANDLER(name) case name: LSP; h##name(session, buf, sph.size - 2); break;
 #define CASE_IGNORED_HANDLER(name) case name: break;
-#define CASE_MOVEMENT_OPCODE(name) _CASE_LUA_HANDLER(name, pMovementInfo);
 #define CASE_LUA_HANDLER(name) _CASE_LUA_HANDLER(name, p##name);
+
+#define CASE_MOVEMENT_OPCODE(name) case name:\
+	lua_getglobal(L, "hMovement");\
+	lua_pushnumber(L, sph.cmd);\
+	pMovementInfo(session, buf, sph.size - 2);\
+	lua_call(L, 2, 0);\
+	break;\
 
 #define _CASE_LUA_HANDLER(name, parser) case name:\
 	lua_getglobal(L, "h" #name);\
