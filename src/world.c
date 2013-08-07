@@ -79,6 +79,28 @@ void runWorld(WorldSession* session) {
 	m(MSG_MOVE_HEARTBEAT)\
 	m(SMSG_SET_PROFICIENCY)\
 
+#define MOVEMENT_OPCODES(m)\
+	m(MSG_MOVE_START_FORWARD)\
+	m(MSG_MOVE_START_BACKWARD)\
+	m(MSG_MOVE_STOP)\
+	m(MSG_MOVE_START_STRAFE_LEFT)\
+	m(MSG_MOVE_START_STRAFE_RIGHT)\
+	m(MSG_MOVE_STOP_STRAFE)\
+	m(MSG_MOVE_JUMP)\
+	m(MSG_MOVE_START_TURN_LEFT)\
+	m(MSG_MOVE_START_TURN_RIGHT)\
+	m(MSG_MOVE_STOP_TURN)\
+	m(MSG_MOVE_START_PITCH_UP)\
+	m(MSG_MOVE_START_PITCH_DOWN)\
+	m(MSG_MOVE_STOP_PITCH)\
+	m(MSG_MOVE_SET_RUN_MODE)\
+	m(MSG_MOVE_SET_WALK_MODE)\
+	m(MSG_MOVE_FALL_LAND)\
+	m(MSG_MOVE_START_SWIM)\
+	m(MSG_MOVE_STOP_SWIM)\
+	m(MSG_MOVE_SET_FACING)\
+	m(MSG_MOVE_SET_PITCH)\
+
 static void checkLuaFunction(lua_State* L, const char* name) {
 	LOG("checking for Lua function %s...\n", name);
 	lua_getglobal(L, name);
@@ -93,16 +115,19 @@ void worldCheckLua(WorldSession* session) {
 	lua_State* L = session->L;
 #define CHECK_LUA_HANDLER(name) checkLuaFunction(L, "h" #name);
 	LUA_HANDLERS(CHECK_LUA_HANDLER);
+	MOVEMENT_OPCODES(CHECK_LUA_HANDLER);
 }
 
 static void handleServerPacket(WorldSession* session, ServerPktHeader sph, char* buf) {
 #define LSP LOG("serverPacket %s (%i)\n", s, sph.size)
 #define CASE_HANDLER(name) case name: LSP; h##name(session, buf, sph.size - 2); break;
 #define CASE_IGNORED_HANDLER(name) case name: break;
+#define CASE_MOVEMENT_OPCODE(name) _CASE_LUA_HANDLER(name, pMovementInfo);
+#define CASE_LUA_HANDLER(name) _CASE_LUA_HANDLER(name, p##name);
 
-#define CASE_LUA_HANDLER(name) case name:\
+#define _CASE_LUA_HANDLER(name, parser) case name:\
 	lua_getglobal(L, "h" #name);\
-	p##name(session, buf, sph.size - 2);\
+	parser(session, buf, sph.size - 2);\
 	lua_call(L, 1, 0);\
 	break;\
 
@@ -110,8 +135,9 @@ static void handleServerPacket(WorldSession* session, ServerPktHeader sph, char*
 	const char* s = opcodeString(sph.cmd);
 	switch(sph.cmd) {
 		HANDLERS(CASE_HANDLER);
-		LUA_HANDLERS(CASE_LUA_HANDLER);
 		IGNORED_PACKET_TYPES(CASE_IGNORED_HANDLER);
+		MOVEMENT_OPCODES(CASE_MOVEMENT_OPCODE);
+		LUA_HANDLERS(CASE_LUA_HANDLER);
 		default:
 		{
 			if(s) {

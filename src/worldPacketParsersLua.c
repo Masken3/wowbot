@@ -232,6 +232,35 @@ static void spMovementUpdate(lua_State* L, const char** src, const char* buf, in
 	*src = ptr;
 }
 
+void pMovementInfo(pLUA_ARGS) {
+	PL_START;
+	MV(PackedGuid, guid);
+	{
+		MM(uint32, flags);
+		M(uint32, time);
+		M(Vector3, pos);
+		M(float, o);
+		if(flags & MOVEFLAG_ONTRANSPORT) {
+			M(Guid, tGuid);
+			M(Vector3, tPos);
+			M(float, tO);
+		}
+		if(flags & MOVEFLAG_SWIMMING) {
+			M(float, sPitch);
+		}
+		M(uint32, fallTime);
+		if(flags & MOVEFLAG_FALLING) {
+			M(float, jumpVelocity);
+			M(float, jumpSin);
+			M(float, jumpCos);
+			M(float, jumpXYSpeed);
+		}
+		if(flags & MOVEFLAG_SPLINE_ELEVATION) {
+			M(uint32, unk1);
+		}
+	}
+}
+
 static void spValuesUpdate(lua_State* L, const char** src, const char* buf, int bufSize) {
 	const char* ptr = *src;
 	int count = 0;
@@ -334,4 +363,35 @@ void pSMSG_COMPRESSED_UPDATE_OBJECT(pLUA_ARGS) {
 void pSMSG_GROUP_INVITE(pLUA_ARGS) {
 	PL_START;
 	MV(string, name);	// name of the player who invited us.
+}
+
+void pSMSG_GROUP_UNINVITE(pLUA_ARGS) {
+}
+void pSMSG_GROUP_DESTROYED(pLUA_ARGS) {
+}
+
+void pSMSG_GROUP_LIST(pLUA_ARGS) {
+	PL_START;
+	M(byte, groupType);
+	M(byte, flags);
+	{
+		MM(uint32, memberCount);	// excluding yourself.
+		lua_pushstring(L, "members");
+		lua_createtable(L, memberCount, 0);
+		for(uint32 _i=1; _i<=memberCount; _i++) {
+			lua_createtable(L, 0, 4);
+			MV(string, name);
+			M(Guid, guid);
+			M(byte, online);
+			M(byte, flags);
+			lua_rawseti(L, -2, _i);
+		}
+		lua_settable(L, -3);
+		M(Guid, leaderGuid);
+		if(memberCount > 0) {
+			M(byte, lootMethod);
+			M(Guid, looterGuid);
+			M(byte, lootThreshold);
+		}
+	}
 }
