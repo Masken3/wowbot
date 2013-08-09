@@ -13,13 +13,16 @@ struct Crypto {
 void sendWorld(WorldSession* session, uint32 opcode, const void* src, uint16 size) {
 	LOG("send %s (%i)\n", opcodeString(opcode), size);
 	ClientPktHeader c = { htons(size + 4), opcode };
-	session->crypto->ac.EncryptSend((uint8*)&c, sizeof(c));
+	if(session->crypto)
+		session->crypto->ac.EncryptSend((uint8*)&c, sizeof(c));
 	sendExact(session->sock, (char*)&c, sizeof(c));
 	if(size > 0)
 		sendExact(session->sock, (char*)src, size);
 }
 
 void decryptHeader(WorldSession* session, ServerPktHeader* sph) {
+	if(!session->crypto)
+		return;
 	session->crypto->ac.DecryptRecv((uint8*)sph, sizeof(*sph));
 }
 

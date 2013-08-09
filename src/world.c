@@ -8,9 +8,12 @@
 #include "dumpPacket.h"
 #include "auth.h"
 #include "worldPacketParsersLua.h"
+#include "worldHandlers.h"
 
 #include <lua.h>
+#include <lauxlib.h>
 #include <assert.h>
+#include <sys/stat.h>
 
 #define DEFAULT_WORLDSERVER_PORT 8085
 
@@ -101,21 +104,120 @@ void runWorld(WorldSession* session) {
 	m(MSG_MOVE_SET_FACING)\
 	m(MSG_MOVE_SET_PITCH)\
 
-static void checkLuaFunction(lua_State* L, const char* name) {
-	LOG("checking for Lua function %s...\n", name);
+static BOOL checkLuaFunction(lua_State* L, const char* name) {
+	//LOG("checking for Lua function %s...\n", name);
 	lua_getglobal(L, name);
 	if(!lua_isfunction(L, -1)) {
 		LOG("LUA function %s is missing!\n", name);
-		exit(1);
+		return FALSE;
 	}
 	lua_pop(L, 1);
+	return TRUE;
 }
 
-void worldCheckLua(WorldSession* session) {
+BOOL readLua(WorldSession* session) {
 	lua_State* L = session->L;
-#define CHECK_LUA_HANDLER(name) checkLuaFunction(L, "h" #name);
+	int res;
+
+	// Read file's date.
+	{
+		struct stat s;
+		res = stat("src/wowbot.lua", &s);
+		if(res != 0) {
+			LOG("stat(src/wowbot.lua) failed: %s\n", strerror(errno));
+			return FALSE;
+		}
+		if(s.st_mtime == session->luaTime)
+			return FALSE;
+		session->luaTime = s.st_mtime;
+	}
+
+	// Load file.
+	res = luaL_loadfile(L, "src/wowbot.lua");
+	if(res != LUA_OK) {
+		LOG("LUA load error!\n");
+		LOG("%s\n", lua_tostring(L, -1));
+		return FALSE;
+	}
+	// Run file (parses functions, sets up global variables).
+	res = lua_pcall(L, 0, 0, 0);
+	if(res != LUA_OK) {
+		LOG("LUA run error!\n");
+		LOG("%s\n", lua_tostring(L, -1));
+		return FALSE;
+	}
+
+	// Make sure all required functions are present.
+#define CHECK_LUA_HANDLER(name) if(!checkLuaFunction(L, "h" #name)) return FALSE;
 	LUA_HANDLERS(CHECK_LUA_HANDLER);
 	CHECK_LUA_HANDLER(Movement);
+
+	return TRUE;
+}
+
+static int l_send(lua_State *L) {
+	WorldSession* session;
+	uint32 opcode;
+	const char* s;
+	const void* data = NULL;
+	uint32 size = 0;
+	int narg = lua_gettop(L);
+
+	if(!lua_isnumber(L, 1)) {
+		lua_pushstring(L, "send error: arg 1 is not a number!");
+		lua_error(L);
+	}
+	opcode = lua_tounsigned(L, 1);
+	s = opcodeString(opcode);
+	if(!s) {
+		lua_pushfstring(L, "send error: unknown opcode %i!", opcode);
+		lua_error(L);
+	}
+	LOG("l_send(%s)\n", s);
+
+	{
+		lua_getglobal(L, "SESSION");
+		if(!lua_isuserdata(L, narg+1)) {
+			LOG("SESSION corrupted! Emergency exit!\n");
+			exit(1);
+		}
+		session = (WorldSession*)lua_topointer(L, narg+1);
+	}
+	if(narg > 2) {
+		lua_pushstring(L, "send error: too many args!");
+		lua_error(L);
+	}
+	if(narg == 2) {
+		if(!lua_istable(L, 2)) {
+			lua_pushstring(L, "send error: arg 2 is not a table!");
+			lua_error(L);
+		}
+		// todo: parse table.
+		lua_pushstring(L, "send error: 2 args not yet supported!");
+		lua_error(L);
+	}
+	sendWorld(session, opcode, data, size);
+	return 0;
+}
+
+void initLua(WorldSession* session) {
+	lua_State* L = session->L;
+
+	lua_pushlightuserdata(L, session);
+	lua_setglobal(L, "SESSION");
+
+	lua_register(L, "send", l_send);
+}
+
+static void luaPcall(lua_State *L, int nargs) {
+	int res = lua_pcall(L, nargs, 0, 0);
+	if(res == LUA_OK)
+		return;
+	// if not OK, an error has occurred.
+	// print it.
+	LOG("Lua error: %s\n", lua_tostring(L, -1));
+	lua_pop(L, 1);
+	// at some point, we'll want to reload the Lua code, if you've fixed the error.
 }
 
 static void handleServerPacket(WorldSession* session, ServerPktHeader sph, char* buf) {
@@ -128,17 +230,20 @@ static void handleServerPacket(WorldSession* session, ServerPktHeader sph, char*
 	lua_getglobal(L, "hMovement");\
 	lua_pushnumber(L, sph.cmd);\
 	pMovementInfo(session, buf, sph.size - 2);\
-	lua_call(L, 2, 0);\
+	luaPcall(L, 2);\
 	break;\
 
 #define _CASE_LUA_HANDLER(name, parser) case name:\
 	lua_getglobal(L, "h" #name);\
 	parser(session, buf, sph.size - 2);\
-	lua_call(L, 1, 0);\
+	luaPcall(L, 1);\
 	break;\
 
 	lua_State* L = session->L;
 	const char* s = opcodeString(sph.cmd);
+
+	readLua(session);
+
 	switch(sph.cmd) {
 		HANDLERS(CASE_HANDLER);
 		IGNORED_PACKET_TYPES(CASE_IGNORED_HANDLER);

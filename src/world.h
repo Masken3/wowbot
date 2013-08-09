@@ -3,6 +3,7 @@
 
 #include "socket.h"
 #include "Common.h"
+#include <time.h>
 
 // Session crypty state.
 struct Crypto;
@@ -14,10 +15,12 @@ typedef struct WorldSession {
 	uint8 key[40];	// session crypto key
 	struct Crypto* crypto;
 	struct lua_State* L;
+	time_t luaTime;
 } WorldSession;
 
 void runWorld(WorldSession*);
 
-void worldCheckLua(WorldSession*);
+void initLua(WorldSession*);
+BOOL readLua(WorldSession*);
 
 #endif	//WORLD_H
