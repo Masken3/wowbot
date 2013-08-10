@@ -912,19 +912,26 @@ open('build/Opcodes.h', 'w') do |file|
 	file.puts '#ifndef OPCODE_H'
 	file.puts '#define OPCODE_H'
 	file.puts
+	file.puts 'typedef struct lua_State lua_State;'
+	file.puts
 	file.puts 'enum Opcode {'
 	Opcodes.each do |k, v|
 		file.puts "\t#{k} = #{v},"
 	end
 	file.puts '};'
 	file.puts
+	file.puts '#ifdef __cplusplus'
+	file.puts 'extern "C"'
+	file.puts '#endif'
 	file.puts 'const char* opcodeString(int opcode);'
+	file.puts 'void opcodeLua(lua_State*);'
 	file.puts
 	file.puts '#endif	//OPCODE_H'
 end
 
 open('build/Opcodes.c', 'w') do |file|
 	file.puts '#include "Opcodes.h"'
+	file.puts '#include <lua.h>'
 	file.puts
 	file.puts 'const char* opcodeString(int opcode) {'
 	file.puts "\tswitch(opcode) {"
@@ -933,5 +940,12 @@ open('build/Opcodes.c', 'w') do |file|
 	end
 	file.puts "\tdefault: return 0;"
 	file.puts "\t}"
+	file.puts '}'
+	file.puts
+	file.puts 'void opcodeLua(lua_State* L) {'
+	Opcodes.each do |k, v|
+		file.puts "\tlua_pushnumber(L, #{k});"
+		file.puts "\tlua_setglobal(L, \"#{k}\");"
+	end
 	file.puts '}'
 end

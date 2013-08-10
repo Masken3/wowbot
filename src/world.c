@@ -9,6 +9,8 @@
 #include "auth.h"
 #include "worldPacketParsersLua.h"
 #include "worldHandlers.h"
+#include "worldPacketGeneratorsLua.h"
+#include "movement.h"
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -72,6 +74,18 @@ void runWorld(WorldSession* session) {
 	} while(1);
 }
 
+void enterWorld(WorldSession* session, uint64 guid) {
+	// set Lua STATE.myGuid.
+	lua_State* L = session->L;
+	lua_getglobal(L, "STATE");
+	lua_pushstring(L, "myGuid");
+	lua_pushlstring(L, (char*)&guid, 8);
+	lua_settable(L, -3);
+	lua_pop(L, 1);
+
+	sendWorld(session, CMSG_PLAYER_LOGIN, &guid, sizeof(guid));
+}
+
 #define HANDLERS(m)\
 	m(SMSG_AUTH_CHALLENGE)\
 	m(SMSG_AUTH_RESPONSE)\
@@ -81,28 +95,6 @@ void runWorld(WorldSession* session) {
 #define IGNORED_PACKET_TYPES(m)\
 	m(MSG_MOVE_HEARTBEAT)\
 	m(SMSG_SET_PROFICIENCY)\
-
-#define MOVEMENT_OPCODES(m)\
-	m(MSG_MOVE_START_FORWARD)\
-	m(MSG_MOVE_START_BACKWARD)\
-	m(MSG_MOVE_STOP)\
-	m(MSG_MOVE_START_STRAFE_LEFT)\
-	m(MSG_MOVE_START_STRAFE_RIGHT)\
-	m(MSG_MOVE_STOP_STRAFE)\
-	m(MSG_MOVE_JUMP)\
-	m(MSG_MOVE_START_TURN_LEFT)\
-	m(MSG_MOVE_START_TURN_RIGHT)\
-	m(MSG_MOVE_STOP_TURN)\
-	m(MSG_MOVE_START_PITCH_UP)\
-	m(MSG_MOVE_START_PITCH_DOWN)\
-	m(MSG_MOVE_STOP_PITCH)\
-	m(MSG_MOVE_SET_RUN_MODE)\
-	m(MSG_MOVE_SET_WALK_MODE)\
-	m(MSG_MOVE_FALL_LAND)\
-	m(MSG_MOVE_START_SWIM)\
-	m(MSG_MOVE_STOP_SWIM)\
-	m(MSG_MOVE_SET_FACING)\
-	m(MSG_MOVE_SET_PITCH)\
 
 static BOOL checkLuaFunction(lua_State* L, const char* name) {
 	//LOG("checking for Lua function %s...\n", name);
@@ -155,11 +147,12 @@ BOOL readLua(WorldSession* session) {
 	return TRUE;
 }
 
-static int l_send(lua_State *L) {
+static int l_send(lua_State* L) {
 	WorldSession* session;
 	uint32 opcode;
 	const char* s;
 	const void* data = NULL;
+	byte buf[64*1024];
 	uint32 size = 0;
 	int narg = lua_gettop(L);
 
@@ -177,24 +170,29 @@ static int l_send(lua_State *L) {
 
 	{
 		lua_getglobal(L, "SESSION");
-		if(!lua_isuserdata(L, narg+1)) {
+		if(!lua_isuserdata(L, -1)) {
 			LOG("SESSION corrupted! Emergency exit!\n");
 			exit(1);
 		}
-		session = (WorldSession*)lua_topointer(L, narg+1);
+		session = (WorldSession*)lua_topointer(L, -1);
+		lua_pop(L, 1);	// required for proper PacketGenerator operation.
 	}
 	if(narg > 2) {
 		lua_pushstring(L, "send error: too many args!");
 		lua_error(L);
 	}
 	if(narg == 2) {
+		PacketGenerator pg = getPacketGenerator(opcode);
 		if(!lua_istable(L, 2)) {
 			lua_pushstring(L, "send error: arg 2 is not a table!");
 			lua_error(L);
 		}
-		// todo: parse table.
-		lua_pushstring(L, "send error: 2 args not yet supported!");
-		lua_error(L);
+		if(!pg) {
+			lua_pushstring(L, "send error: no PacketGenerator for opcode!");
+			lua_error(L);
+		}
+		size = pg(L, buf);
+		data = buf;
 	}
 	sendWorld(session, opcode, data, size);
 	return 0;
@@ -207,9 +205,11 @@ void initLua(WorldSession* session) {
 	lua_setglobal(L, "SESSION");
 
 	lua_register(L, "send", l_send);
+
+	opcodeLua(L);
 }
 
-static void luaPcall(lua_State *L, int nargs) {
+static void luaPcall(lua_State* L, int nargs) {
 	int res = lua_pcall(L, nargs, 0, 0);
 	if(res == LUA_OK)
 		return;

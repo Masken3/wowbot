@@ -5,7 +5,7 @@
 //#include <assert.h>
 #include <string.h>
 
-#include "movementFlags.h"
+#include "movement.h"
 #include "updateBlockFlags.h"
 #include "Common.h"
 #include "types.h"
@@ -104,7 +104,7 @@ typedef const char* string;
 	int len = strnlen(ptr, PL_REMAIN);\
 	assert(len < PL_REMAIN);\
 	lua_pushlstring(L, ptr, len);\
-	ptr += len; }
+	ptr += len +1; } // +1 for the terminating zero.
 
 static uint64 readPackGUID(byte** src, int remain) {
 	uint64 guid = 0;
@@ -357,7 +357,7 @@ void pSMSG_COMPRESSED_UPDATE_OBJECT(pLUA_ARGS) {
 	assert(res == Z_OK);
 
 	pSMSG_UPDATE_OBJECT(session, (char*)inflatedBuf, pSize);
-	free(zs.next_out);
+	free(inflatedBuf);
 }
 
 void pSMSG_GROUP_INVITE(pLUA_ARGS) {
@@ -394,4 +394,11 @@ void pSMSG_GROUP_LIST(pLUA_ARGS) {
 			M(byte, lootThreshold);
 		}
 	}
+}
+
+void pSMSG_LOGIN_VERIFY_WORLD(pLUA_ARGS) {
+	PL_START;
+	M(uint32, mapId);
+	M(Vector3, position);
+	M(float, orientation);
 }

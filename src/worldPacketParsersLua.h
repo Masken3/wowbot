@@ -13,6 +13,12 @@ typedef struct WorldSession WorldSession;
 	m(SMSG_GROUP_UNINVITE)\
 	m(SMSG_GROUP_DESTROYED)\
 	m(SMSG_GROUP_LIST)\
+	m(SMSG_LOGIN_VERIFY_WORLD)\
+
+#if 0
+	m(SMSG_ACCOUNT_DATA_TIMES)
+	m(SMSG_INIT_WORLD_STATES)
+#endif
 
 #define pLUA_ARGS WorldSession* session, const char* buf, uint16 bufSize
 
