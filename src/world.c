@@ -11,6 +11,7 @@
 #include "worldHandlers.h"
 #include "worldPacketGeneratorsLua.h"
 #include "movement.h"
+#include "getRealTime.h"
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -20,6 +21,7 @@
 #define DEFAULT_WORLDSERVER_PORT 8085
 
 static void handleServerPacket(WorldSession*, ServerPktHeader, char* buf);
+static void luaTimerCallback(double t, void* user);
 
 static int runWorld2(WorldSession* session) {
 	Socket sock = session->sock;
@@ -156,11 +158,7 @@ static int l_send(lua_State* L) {
 	uint32 size = 0;
 	int narg = lua_gettop(L);
 
-	if(!lua_isnumber(L, 1)) {
-		lua_pushstring(L, "send error: arg 1 is not a number!");
-		lua_error(L);
-	}
-	opcode = lua_tounsigned(L, 1);
+	opcode = luaL_checkunsigned(L, 1);
 	s = opcodeString(opcode);
 	if(!s) {
 		lua_pushfstring(L, "send error: unknown opcode %i!", opcode);
@@ -169,7 +167,7 @@ static int l_send(lua_State* L) {
 	LOG("l_send(%s)\n", s);
 
 	{
-		lua_getglobal(L, "SESSION");
+		lua_getfield(L, LUA_REGISTRYINDEX, "SESSION");
 		if(!lua_isuserdata(L, -1)) {
 			LOG("SESSION corrupted! Emergency exit!\n");
 			exit(1);
@@ -183,10 +181,7 @@ static int l_send(lua_State* L) {
 	}
 	if(narg == 2) {
 		PacketGenerator pg = getPacketGenerator(opcode);
-		if(!lua_istable(L, 2)) {
-			lua_pushstring(L, "send error: arg 2 is not a table!");
-			lua_error(L);
-		}
+		luaL_checktype(L, 2, LUA_TTABLE);
 		if(!pg) {
 			lua_pushstring(L, "send error: no PacketGenerator for opcode!");
 			lua_error(L);
@@ -198,13 +193,78 @@ static int l_send(lua_State* L) {
 	return 0;
 }
 
+// Returns a float that measures times in seconds since some undefined starting point.
+// The starting point is guaranteed to remain static during an OS process, but not beyond that.
+static int l_getRealTime(lua_State* L) {
+	int narg = lua_gettop(L);
+	if(narg != 0) {
+		lua_pushstring(L, "getRealTime error: too many args!");
+		lua_error(L);
+	}
+	lua_pushnumber(L, getRealTime());
+	return 1;
+}
+
+// args: func(), t.
+// Causes func to be called as soon as possible after getRealTime() would return >= t.
+// func has no args.
+static int l_setTimer(lua_State* L) {
+	int narg = lua_gettop(L);
+	int index;
+	double t;
+	if(narg != 2) {
+		lua_pushstring(L, "setTimer error: not two args!");
+		lua_error(L);
+	}
+	luaL_checktype(L, 1, LUA_TFUNCTION);
+	t = luaL_checknumber(L, 2);
+
+	// LUA_REGISTRYINDEX.timers[function] = t
+	lua_getfield(L, LUA_REGISTRYINDEX, "timers");
+	if(lua_isnil(L, -1)) {
+		lua_newtable(L);
+		lua_copy(L, -1, -2);	// assuming this copies only the reference to the table.
+		lua_setfield(L, LUA_REGISTRYINDEX, "timers");
+	}
+	lua_pushvalue(L, 2);
+	lua_pushvalue(L, 1);
+	lua_setfield(L, -3);
+
+	socketSetTimer(t, luaTimerCallback, NULL);
+	return 0;
+}
+
+static void luaTimerCallback(double t, void* user) {
+	lua_getfield(L, LUA_REGISTRYINDEX, "timers");
+	// check all timers.
+	lua_pushnil(L);	// causes lua_next to fetch the first key.
+	while (lua_next(L, 1) != 0) {
+		double tt;
+		// key is now at index -2 and value at index -1.
+		luaL_checktype(L, -2, LUA_TFUNCTION);
+		tt = luaL_checknumber(L, -1);
+		if(tt <= t) {
+			// remove this timer
+			lua_pushvalue(L, -2);
+			lua_pushnil(L);
+			lua_settable(L, 1);
+			// call the function
+		}
+		// removes 'value'; keeps 'key' for next iteration.
+		lua_pop(L, 1);
+	}
+}
+
 void initLua(WorldSession* session) {
 	lua_State* L = session->L;
 
 	lua_pushlightuserdata(L, session);
-	lua_setglobal(L, "SESSION");
+	lua_setfield(L, LUA_REGISTRYINDEX, "SESSION");
 
 	lua_register(L, "send", l_send);
+	lua_register(L, "getRealTime", l_getRealTime);
+	lua_register(L, "setTimer", l_setTimer);
+	lua_register(L, "removeTimer", l_removeTimer);
 
 	opcodeLua(L);
 }

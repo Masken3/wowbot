@@ -1,0 +1,6 @@
+17:03 2013-08-11
+Here's a fun programming philosophy problem: should "lua_isnumber()" return "true" for NaN?
+
+17:16 2013-08-11
+Design note: I could, at some points, pass the realTime value to Lua.
+I've chosen not to do so to minimize the complexity of the Lua-C interface.

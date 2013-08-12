@@ -11,13 +11,18 @@ function dump(o)
 	end
 end
 
+-- Location: {mapId, position{x,y,z}, orientation}.
+
 if(STATE == nil) then
 	STATE = {
 		inGroup = false,
 		leaderGuid = nil,	-- set by hSMSG_GROUP_LIST.
+		leaderLocation = {},
 		reloadCount = 0,
 		myGuid = nil,	-- set by C function enterWorld.
-		myPosition = nil,	-- set by hSMSG_LOGIN_VERIFY_WORLD.
+		myLocation = nil,	-- set by hSMSG_LOGIN_VERIFY_WORLD.
+		moving = false,
+		moveStartTime = nil,	-- floating point, in seconds. valid if moving == true.
 	}
 else
 	STATE.reloadCount = STATE.reloadCount + 1;
@@ -73,10 +78,10 @@ end
 
 -- returns the distance between xyz points a and b.
 function distance3(a, b)
-	dx = a.x - b.x
-	dy = a.y - b.y
-	dz = a.z - b.z
-	square = dx^2 + dy^2 + dz^2
+	local dx = a.x - b.x
+	local dy = a.y - b.y
+	local dz = a.z - b.z
+	local square = dx^2 + dy^2 + dz^2
 	return square^0.5
 end
 
@@ -85,7 +90,7 @@ end
 -- conclusion: d = b - a
 -- conclusion: diff3(a, b) != diff3(b, a)
 function diff3(a, b)
-	d = {}
+	local d = {}
 	d.x = b.x - a.x
 	d.y = b.y - a.y
 	d.z = b.z - a.z
@@ -94,7 +99,7 @@ end
 
 -- returns the length of xyz vector v.
 function length3(v)
-	square = v.x^2 + v.y^2 + v.z^2
+	local square = v.x^2 + v.y^2 + v.z^2
 	return square^0.5
 end
 
@@ -129,7 +134,7 @@ MOVEFLAG_FORWARD = 0x00000001
 
 -- format guid
 function fg(guid)
-	res = "";
+	local res = "";
 	--print(#guid)
 	for i=1, #guid do
 		res = res .. string.format("%02x", string.byte(guid, i));
@@ -137,41 +142,80 @@ function fg(guid)
 	return res
 end
 
+function sendStop()
+	STATE.moving = false;
+	local data = {
+		flags = 0,
+		pos = STATE,
+		o = STATE.myLocation.orientation,
+		"time" = 0,
+		fallTime = 0,
+	}
+	send(MSG_MOVE_STOP, data);
+end
+
 function hMovement(opcode, p)
 	print("hMovement", fg(p.guid), opcode, p.flags)
 
 	--print("p,l:", fg(p.guid), fg(STATE.leaderGuid));
 	if(p.guid == STATE.leaderGuid) then
+		local realTime = getRealTime();
+		updatePosition(realTime);
+		STATE.leaderLocation.position = p.pos;
+		STATE.leaderLocation.orientation = p.o;
 		-- todo: handle the case of being on different maps.
-		myPos = STATE.myLocation.position;
-		diff = diff3(myPos, p.pos);
-		dist = length3(diff);
+		local myPos = STATE.myLocation.position;
+		local diff = diff3(myPos, p.pos);
+		local dist = length3(diff);
 		print("dist:", dist);
 		if(dist > (FOLLOW_DIST + FOLLOW_TOLERANCE) or dist < (FOLLOW_DIST - FOLLOW_TOLERANCE)) then
-			data = {
-				guid = STATE.myGuid,
+			local data = {
 				flags = MOVEFLAG_FORWARD,
 				pos = myPos,
 				o = orient2(diff),
+				"time" = 0,
 				fallTime = 0,
 			}
-			data["time"] = 0;
-			STATE.myOrientation = data.o;
+			STATE.myLocation.orientation = data.o;
 			STATE.moving = true;
-			print(dump(data));
+			--print(dump(data));
 			send(MSG_MOVE_START_FORWARD, data);
+			-- set timer to when we'll arrive, or at most one second.
+			STATE.moveStartTime = getRealTime();
+			local moveEndTime = STATE.moveStartTime + (dist - FOLLOW_DIST) / RUN_SPEED;
+			local timerTime = math.min(moveEndTime, STATE.moveStartTime + 1);
+			setTimer(movementTimerCallback, timerTime);
 		elseif(STATE.moving) then
-			STATE.moving = false;
-			data = {
-				guid = STATE.myGuid,
-				flags = 0,
-				pos = myPos,
-				o = STATE.myOrientation,
-				fallTime = 0,
-			}
-			data["time"] = 0;
-			print(dump(data));
-			send(MSG_MOVE_STOP, data);
+			sendStop();
+			removeTimer(movementTimerCallback);
 		end
 	end
+end
+
+function updatePosition(realTime)
+	if(!STATE.moving) then
+		return;
+	end
+	local diffTime = realTime - STATE.moveStartTime;
+	STATE.myLocation.position.x += math.cos(STATE.myLocation.orientation) * diffTime * RUN_SPEED;
+	STATE.myLocation.position.y += math.sin(STATE.myLocation.orientation) * diffTime * RUN_SPEED;
+	STATE.moveStartTime = realTime;
+end
+
+function updateLeaderPosition(realTime)
+	-- todo: implement
+end
+
+function movementTimerCallback()
+	local realTime = getRealTime();
+	updatePosition(realTime);
+	updateLeaderPosition(realTime);
+	-- hack
+	sendStop();
+end
+
+function setTimer(callback, targetTime)
+end
+
+function removeTimer(callback)
 end

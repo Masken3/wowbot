@@ -36,3 +36,12 @@ extern "C"
 void sendExact(Socket, const char* src, size_t srcSize);
 
 Socket connectNewSocket(const char* address, ushort port) __attribute__ ((warn_unused_result));
+
+typedef void (*SocketTimerCallback)(double t, void* user);
+
+// Causes callback to be called asap after min(t, oldT).
+void socketSetTimer(double t, SocketTimerCallback callback, void* user);
+
+// Cancels the timer with the specified callback and user data.
+// If no such timer exists, it's a fatal error.
+void socketRemoveTimer(SocketTimerCallback callback, void* user);
