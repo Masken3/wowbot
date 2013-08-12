@@ -22,6 +22,7 @@
 
 static void handleServerPacket(WorldSession*, ServerPktHeader, char* buf);
 static void luaTimerCallback(double t, void* user);
+static void luaPcall(lua_State* L, int nargs);
 
 static int runWorld2(WorldSession* session) {
 	Socket sock = session->sock;
@@ -205,54 +206,36 @@ static int l_getRealTime(lua_State* L) {
 	return 1;
 }
 
-// args: func(), t.
-// Causes func to be called as soon as possible after getRealTime() would return >= t.
-// func has no args.
+// args: t.
+// Causes "luaTimerCallback" to be called as soon as possible after getRealTime() would return >= t.
 static int l_setTimer(lua_State* L) {
 	int narg = lua_gettop(L);
-	int index;
 	double t;
-	if(narg != 2) {
-		lua_pushstring(L, "setTimer error: not two args!");
+	if(narg != 1) {
+		lua_pushstring(L, "setTimer error: not one arg!");
 		lua_error(L);
 	}
-	luaL_checktype(L, 1, LUA_TFUNCTION);
-	t = luaL_checknumber(L, 2);
+	t = luaL_checknumber(L, 1);
 
-	// LUA_REGISTRYINDEX.timers[function] = t
-	lua_getfield(L, LUA_REGISTRYINDEX, "timers");
-	if(lua_isnil(L, -1)) {
-		lua_newtable(L);
-		lua_copy(L, -1, -2);	// assuming this copies only the reference to the table.
-		lua_setfield(L, LUA_REGISTRYINDEX, "timers");
+	socketSetTimer(t, luaTimerCallback, L);
+	return 0;
+}
+
+static int l_removeTimer(lua_State* L) {
+	int narg = lua_gettop(L);
+	if(narg != 0) {
+		lua_pushstring(L, "removeTimer error: args!");
+		lua_error(L);
 	}
-	lua_pushvalue(L, 2);
-	lua_pushvalue(L, 1);
-	lua_setfield(L, -3);
-
-	socketSetTimer(t, luaTimerCallback, NULL);
+	socketRemoveTimer(luaTimerCallback, L);
 	return 0;
 }
 
 static void luaTimerCallback(double t, void* user) {
-	lua_getfield(L, LUA_REGISTRYINDEX, "timers");
-	// check all timers.
-	lua_pushnil(L);	// causes lua_next to fetch the first key.
-	while (lua_next(L, 1) != 0) {
-		double tt;
-		// key is now at index -2 and value at index -1.
-		luaL_checktype(L, -2, LUA_TFUNCTION);
-		tt = luaL_checknumber(L, -1);
-		if(tt <= t) {
-			// remove this timer
-			lua_pushvalue(L, -2);
-			lua_pushnil(L);
-			lua_settable(L, 1);
-			// call the function
-		}
-		// removes 'value'; keeps 'key' for next iteration.
-		lua_pop(L, 1);
-	}
+	lua_State* L = (lua_State*)user;
+	lua_getglobal(L, "luaTimerCallback");
+	lua_pushnumber(L, t);
+	luaPcall(L, 1);
 }
 
 void initLua(WorldSession* session) {
@@ -263,8 +246,8 @@ void initLua(WorldSession* session) {
 
 	lua_register(L, "send", l_send);
 	lua_register(L, "getRealTime", l_getRealTime);
-	lua_register(L, "setTimer", l_setTimer);
-	lua_register(L, "removeTimer", l_removeTimer);
+	lua_register(L, "cSetTimer", l_setTimer);
+	lua_register(L, "cRemoveTimer", l_removeTimer);
 
 	opcodeLua(L);
 }

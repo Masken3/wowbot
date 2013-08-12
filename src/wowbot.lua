@@ -1,3 +1,5 @@
+dofile("src/lua/timers.lua")
+
 function dump(o)
 	if type(o) == 'table' then
 		local s = '{ '
@@ -23,6 +25,12 @@ if(STATE == nil) then
 		myLocation = nil,	-- set by hSMSG_LOGIN_VERIFY_WORLD.
 		moving = false,
 		moveStartTime = nil,	-- floating point, in seconds. valid if moving == true.
+
+		-- timer-related stuff
+		timers = {},
+		inTimerCallback = false,
+		newTimers = {},
+		removedTimers = {},
 	}
 else
 	STATE.reloadCount = STATE.reloadCount + 1;
@@ -146,9 +154,9 @@ function sendStop()
 	STATE.moving = false;
 	local data = {
 		flags = 0,
-		pos = STATE,
+		pos = STATE.myLocation.position,
 		o = STATE.myLocation.orientation,
-		"time" = 0,
+		time = 0,
 		fallTime = 0,
 	}
 	send(MSG_MOVE_STOP, data);
@@ -168,12 +176,13 @@ function hMovement(opcode, p)
 		local diff = diff3(myPos, p.pos);
 		local dist = length3(diff);
 		print("dist:", dist);
-		if(dist > (FOLLOW_DIST + FOLLOW_TOLERANCE) or dist < (FOLLOW_DIST - FOLLOW_TOLERANCE)) then
+		--  or dist < (FOLLOW_DIST - FOLLOW_TOLERANCE)
+		if(dist > FOLLOW_DIST) then
 			local data = {
 				flags = MOVEFLAG_FORWARD,
 				pos = myPos,
 				o = orient2(diff),
-				"time" = 0,
+				time = 0,
 				fallTime = 0,
 			}
 			STATE.myLocation.orientation = data.o;
@@ -182,6 +191,8 @@ function hMovement(opcode, p)
 			send(MSG_MOVE_START_FORWARD, data);
 			-- set timer to when we'll arrive, or at most one second.
 			STATE.moveStartTime = getRealTime();
+			-- todo: take into account movement speed modifiers,
+			-- like ghost form, mount effects and other auras.
 			local moveEndTime = STATE.moveStartTime + (dist - FOLLOW_DIST) / RUN_SPEED;
 			local timerTime = math.min(moveEndTime, STATE.moveStartTime + 1);
 			setTimer(movementTimerCallback, timerTime);
@@ -193,12 +204,14 @@ function hMovement(opcode, p)
 end
 
 function updatePosition(realTime)
-	if(!STATE.moving) then
+	if(not STATE.moving) then
 		return;
 	end
 	local diffTime = realTime - STATE.moveStartTime;
-	STATE.myLocation.position.x += math.cos(STATE.myLocation.orientation) * diffTime * RUN_SPEED;
-	STATE.myLocation.position.y += math.sin(STATE.myLocation.orientation) * diffTime * RUN_SPEED;
+	local p = STATE.myLocation.position;
+	local o = STATE.myLocation.orientation;
+	p.x = p.x + math.cos(o) * diffTime * RUN_SPEED;
+	p.y = p.y + math.sin(o) * diffTime * RUN_SPEED;
 	STATE.moveStartTime = realTime;
 end
 
@@ -206,16 +219,9 @@ function updateLeaderPosition(realTime)
 	-- todo: implement
 end
 
-function movementTimerCallback()
-	local realTime = getRealTime();
-	updatePosition(realTime);
-	updateLeaderPosition(realTime);
+function movementTimerCallback(t)
+	updatePosition(t);
+	updateLeaderPosition(t);
 	-- hack
 	sendStop();
-end
-
-function setTimer(callback, targetTime)
-end
-
-function removeTimer(callback)
 end

@@ -1,5 +1,36 @@
 #include "socket.h"
 #include "log.h"
+#include "getRealTime.h"
+#include <assert.h>
+#include <errno.h>
+
+typedef struct Timer {
+	double t;
+	SocketTimerCallback callback;
+	void* user;
+} Timer;
+
+static Timer sTimer;
+
+void socketSetTimer(double t, SocketTimerCallback callback, void* user) {
+	sTimer.t = t;
+	sTimer.callback = callback;
+	sTimer.user = user;
+}
+
+void socketRemoveTimer(SocketTimerCallback callback, void* user) {
+	sTimer.callback = NULL;
+}
+
+#ifndef TEMP_FAILURE_RETRY
+#define TEMP_FAILURE_RETRY(expression) \
+	({ \
+	long int _result; \
+	do _result = (long int) (expression); \
+	while (_result == -1L && errno == EINTR); \
+	_result; \
+	})
+#endif
 
 int receiveExact(Socket sock, void* dst, size_t dstSize) {
 	int remain = dstSize;
@@ -7,6 +38,40 @@ int receiveExact(Socket sock, void* dst, size_t dstSize) {
 	int res;
 	//LOG("recv...\n");
 	do {
+		// handle timer.
+		if(sTimer.callback) {
+			fd_set set;
+			struct timeval timeout;
+			double realTime = getRealTime();
+			double diff = sTimer.t - realTime;
+
+			// if timer has been hit, remove & call it, then restart loop.
+			if(realTime >= sTimer.t) {
+				SocketTimerCallback cb = sTimer.callback;
+				sTimer.callback = NULL;
+				cb(realTime, sTimer.user);
+				continue;
+			}
+
+			// otherwise wait for timer or data.
+			FD_ZERO(&set);
+			FD_SET(sock, &set);
+
+			assert(diff > 0);
+			timeout.tv_sec = (int)diff;
+			timeout.tv_usec = (int)((diff - timeout.tv_sec) * 1000000000);
+
+			res = TEMP_FAILURE_RETRY(select(FD_SETSIZE, &set, NULL, NULL, &timeout));
+			if(res < 0) {
+				printf("select failed: %d\n", SOCKET_ERRNO);
+				return res;
+			}
+			if(res == 0) {	// timeout expired.
+				// check the timer.
+				continue;
+			}
+		}
+
 		res = recv(sock, dstP, remain, 0);
 		if (res > 0) {
 			//printf("Bytes received: %d\n", res);
