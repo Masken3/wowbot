@@ -5,6 +5,8 @@
 #include "Opcodes.h"
 #include <openssl/sha.h>
 #include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 #include "WorldCrypt.h"
 #include "worldHandlers.h"
 #include "log.h"

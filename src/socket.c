@@ -3,6 +3,7 @@
 #include "getRealTime.h"
 #include <assert.h>
 #include <errno.h>
+#include <stdlib.h>
 
 typedef struct Timer {
 	double t;
@@ -63,7 +64,7 @@ int receiveExact(Socket sock, void* dst, size_t dstSize) {
 
 			res = TEMP_FAILURE_RETRY(select(FD_SETSIZE, &set, NULL, NULL, &timeout));
 			if(res < 0) {
-				printf("select failed: %d\n", SOCKET_ERRNO);
+				printf("select failed: %d.\n", SOCKET_ERRNO);
 				return res;
 			}
 			if(res == 0) {	// timeout expired.
@@ -82,7 +83,7 @@ int receiveExact(Socket sock, void* dst, size_t dstSize) {
 		if (res == 0) {
 			printf("Connection closed\n");
 		} else {
-			printf("recv failed: %d\n", SOCKET_ERRNO);
+			printf("recv failed: %d.\n", SOCKET_ERRNO);
 		}
 		return res;
 	} while (remain > 0);
@@ -95,7 +96,7 @@ void sendExact(Socket sock, const char* src, size_t srcSize) {
 	res = send(sock, src, srcSize, 0);
 	if(SOCKET_ERROR == res)
 	{
-		LOG("send() returned error code %d\n", SOCKET_ERRNO);
+		LOG("send() returned error code %d.\n", SOCKET_ERRNO);
 		exit(1);
 	}
 }
@@ -119,7 +120,7 @@ Socket connectNewSocket(const char* address, ushort port) {
 	Socket sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if(sock == INVALID_SOCKET)
 	{
-		LOG("socket() returned error code %d\n", SOCKET_ERRNO);
+		LOG("socket() returned error code %d.\n", SOCKET_ERRNO);
 		return INVALID_SOCKET;
 	}
 
@@ -138,12 +139,12 @@ Socket connectNewSocket(const char* address, ushort port) {
 	if(inetAddr == INADDR_NONE) {
 		struct hostent *hostEnt;
 		if((hostEnt = gethostbyname(address)) == NULL) {
-			LOG("DNS resolve failed. %d\n", SOCKET_ERRNO);
+			LOG("DNS resolve failed. %d.\n", SOCKET_ERRNO);
 			return INVALID_SOCKET;
 		}
 		inetAddr = (uint32_t)*((uint32_t*)hostEnt->h_addr_list[0]);
 		if(inetAddr == INADDR_NONE) {
-			LOG("Could not parse the resolved ip address. %d\n", SOCKET_ERRNO);
+			LOG("Could not parse the resolved ip address. %d.\n", SOCKET_ERRNO);
 			return INVALID_SOCKET;
 		}
 	}
@@ -155,7 +156,7 @@ Socket connectNewSocket(const char* address, ushort port) {
 	res = connect(sock, (struct sockaddr*) &clientService, sizeof(clientService));
 	if(SOCKET_ERROR == res)
 	{
-		LOG("connect() returned error code %d\n", SOCKET_ERRNO);
+		LOG("connect() returned error code %d.\n", SOCKET_ERRNO);
 		return INVALID_SOCKET;
 	}
 

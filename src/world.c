@@ -17,6 +17,8 @@
 #include <lauxlib.h>
 #include <assert.h>
 #include <sys/stat.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define DEFAULT_WORLDSERVER_PORT 8085
 

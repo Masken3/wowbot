@@ -1,0 +1,3 @@
+#define CONFIG_ACCOUNT_NAME "aname"
+#define CONFIG_ACCOUNT_PASSWORD "apass"
+#define CONFIG_SERVER_ADDRESS "authserv.example.com"

@@ -96,9 +96,11 @@ double getRealTime(void)
 #endif /* _POSIX_TIMERS */
 
 	/* AIX, BSD, Cygwin, HP-UX, Linux, OSX, POSIX, Solaris. ----- */
-	struct timeval tm;
-	gettimeofday( &tm, NULL );
-	return (double)tm.tv_sec + (double)tm.tv_usec / 1000000.0;
+	{
+		struct timeval tm;
+		gettimeofday( &tm, NULL );
+		return (double)tm.tv_sec + (double)tm.tv_usec / 1000000.0;
+	}
 #else
 	return -1.0;		/* Failed. */
 #endif

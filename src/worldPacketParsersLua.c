@@ -1,7 +1,8 @@
-
+#include <inttypes.h>
 #include <lua.h>
 #include <zlib.h>
 #include <stdint.h>
+#include <stdlib.h>
 //#include <assert.h>
 #include <string.h>
 
@@ -117,7 +118,7 @@ static uint64 readPackGUID(byte** src, int remain) {
 		if(guidmark & (1) << i) {
 			uint8 bit = *(*src)++;
 			if(remain < (*src - ptr)) {
-				LOG("remain %i < %i\n", remain, (*src - ptr));
+				LOG("remain %i < %" PRIiPTR "\n", remain, (*src - ptr));
 				crash();
 			}
 			guid |= ((uint64)bit) << (i * 8);

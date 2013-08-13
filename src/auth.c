@@ -6,6 +6,8 @@
 #include "log.h"
 
 #include <assert.h>
+#include <string.h>
+#include <stdlib.h>
 
 void authenticate(WorldSession* session) {
 	Socket sock = session->authSock;

@@ -6,6 +6,7 @@
 #include "world.h"
 #include "Opcodes.h"
 #include <assert.h>
+#include <string.h>
 #include "WorldCrypt.h"
 #include "worldHandlers.h"
 #include "log.h"
