@@ -4,3 +4,41 @@ Here's a fun programming philosophy problem: should "lua_isnumber()" return "tru
 17:16 2013-08-11
 Design note: I could, at some points, pass the realTime value to Lua.
 I've chosen not to do so to minimize the complexity of the Lua-C interface.
+
+13:30 2013-08-14
+Preliminary decision tree:
+
+If a party member is in combat, attack the tank's target.
+* Tanks: if a non-tank is being attacked, taunt the attacker.
+* Healers: if a member has lost enough health
+  that our most efficient (hp/mana) healing spell will not overheal, use that spell.
+** todo: have some provision for extra healing (useful in high-damage situations).
+* All: focus attacks on marked targets. This takes priority over the "tank's target" rule.
+* Mage: polymorph Moon.
+* Rogue: sap Diamond. (only works if target is not in combat.)
+
+If not in combat:
+* Quests
+** If a quest can be turned in within X yards without aggroing any enemies, do so.
+** If leader has picked up a quest, and you don't have it, pick up that quest.
+** todo: deal with class and profession quests.
+
+* Gathering
+** If a gathering node is nearby and it can be accessed without aggroing, do so.
+*** Notify party of nodes guarded by hostiles. Leader may choose to engage the hostiles and thus clear the node.
+** Skinning: unless party is in combat with an elite, skin any downed mobs as soon as they are cleared of loot.
+** Fishing: normal gathering; get all nodes, or ask for clearing.
+*** If fishing water is nearby and party is not moving, go fish.
+
+* Crafting
+** When new mats are aquired: check if any new recipes can be crafted. If so, notify party.
+** If a quest requires crafted items, craft them only when all mats for all items for that quest are available.
+*** Also, require permission from leader before starting craft.
+** todo: handle automatic leveling up.
+** todo: handle equipment requests from party members.
+
+* Idle movement, only effective if nothing else is being done.
+** If leader is >FOLLOW_DIST from us, run to him.
+** If leading is walking and within FOLLOW_DIST*2, we too should be walking.
+** Attempt to stay FOLLOW_DIST/2 away from every party member, excluding leader.
+*** This should cause a decent emergent formation.

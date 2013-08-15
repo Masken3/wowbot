@@ -252,6 +252,7 @@ void initLua(WorldSession* session) {
 	lua_register(L, "cRemoveTimer", l_removeTimer);
 
 	opcodeLua(L);
+	movementFlagsLua(L);
 }
 
 static void luaPcall(lua_State* L, int nargs) {

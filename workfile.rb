@@ -4,21 +4,23 @@ CONFIG_CCOMPILE_DEFAULT = 'debug'
 
 require File.expand_path 'rules/cExe.rb'
 
-class OpcodesTask < MultiFileTask
-	def initialize
-		@prerequisites = [FileTask.new('src/Opcodes.rb')]
-		super('build/Opcodes.c', ['build/Opcodes.h'])
+class GenTask < MultiFileTask
+	def initialize(name)
+		@src = "src/#{name}.rb"
+		@prerequisites = [FileTask.new(@src)]
+		super("build/#{name}.c", ["build/#{name}.h"])
 	end
 	def fileExecute
-		sh 'ruby src/Opcodes.rb'
+		sh "ruby #{@src}"
 	end
 end
 
 work = ExeWork.new do
 	@SOURCES = ['src', 'src/worldMsgHandlers', 'server-code/Auth']
-	o = OpcodesTask.new
-	@SOURCE_TASKS = [o]
-	@REQUIREMENTS = [o]
+	@SOURCE_TASKS = @REQUIREMENTS = [
+		GenTask.new('Opcodes'),
+		GenTask.new('movementFlags'),
+	]
 	@SPECIFIC_CFLAGS = {
 		'worldPacketParsersLua.c' => ' -Wno-vla',
 	}
