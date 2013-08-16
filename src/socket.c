@@ -60,7 +60,8 @@ int receiveExact(Socket sock, void* dst, size_t dstSize) {
 
 			assert(diff > 0);
 			timeout.tv_sec = (int)diff;
-			timeout.tv_usec = (int)((diff - timeout.tv_sec) * 1000000000);
+			timeout.tv_usec = (int)((diff - timeout.tv_sec) * 1000000);
+			//printf("timeout.tv_usec: %li\n", timeout.tv_usec);
 
 			res = TEMP_FAILURE_RETRY(select(FD_SETSIZE, &set, NULL, NULL, &timeout));
 			if(res < 0) {

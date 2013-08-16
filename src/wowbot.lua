@@ -44,12 +44,6 @@ end
 function hMSG_MOVE_HEARTBEAT(p)
 	print("MSG_MOVE_HEARTBEAT", dump(p));
 end
-function hSMSG_COMPRESSED_UPDATE_OBJECT(p)
-	--print("SMSG_COMPRESSED_UPDATE_OBJECT", dump(p));
-end
-function hSMSG_UPDATE_OBJECT(p)
-	--print("SMSG_UPDATE_OBJECT", dump(p));
-end
 
 function hSMSG_GROUP_INVITE(p)
 	--print("SMSG_GROUP_INVITE", dump(p));
@@ -161,7 +155,7 @@ function sendStop()
 end
 
 function hMovement(opcode, p)
-	print("hMovement", fg(p.guid), opcode, p.flags)
+	--print("hMovement", fg(p.guid), opcode, p.flags)
 
 	--print("p,l:", fg(p.guid), fg(STATE.leaderGuid));
 	if(p.guid == STATE.leaderGuid) then
@@ -180,8 +174,8 @@ function hMovement(opcode, p)
 		if(bit32.btest(f, MOVEFLAG_WALK_MODE)) then
 			speed = WALK_SPEED;
 		end
-		if(bit32.btest(f, MOVEFLAG_FORWARD) then
-			assert(not bit32.btest(f, MOVEFLAG_BACKWARD);
+		if(bit32.btest(f, MOVEFLAG_FORWARD)) then
+			assert(not bit32.btest(f, MOVEFLAG_BACKWARD));
 			y = 1;
 		end
 		if(bit32.btest(f, MOVEFLAG_BACKWARD)) then
@@ -217,6 +211,7 @@ function hMovement(opcode, p)
 		STATE.leaderMovement.startTime = realTime;
 
 		-- todo: handle the case of being on different maps.
+		--print("leaderMovement", realTime);
 		doMoveToTarget(realTime, p.pos, FOLLOW_DIST)
 	end
 end
@@ -229,7 +224,7 @@ function doMoveToTarget(realTime, p, maxDist)
 	local myPos = STATE.myLocation.position;
 	local diff = diff3(myPos, p);
 	local dist = length3(diff);
-	print("dist:", dist);
+	--print("dist:", dist);
 	--  or dist < (FOLLOW_DIST - FOLLOW_TOLERANCE)
 	if(dist > maxDist) then
 		local data = {
@@ -280,5 +275,16 @@ end
 function movementTimerCallback(t)
 	updatePosition(t);
 	updateLeaderPosition(t);
+	--print("movementTimerCallback", t)
 	doMoveToLeader(t);
+	--print("movementTimerCallback ends", t)
+end
+
+function hSMSG_COMPRESSED_UPDATE_OBJECT(p)
+	--print("SMSG_COMPRESSED_UPDATE_OBJECT", dump(p));
+	hSMSG_UPDATE_OBJECT(p);
+end
+function hSMSG_UPDATE_OBJECT(p)
+	--print("SMSG_UPDATE_OBJECT", dump(p));
+	-- todo: get notified when someone is in combat with a party member.
 end

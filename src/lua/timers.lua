@@ -1,12 +1,15 @@
 
 function setTimer(callback, targetTime)
+	--print("setTimer", debug.getinfo(callback).name, targetTime)
 	if(STATE.inTimerCallback) then
 		if(STATE.removedTimers[callback]) then
 			STATE.removedTimers[callback] = nil
 		end
-		STATE.newTimers[callback] = targetTimer
+		assert(targetTime > STATE.callbackTime);
+		STATE.newTimers[callback] = targetTime
 		return
 	end
+	assert(targetTime > getRealTime());
 	local timers = STATE.timers
 	local closestTime = targetTime
 	timers[callback] = targetTime
@@ -23,6 +26,7 @@ function countTable(tab)
 end
 
 function removeTimer(callback)
+	--print("removeTimer", debug.getinfo(callback).name)
 	local timers = STATE.timers
 	if(STATE.inTimerCallback) then
 		if(STATE.newTimers[callback]) then
@@ -53,12 +57,14 @@ end
 
 function luaTimerCallback(realTime)
 	assert(not STATE.inTimerCallback)
+	STATE.callbackTime = realTime
 	STATE.inTimerCallback = true
 	STATE.newTimers = {}
 	STATE.removedTimers = {}
 
 	local timers = STATE.timers
 	for k, t in pairs(timers) do
+		--print("timer", realTime, t);
 		if(realTime >= t) then
 			removeTimer(k)	-- should erase the element without interrupting the for loop.
 			-- however, this function may add or remove other timers. we must protect the array.
@@ -81,8 +87,12 @@ function luaTimerCallback(realTime)
 	end
 	-- reset the C timer.
 	local closestTime = timers[first]
+	local count = 0
 	for k, t in pairs(timers) do
 		closestTime = math.min(closestTime, t)
+		count = count +1
 	end
+	--print("closestTime", count, closestTime, realTime);
+	assert(closestTime > realTime);
 	cSetTimer(closestTime)
 end
