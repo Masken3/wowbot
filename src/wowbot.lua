@@ -169,7 +169,7 @@ function hMovement(opcode, p)
 		local x = 0;
 		local y = 0;
 		if(f == MOVEFLAG_STOP) then
-			STATE.leaderMovement.speed = 0;
+			speed = 0;
 		end
 		if(bit32.btest(f, MOVEFLAG_WALK_MODE)) then
 			speed = WALK_SPEED;
@@ -212,14 +212,58 @@ function hMovement(opcode, p)
 
 		-- todo: handle the case of being on different maps.
 		--print("leaderMovement", realTime);
-		doMoveToTarget(realTime, p.pos, FOLLOW_DIST)
+		if(not doMoveToTarget(realTime, p.pos, FOLLOW_DIST) and speed ~= 0) then
+			-- now, given our position and leader's position and movement,
+			-- determine how long it will take for him to move to the edge of the circle
+			-- surrounding us with radius FOLLOW_DIST.
+			-- set a timer for that time.
+
+			-- dist(x,y) = (x² + y²) ^ 0.5
+			-- pos(x,y,dx,dy,t) = (x + dx*t), (y + dy*t)
+			-- dist(t) = ((x+dx*t)² + (y+dy*t)²)^0.5
+			-- solve dist(t) for dist = FOLLOW_DIST, assuming our position is origo:
+			-- FOLLOW_DIST² = (x+dx*t)² + (y+dy*t)²
+			-- FOLLOW_DIST² = x²+2*x*dx*t+dx²*t² + y²+2*y*dy*t+dy²*t²
+			-- FOLLOW_DIST² - (x²+y²) = 2*x*dx*t+dx²*t² + 2*y*dy*t+dy²*t²
+			-- (FOLLOW_DIST² - (x²+y²))/t = 2*x*dx+dx²*t + 2*y*dy+dy²*t
+			-- (FOLLOW_DIST² - (x²+y²))/t - (2*x*dx + 2*y*dy) = dx²*t + dy²*t
+			-- (FOLLOW_DIST² - (x²+y²))/t - (2*x*dx + 2*y*dy) = t*(dx² + dy²)
+			-- blargh. this isn't working.
+
+			-- general 2nd grade equation: ax² + bx + c = 0
+			-- general solution: x = (-b +- (b² - 4ac)^0.5) / 2a
+
+			-- general form of dist(t): (dx²+dy²)*t² + (2*(x*dx+y*dy))*t + (x²+y²-FOLLOW_DIST²) = 0
+			local myPos = STATE.myLocation.position;
+			local dx = STATE.leaderMovement.x;
+			local dy = STATE.leaderMovement.y;
+			local x = p.pos.x - myPos.x;
+			local y = p.pos.y - myPos.y;
+			local a = dx^2 + dy^2;
+			local b = 2*(x*dx+y*dy);
+			local c = (x^2+y^2-FOLLOW_DIST^2);
+			if(a == 0) then
+				return;
+			end
+			local t1 = (-b + (b^2 - 4*a*c)^0.5) / (2*a);
+			local t2 = (-b - (b^2 - 4*a*c)^0.5) / (2*a);
+			local t = math.max(t1, t2);
+			print("t", t);
+			assert(t > 0);
+			assert(math.min(t1, t2) < 0);
+			setTimer(movementTimerCallback, realTime + t);
+		end
+		-- todo: if target is close, and moving in roughly the same direction and speed as us,
+		-- wait longer before resetting our movement. otherwise,
+		-- a leader running away will cause tons of unneeded update packets.
 	end
 end
 
 function doMoveToLeader(realTime)
-	doMoveToTarget(realTime, STATE.leaderLocation.position, FOLLOW_DIST)
+	return doMoveToTarget(realTime, STATE.leaderLocation.position, FOLLOW_DIST)
 end
 
+-- returns true if movement has been handled, false otherwise.
 function doMoveToTarget(realTime, p, maxDist)
 	local myPos = STATE.myLocation.position;
 	local diff = diff3(myPos, p);
@@ -245,10 +289,13 @@ function doMoveToTarget(realTime, p, maxDist)
 		local moveEndTime = STATE.moveStartTime + (dist - maxDist) / RUN_SPEED;
 		local timerTime = math.min(moveEndTime, STATE.moveStartTime + 1);
 		setTimer(movementTimerCallback, timerTime);
+		return true;
 	elseif(STATE.moving) then
 		sendStop();
 		removeTimer(movementTimerCallback);
+		return true;
 	end
+	return false;
 end
 
 function updatePosition(realTime)
