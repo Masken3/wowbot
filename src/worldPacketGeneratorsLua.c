@@ -6,6 +6,8 @@
 #include <string.h>
 #include <assert.h>
 
+#define MLOG(...) //LOG
+
 #define GL_START byte* ptr = buf;
 
 static void lua_gen_uint32(lua_State* L, const char* name, byte** pp) {
@@ -103,7 +105,7 @@ static void lua_gen_Guid(lua_State* L, const char* name, byte** pp) {
 }
 
 #define M(type, name)\
-	LOG("M(%s, %s)\n", #type, #name);\
+	MLOG("M(%s, %s)\n", #type, #name);\
 	lua_pushstring(L, #name);\
 	lua_gettable(L, -2);\
 	lua_gen_##type(L, #name, &ptr);\

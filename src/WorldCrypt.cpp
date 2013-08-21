@@ -11,7 +11,7 @@ struct Crypto {
 };
 
 void sendWorld(WorldSession* session, uint32 opcode, const void* src, uint16 size) {
-	LOG("send %s (%i)\n", opcodeString(opcode), size);
+	//LOG("send %s (%i)\n", opcodeString(opcode), size);
 	ClientPktHeader c = { htons(size + 4), opcode };
 	if(session->crypto)
 		session->crypto->ac.EncryptSend((uint8*)&c, sizeof(c));

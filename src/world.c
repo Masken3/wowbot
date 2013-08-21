@@ -167,7 +167,7 @@ static int l_send(lua_State* L) {
 		lua_pushfstring(L, "send error: unknown opcode %i!", opcode);
 		lua_error(L);
 	}
-	LOG("l_send(%s)\n", s);
+	//LOG("l_send(%s)\n", s);
 
 	{
 		lua_getfield(L, LUA_REGISTRYINDEX, "SESSION");

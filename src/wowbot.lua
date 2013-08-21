@@ -206,8 +206,8 @@ function hMovement(opcode, p)
 			-- multiply vector by square root of 2.
 			factor = factor * 2^0.5;
 		end
-		STATE.leaderMovement.x = x * factor;
-		STATE.leaderMovement.y = y * factor;
+		STATE.leaderMovement.x = y * factor * math.cos(p.o) + x * factor * math.cos(p.o);
+		STATE.leaderMovement.y = y * factor * math.sin(p.o) + x * factor * math.sin(p.o);
 		STATE.leaderMovement.startTime = realTime;
 
 		-- todo: handle the case of being on different maps.
@@ -293,6 +293,7 @@ function doMoveToTarget(realTime, p, maxDist)
 	elseif(STATE.moving) then
 		sendStop();
 		removeTimer(movementTimerCallback);
+		-- todo: if this happens while target is still moving, the timer should be set.
 		return true;
 	end
 	return false;

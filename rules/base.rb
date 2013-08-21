@@ -9,10 +9,10 @@ require 'thread'
 module Kernel
 	@@mutex = Mutex.new
 	def puts(str)
-		@@mutex.synchronize do
+		#@@mutex.synchronize do
 			$stdout.write("#{Works.threadName}#{str.strip}\n")
 			$stdout.flush
-		end
+		#end
 	end
 end
 
