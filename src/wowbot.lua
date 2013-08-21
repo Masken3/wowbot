@@ -21,6 +21,11 @@ if(STATE == nil) then
 		leaderGuid = nil,	-- set by hSMSG_GROUP_LIST.
 		leaderLocation = {},
 		leaderMovement = {}, -- scalar x, y, startTime.
+
+		groupMembers = {},	-- set by hSMSG_GROUP_LIST.
+
+		knownObjects = {},
+
 		reloadCount = 0,
 		myGuid = nil,	-- set by C function enterWorld.
 		myLocation = nil,	-- set by hSMSG_LOGIN_VERIFY_WORLD.
@@ -71,6 +76,7 @@ function hSMSG_GROUP_LIST(p)
 	else
 		STATE.inGroup = true;
 		print("Group rejoined.");
+		STATE.groupMembers = p.members;
 	end
 end
 
@@ -161,6 +167,13 @@ function hMovement(opcode, p)
 	if(p.guid == STATE.leaderGuid) then
 		local realTime = getRealTime();
 		updatePosition(realTime);
+		if(STATE.leaderMovement.startTime) then
+			updateLeaderPosition(realTime);
+			-- calculated leader position
+			local clp = STATE.leaderLocation.position;
+			print("clp, p:", dump(clp), dump(p.pos));
+			print("diff:", dump(diff3(clp, p.pos)));
+		end
 		STATE.leaderLocation.position = p.pos;
 		STATE.leaderLocation.orientation = p.o;
 
@@ -323,7 +336,7 @@ end
 function movementTimerCallback(t)
 	updatePosition(t);
 	updateLeaderPosition(t);
-	--print("movementTimerCallback", t)
+	print("movementTimerCallback", t)
 	doMoveToLeader(t);
 	--print("movementTimerCallback ends", t)
 end
@@ -335,4 +348,30 @@ end
 function hSMSG_UPDATE_OBJECT(p)
 	--print("SMSG_UPDATE_OBJECT", dump(p));
 	-- todo: get notified when someone is in combat with a party member.
+	for i,b in ipairs(p.blocks) do
+		if(b.type == UPDATETYPE_OUT_OF_RANGE_OBJECTS) then
+			for j,guid in ipairs(b.guids) do
+				STATE.knownObjects[guid] = nil;
+			end
+		elseif(b.type == UPDATETYPE_CREATE_OBJECT or b.type == UPDATETYPE_CREATE_OBJECT2) then
+			local o = {}
+			updateValues(o, b);
+			updateMovement(o, b);
+			STATE.knownObjects[b.guid] = o;
+		elseif(b.type == UPDATETYPE_VALUES) then
+			updateValues(STATE.knownObjects[b.guid], b);
+		elseif(b.type == UPDATETYPE_MOVEMENT) then
+			updateMovement(STATE.knownObjects[b.guid], b);
+		else
+			error("Unknown update type "..b.type);
+		end
+		--UNIT_FIELD_TARGET
+	end
+end
+function updateValues(o, b)
+	local j = 0
+	for i, m in ipairs(b.updateMask) do
+	end
+end
+function updateMovement(o, b)
 end

@@ -20,6 +20,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "UpdateFieldsLua.h"
+#include "updateBlockFlagsLua.h"
+
 #define DEFAULT_WORLDSERVER_PORT 8085
 
 static void handleServerPacket(WorldSession*, ServerPktHeader, char* buf);
@@ -253,6 +256,8 @@ void initLua(WorldSession* session) {
 
 	opcodeLua(L);
 	movementFlagsLua(L);
+	UpdateFieldsLua(L);
+	updateBlockFlagsLua(L);
 }
 
 static void luaPcall(lua_State* L, int nargs) {

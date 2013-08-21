@@ -292,9 +292,9 @@ void pSMSG_UPDATE_OBJECT(pLUA_ARGS) {
 		lua_createtable(L, blockCount, 0);
 		MLOG("%i blocks\n", blockCount);
 		for(uint32 i=1; i<=blockCount; i++) {
+			lua_createtable(L, 0, 0); {
 			MM(byte, type);
 			MLOG("block type %i @ %x bytes\n", type, PL_PARSED);
-			lua_createtable(L, 0, 0);
 			switch(type) {
 			case UPDATETYPE_OUT_OF_RANGE_OBJECTS:
 				{
@@ -323,7 +323,7 @@ void pSMSG_UPDATE_OBJECT(pLUA_ARGS) {
 				exit(1);
 			}
 			lua_rawseti(L, -2, i);
-		}
+		} }
 		lua_settable(L, -3);
 	}
 }
