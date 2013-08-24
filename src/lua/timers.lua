@@ -9,7 +9,7 @@ function setTimer(callback, targetTime)
 		STATE.newTimers[callback] = targetTime
 		return
 	end
-	assert(targetTime > getRealTime());
+	assert(targetTime > getRealTime()-1);
 	local timers = STATE.timers
 	local closestTime = targetTime
 	timers[callback] = targetTime
@@ -56,6 +56,7 @@ function removeTimer(callback)
 end
 
 function luaTimerCallback(realTime)
+	--print("luaTimerCallback", realTime);
 	assert(not STATE.inTimerCallback)
 	STATE.callbackTime = realTime
 	STATE.inTimerCallback = true

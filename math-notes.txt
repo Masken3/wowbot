@@ -1,0 +1,95 @@
+2013-08-18 20:03:46
+now, given our position and leader's position and movement,
+determine how long it will take for him to move to the edge of the circle
+surrounding us with radius FOLLOW_DIST.
+set a timer for that time.
+
+dist(x,y) = (x² + y²) ^ 0.5
+pos(x,y,dx,dy,t) = (x + dx*t), (y + dy*t)
+dist(t) = ((x+dx*t)² + (y+dy*t)²)^0.5
+solve dist(t) for dist = FOLLOW_DIST, assuming our position is origo:
+FOLLOW_DIST² = (x+dx*t)² + (y+dy*t)²
+FOLLOW_DIST² = x²+2*x*dx*t+dx²*t² + y²+2*y*dy*t+dy²*t²
+FOLLOW_DIST² - (x²+y²) = 2*x*dx*t+dx²*t² + 2*y*dy*t+dy²*t²
+FOLLOW_DIST² - (x²+y²))/t = 2*x*dx+dx²*t + 2*y*dy+dy²*t
+FOLLOW_DIST² - (x²+y²))/t - (2*x*dx + 2*y*dy) = dx²*t + dy²*t
+FOLLOW_DIST² - (x²+y²))/t - (2*x*dx + 2*y*dy) = t*(dx² + dy²)
+blargh. this isn't working.
+
+general 2nd grade equation: ax² + bx + c = 0
+general solution: x = (-b +- (b² - 4ac)^0.5) / 2a
+
+general form of dist(t): (dx²+dy²)*t² + (2*(x*dx+y*dy))*t + (x²+y²-FOLLOW_DIST²) = 0
+
+
+11:50 2013-08-24
+we have two linearly moving points.
+find the point where we cross a radius about them, or if that radius is never crossed,
+find the nearest point.
+set the timer to the time t we arrive at that point, if current time is 0.
+
+myPos.x(t) = myPos.x + math.cos(o) * t * RUN_SPEED;
+myPos.y(t) = myPos.y + math.sin(o) * t * RUN_SPEED;
+mo.x(t) = mo.x + mo.dx * t;
+mo.y(t) = mo.y + mo.dy * t;
+dist(t) = distance2(myPos(t), mo(t));
+Find minimum of dist(t).
+To do this, solve dist'(t) = 0
+
+dist(t) = ((myX(t) - moX(t))² + (myY(t) - moY(t))²)^0.5
+dist(t) = ((myX + myDX*t - moX - moDX*t)² ...
+dist(t) = ((myX - moX + t*(myDX - moDX))² ...
+diX = myX - moX
+diDX = myDX - moDX
+dist(t) = (diX² + 2*t*diDX + diDX²*t² + diY² + 2*t*diDY + diDY²*t²)^0.5
+Chain rule: if f(x) = h(g(x)), then f'(x) = h'(g(x)) * g'(x)
+dist(t) = h(diX²...), where h(g) = g^0.5
+g(t) = diX² + diY² + 2*(diDX+diDY)*t + (diDX+diDY)*t²
+g'(t) = 0 + 2*(diDX+diDY) + 2*(diDX+diDY)*t
+h'(g) = 0.5*(g^-0.5)
+(g^-0.5) = 1 / (g^0.5)
+h'(g) = 0.5 / (g^0.5)
+Solving for 0:
+0 = 0.5 / (g^0.5)
+0 = 0.5? That can't be right...
+
+Quite. h'(g) != f'(x). Therefore:
+dist'(t) = 0.5 / (g(t)^0.5) * g'(t)
+Solving again for 0:
+0 = 0.5*g'(t) = diDX+diDY + (diDX+diDY)*t? Not right again, since diX and diY are lost...
+
+dist(t) = ((diX + t*diDX)² ...
+(a+b)² = a² + 2ab + b²
+dist(t) = (diX² + 2*t*diX*diDX + diDX²*t² + diY² + 2*t*diY*diDY + diDY²*t²) ^ 0.5
+g(t) = diX² + diY² + 2*t*(diX*diDX+diY*diDY) + (diDX²+diDY²)*t²
+g'(t) = 2*(diX*diDX+diY*diDY) + 2*(diDX²+diDY²)*t
+Third try's the charm:
+0 = diX*diDX+diY*diDY + (diDX²+diDY²)*t	Seems reasonable.
+t = -(diX*diDX+diY*diDY) / (diDX²+diDY²)
+
+OK, mathematically correct, but still not useful; since we're already so close to the closest point we can get,
+we will hit it very soon, thus causing a quick loop of corrections, which is not so nice.
+
+Better would be to find out when we'll have deviated x yards from the target's course.
+
+so, a point's minimum distance from a straight line:
+line: ax+by+c=0
+abs(am+bn+c)/sqrt(a²+b²)
+we wanna solve for t, m(t) & n(t), dist = 5
+5 = abs(a*m(t)+b*n(t)+c)/sqrt(a²+b²)
+5*sqrt(a²+b²) = abs(a*m(t)+b*n(t)+c)
+m(t) = x+dx*t
+n(t) = y+dy*t
+5*sqrt(a²+b²) = abs(a*x+a*dx*t+b*y+b*y*dy*t+c)
+5*sqrt(a²+b²) = abs(a*x+b*y+c + t*(a*dx+b*y*dy))
+5*sqrt(a²+b²) = +/- (a*x+b*y+c + t*(a*dx+b*y*dy))
+1:
+5*sqrt(a²+b²) = a*x+b*y+c + t*(a*dx+b*y*dy)
+5*sqrt(a²+b²) - a*x+b*y+c = t*(a*dx+b*y*dy)
+(5*sqrt(a²+b²) - a*x+b*y+c) / (a*dx+b*y*dy) = t
+2:
+5*sqrt(a²+b²) = -a*x+b*y+c - t*(a*dx+b*y*dy)
+5*sqrt(a²+b²) + a*x+b*y+c = -t*(a*dx+b*y*dy)
+(5*sqrt(a²+b²) + a*x+b*y+c) / -(a*dx+b*y*dy) = t
+
+One t is positive, the other is negative. Only the positive one is valid.

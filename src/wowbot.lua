@@ -1,4 +1,3 @@
-dofile("src/lua/timers.lua")
 
 function dump(o)
 	if type(o) == 'table' then
@@ -13,31 +12,48 @@ function dump(o)
 	end
 end
 
+dofile("src/lua/timers.lua")
+dofile("src/lua/struct.lua")
+
+-- Position: x, y, z
 -- Location: {mapId, position{x,y,z}, orientation}.
+-- Movement: dx, dy, startTime.
+-- MovingObject: guid, Location, Movement.
+Position = Struct.new{x='number', y='number', z='number'}
+Location = Struct.new{mapId='number', position=Position, orientation='number'}
+Movement = Struct.new{dx='number', dy='number', startTime='number'}
+MovingObject = Struct.new{guid='string', location=Location, movement=Movement}
 
 if(STATE == nil) then
 	STATE = {
 		inGroup = false,
-		leaderGuid = nil,	-- set by hSMSG_GROUP_LIST.
-		leaderLocation = {},
-		leaderMovement = {}, -- scalar x, y, startTime.
+		leader = MovingObject.new{
+			location=Location.new{position=Position.new()},
+			movement=Movement.new(),
+		},
 
 		groupMembers = {},	-- set by hSMSG_GROUP_LIST.
 
 		knownObjects = {},
 
 		reloadCount = 0,
-		myGuid = nil,	-- set by C function enterWorld.
-		myLocation = nil,	-- set by hSMSG_LOGIN_VERIFY_WORLD.
+		myGuid = '',	-- set by C function enterWorld.
+		myLocation = Location.new(),	-- set by hSMSG_LOGIN_VERIFY_WORLD.
 		moving = false,
-		moveStartTime = nil,	-- floating point, in seconds. valid if moving == true.
+		moveStartTime = 0,	-- floating point, in seconds. valid if moving == true.
 
 		-- timer-related stuff
 		timers = {},
 		inTimerCallback = false,
 		newTimers = {},
 		removedTimers = {},
+		callbackTime = 0,
 	}
+	-- type-securing STATE is too much work, but at least we can prevent unregistered members.
+	local mt = {
+		__newindex = "no go",
+	}
+	setmetatable(STATE, mt);
 else
 	STATE.reloadCount = STATE.reloadCount + 1;
 	print("STATE.reloadCount", STATE.reloadCount);
@@ -69,7 +85,7 @@ function hSMSG_GROUP_DESTROYED(p)
 end
 function hSMSG_GROUP_LIST(p)
 	print("SMSG_GROUP_LIST", dump(p));
-	STATE.leaderGuid = p.leaderGuid;
+	STATE.leader.guid = p.leaderGuid;
 	if(p.memberCount == 0) then
 		STATE.inGroup = false;
 		print("Group disbanded.");
@@ -164,18 +180,20 @@ function hMovement(opcode, p)
 	--print("hMovement", fg(p.guid), opcode, p.flags)
 
 	--print("p,l:", fg(p.guid), fg(STATE.leaderGuid));
-	if(p.guid == STATE.leaderGuid) then
+	if(p.guid == STATE.leader.guid) then
 		local realTime = getRealTime();
 		updatePosition(realTime);
-		if(STATE.leaderMovement.startTime) then
+		if(STATE.leader.movement.startTime) then
 			updateLeaderPosition(realTime);
 			-- calculated leader position
-			local clp = STATE.leaderLocation.position;
-			print("clp, p:", dump(clp), dump(p.pos));
-			print("diff:", dump(diff3(clp, p.pos)));
+			local clp = STATE.leader.location.position;
+			--print("clp, p:", dump(clp), dump(p.pos));
+			--print("diff:", dump(diff3(clp, p.pos)));
 		end
-		STATE.leaderLocation.position = p.pos;
-		STATE.leaderLocation.orientation = p.o;
+		STATE.leader.location.position.x = p.pos.x;
+		STATE.leader.location.position.y = p.pos.y;
+		STATE.leader.location.position.z = p.pos.z;
+		STATE.leader.location.orientation = p.o;
 
 		local f = p.flags;
 		local speed = RUN_SPEED;	-- speed, in yards per second.
@@ -219,69 +237,25 @@ function hMovement(opcode, p)
 			-- multiply vector by square root of 2.
 			factor = factor * 2^0.5;
 		end
-		STATE.leaderMovement.x = y * factor * math.cos(p.o) + x * factor * math.cos(p.o);
-		STATE.leaderMovement.y = y * factor * math.sin(p.o) + x * factor * math.sin(p.o);
-		STATE.leaderMovement.startTime = realTime;
+		STATE.leader.movement.dx = y * factor * math.cos(p.o) + x * factor * math.cos(p.o);
+		STATE.leader.movement.dy = y * factor * math.sin(p.o) + x * factor * math.sin(p.o);
+		STATE.leader.movement.startTime = realTime;
 
 		-- todo: handle the case of being on different maps.
 		--print("leaderMovement", realTime);
-		if(not doMoveToTarget(realTime, p.pos, FOLLOW_DIST) and speed ~= 0) then
-			-- now, given our position and leader's position and movement,
-			-- determine how long it will take for him to move to the edge of the circle
-			-- surrounding us with radius FOLLOW_DIST.
-			-- set a timer for that time.
-
-			-- dist(x,y) = (x² + y²) ^ 0.5
-			-- pos(x,y,dx,dy,t) = (x + dx*t), (y + dy*t)
-			-- dist(t) = ((x+dx*t)² + (y+dy*t)²)^0.5
-			-- solve dist(t) for dist = FOLLOW_DIST, assuming our position is origo:
-			-- FOLLOW_DIST² = (x+dx*t)² + (y+dy*t)²
-			-- FOLLOW_DIST² = x²+2*x*dx*t+dx²*t² + y²+2*y*dy*t+dy²*t²
-			-- FOLLOW_DIST² - (x²+y²) = 2*x*dx*t+dx²*t² + 2*y*dy*t+dy²*t²
-			-- (FOLLOW_DIST² - (x²+y²))/t = 2*x*dx+dx²*t + 2*y*dy+dy²*t
-			-- (FOLLOW_DIST² - (x²+y²))/t - (2*x*dx + 2*y*dy) = dx²*t + dy²*t
-			-- (FOLLOW_DIST² - (x²+y²))/t - (2*x*dx + 2*y*dy) = t*(dx² + dy²)
-			-- blargh. this isn't working.
-
-			-- general 2nd grade equation: ax² + bx + c = 0
-			-- general solution: x = (-b +- (b² - 4ac)^0.5) / 2a
-
-			-- general form of dist(t): (dx²+dy²)*t² + (2*(x*dx+y*dy))*t + (x²+y²-FOLLOW_DIST²) = 0
-			local myPos = STATE.myLocation.position;
-			local dx = STATE.leaderMovement.x;
-			local dy = STATE.leaderMovement.y;
-			local x = p.pos.x - myPos.x;
-			local y = p.pos.y - myPos.y;
-			local a = dx^2 + dy^2;
-			local b = 2*(x*dx+y*dy);
-			local c = (x^2+y^2-FOLLOW_DIST^2);
-			if(a == 0) then
-				return;
-			end
-			local t1 = (-b + (b^2 - 4*a*c)^0.5) / (2*a);
-			local t2 = (-b - (b^2 - 4*a*c)^0.5) / (2*a);
-			local t = math.max(t1, t2);
-			print("t", t);
-			assert(t > 0);
-			assert(math.min(t1, t2) < 0);
-			setTimer(movementTimerCallback, realTime + t);
-		end
-		-- todo: if target is close, and moving in roughly the same direction and speed as us,
-		-- wait longer before resetting our movement. otherwise,
-		-- a leader running away will cause tons of unneeded update packets.
+		doMoveToTarget(realTime, STATE.leader, FOLLOW_DIST);
 	end
 end
 
 function doMoveToLeader(realTime)
-	return doMoveToTarget(realTime, STATE.leaderLocation.position, FOLLOW_DIST)
+	return doMoveToTarget(realTime, STATE.leader, FOLLOW_DIST)
 end
 
--- returns true if movement has been handled, false otherwise.
-function doMoveToTarget(realTime, p, maxDist)
+function doMoveToTarget(realTime, mo, maxDist)
 	local myPos = STATE.myLocation.position;
-	local diff = diff3(myPos, p);
+	local diff = diff3(myPos, mo.location.position);
 	local dist = length3(diff);
-	--print("dist:", dist);
+	print("dist:", dist);
 	--  or dist < (FOLLOW_DIST - FOLLOW_TOLERANCE)
 	if(dist > maxDist) then
 		local data = {
@@ -296,20 +270,61 @@ function doMoveToTarget(realTime, p, maxDist)
 		--print(dump(data));
 		send(MSG_MOVE_START_FORWARD, data);
 		-- set timer to when we'll arrive, or at most one second.
-		STATE.moveStartTime = getRealTime();
+		STATE.moveStartTime = realTime;
+
+		-- if target is close, and moving in roughly the same direction and speed as us,
+		-- wait longer before resetting our movement. otherwise,
+		-- a target running away will cause tons of unneeded update packets.
+		if(mo.movement.dx ~=0 or mo.movement.dy ~=0) then
+			-- see math-notes.txt, 11:50 2013-08-24
+			-- t = -(diX*diDX+diY*diDY) / (diDX²+diDY²)
+			local diX = myPos.x - mo.location.position.x;
+			local diY = myPos.y - mo.location.position.y;
+			local diDX = math.cos(data.o) * RUN_SPEED - mo.movement.dx;
+			local diDY = math.sin(data.o) * RUN_SPEED - mo.movement.dy;
+			local t = -(diX*diDX+diY*diDY) / (diDX^2+diDY^2);
+			print("diDX,Y:", diDX, diDY);
+			print("moving T:", t);
+			assert(t > 0);
+			setTimer(movementTimerCallback, realTime + t);
+			return;
+		end
+
 		-- todo: take into account movement speed modifiers,
 		-- like ghost form, mount effects and other auras.
 		local moveEndTime = STATE.moveStartTime + (dist - maxDist) / RUN_SPEED;
-		local timerTime = math.min(moveEndTime, STATE.moveStartTime + 1);
+		--local timerTime = math.min(moveEndTime, STATE.moveStartTime + 1);
+		local timerTime = moveEndTime;
+		print("still T:", timerTime - realTime);
 		setTimer(movementTimerCallback, timerTime);
-		return true;
+		return;
 	elseif(STATE.moving) then
+		print("stop");
 		sendStop();
-		removeTimer(movementTimerCallback);
-		-- todo: if this happens while target is still moving, the timer should be set.
-		return true;
+		if(mo.movement.dx == 0 and mo.movement.dy == 0) then
+			removeTimer(movementTimerCallback);
+			print("removed timer.");
+			return;
+		end
 	end
-	return false;
+	if(mo.movement.dx ~= 0 or mo.movement.dy ~= 0) then
+		-- see math-notes.txt, 2013-08-18 20:03:46
+		local dx = STATE.leader.movement.dx;
+		local dy = STATE.leader.movement.dy;
+		local x = mo.location.position.x - myPos.x;
+		local y = mo.location.position.y - myPos.y;
+		local a = dx^2 + dy^2;
+		local b = 2*(x*dx+y*dy);
+		local c = (x^2+y^2-FOLLOW_DIST^2);
+		assert(a ~= 0);
+		local t1 = (-b + (b^2 - 4*a*c)^0.5) / (2*a);
+		local t2 = (-b - (b^2 - 4*a*c)^0.5) / (2*a);
+		local t = math.max(t1, t2);
+		print("inside t:", t);
+		assert(t > 0);
+		assert(math.min(t1, t2) < 0);
+		setTimer(movementTimerCallback, realTime + t);
+	end
 end
 
 function updatePosition(realTime)
@@ -325,18 +340,18 @@ function updatePosition(realTime)
 end
 
 function updateLeaderPosition(realTime)
-	local p = STATE.leaderLocation.position;
-	local m = STATE.leaderMovement;
+	local p = STATE.leader.location.position;
+	local m = STATE.leader.movement;
 	local diffTime = realTime - m.startTime;
-	p.x = p.x + m.x * diffTime;
-	p.y = p.y + m.y * diffTime;
+	p.x = p.x + m.dx * diffTime;
+	p.y = p.y + m.dy * diffTime;
 	m.startTime = realTime;
 end
 
 function movementTimerCallback(t)
+	print("movementTimerCallback", t)
 	updatePosition(t);
 	updateLeaderPosition(t);
-	print("movementTimerCallback", t)
 	doMoveToLeader(t);
 	--print("movementTimerCallback ends", t)
 end
