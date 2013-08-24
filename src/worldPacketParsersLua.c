@@ -43,6 +43,9 @@ static byte local_byte(const char* p) { return *p; }
 #define lua_push_uint32 lua_pushnumber(L, *(uint32*)cur)
 static uint32 local_uint32(const char* p) { return *(uint32*)p; }
 
+#define lua_push_uint16 lua_pushnumber(L, *(uint16*)cur)
+static uint16 local_uint16(const char* p) { return *(uint16*)p; }
+
 #define lua_push_int32 lua_pushnumber(L, *(int32*)cur)
 
 typedef struct Vector3 {
@@ -82,7 +85,7 @@ typedef struct Vector3 {
 #define MM(type, name) type name; M(type, name); name = local_##type(ptr - sizeof(type))
 // member array
 #define MA(type, name, count)\
-	_BASE_MA(type, name, count, lua_push_##type, PL_SIZE(sizeof(type) * c))
+	_BASE_MA(type, name, count, lua_push_##type; cur += sizeof(type), PL_SIZE(sizeof(type) * c))
 // member array, with local copy
 #define MMA(type, name, count) type name[count];\
 	_BASE_MA(type, name, count,\
@@ -377,6 +380,7 @@ void pSMSG_GROUP_LIST(pLUA_ARGS) {
 	M(byte, flags);
 	{
 		MM(uint32, memberCount);	// excluding yourself.
+		// array of structs
 		lua_pushstring(L, "members");
 		lua_createtable(L, memberCount, 0);
 		for(uint32 _i=1; _i<=memberCount; _i++) {
@@ -402,4 +406,31 @@ void pSMSG_LOGIN_VERIFY_WORLD(pLUA_ARGS) {
 	M(uint32, mapId);
 	M(Vector3, position);
 	M(float, orientation);
+}
+
+void pSMSG_INITIAL_SPELLS(pLUA_ARGS) {
+	PL_START;
+	M(byte, unk1);
+	{
+		MM(uint16, spellCount);
+		MA(uint32, spells, spellCount);
+	}
+	{
+		MM(uint16, cooldownCount);
+		// array of structs
+		lua_pushstring(L, "cooldowns");
+		lua_createtable(L, cooldownCount, 0);
+		for(uint32 _i=1; _i<=cooldownCount; _i++) {
+			lua_createtable(L, 0, 5);
+			M(uint16, spellId);
+			M(uint16, itemId);
+			M(uint16, spellCategory);
+
+			// if one is 0, the other has the cooldown in milliseconds.
+			// if cooldown is 1 and categoryCooldown is 0x80000000, the cooldown is infinite.
+			M(uint32, cooldown);
+			M(uint32, categoryCooldown);
+		}
+		lua_settable(L, -3);
+	}
 }

@@ -406,3 +406,7 @@ function updateValues(o, b)
 end
 function updateMovement(o, b)
 end
+
+function hSMSG_INITIAL_SPELLS(p)
+	print("SMSG_INITIAL_SPELLS", dump(p));
+end
