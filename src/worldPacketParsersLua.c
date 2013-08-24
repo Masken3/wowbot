@@ -335,7 +335,7 @@ void pSMSG_COMPRESSED_UPDATE_OBJECT(pLUA_ARGS) {
 	int res;
 	z_stream zs;
 
-	LOG("pSMSG_COMPRESSED_UPDATE_OBJECT %i -> %i\n", bufSize, pSize);
+	MLOG("pSMSG_COMPRESSED_UPDATE_OBJECT %i -> %i\n", bufSize, pSize);
 	//dumpPacket(buf, bufSize);
 
 	assert(pSize < UINT16_MAX);

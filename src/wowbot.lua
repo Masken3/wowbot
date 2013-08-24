@@ -188,7 +188,8 @@ function hMovement(opcode, p)
 			-- calculated leader position
 			local clp = STATE.leader.location.position;
 			--print("clp, p:", dump(clp), dump(p.pos));
-			--print("diff:", dump(diff3(clp, p.pos)));
+			local d = diff3(clp, p.pos);
+			--print("diff:", d.x, d.y);
 		end
 		STATE.leader.location.position.x = p.pos.x;
 		STATE.leader.location.position.y = p.pos.y;
@@ -253,11 +254,12 @@ end
 
 function doMoveToTarget(realTime, mo, maxDist)
 	local myPos = STATE.myLocation.position;
-	local diff = diff3(myPos, mo.location.position);
+	local tarPos = mo.location.position;
+	local diff = diff3(myPos, tarPos);
 	local dist = length3(diff);
-	print("dist:", dist);
 	--  or dist < (FOLLOW_DIST - FOLLOW_TOLERANCE)
 	if(dist > maxDist) then
+		--print("dist:", dist);
 		local data = {
 			flags = MOVEFLAG_FORWARD,
 			pos = myPos,
@@ -275,17 +277,31 @@ function doMoveToTarget(realTime, mo, maxDist)
 		-- if target is close, and moving in roughly the same direction and speed as us,
 		-- wait longer before resetting our movement. otherwise,
 		-- a target running away will cause tons of unneeded update packets.
-		if(mo.movement.dx ~=0 or mo.movement.dy ~=0) then
-			-- see math-notes.txt, 11:50 2013-08-24
-			-- t = -(diX*diDX+diY*diDY) / (diDX²+diDY²)
-			local diX = myPos.x - mo.location.position.x;
-			local diY = myPos.y - mo.location.position.y;
-			local diDX = math.cos(data.o) * RUN_SPEED - mo.movement.dx;
-			local diDY = math.sin(data.o) * RUN_SPEED - mo.movement.dy;
-			local t = -(diX*diDX+diY*diDY) / (diDX^2+diDY^2);
-			print("diDX,Y:", diDX, diDY);
-			print("moving T:", t);
+		local mov = mo.movement;
+		if(mov.dx ~=0 or mov.dy ~=0) then
+			--see math-notes.txt, 14:33 2013-08-24
+			local a, b, c;
+			if(mov.dy == 0) then
+				b = 0;
+			else
+				b = -1;
+			end
+			a = mov.dx/mov.dy;
+			c = -(a*tarPos.x + b*tarPos.y);
+			local x = myPos.x;
+			local y = myPos.y;
+			local dx = math.cos(data.o) * RUN_SPEED;
+			local dy = math.sin(data.o) * RUN_SPEED;
+			local t1 = (maxDist*((a^2+b^2)^0.5) - (a*x+b*y+c)) / (a*dx+b*dy);
+			local t2 = (maxDist*((a^2+b^2)^0.5) + a*x+b*y+c) / -(a*dx+b*dy);
+			local t = math.max(t1, t2);
+			local tMin = math.min(t1, t2);
+
+			--print("a, b, c:", a, b, c);
+			--print("dx, dy:", dx, dy);
+			--print("moving T:", t);
 			assert(t > 0);
+			--assert(tMin < 0);
 			setTimer(movementTimerCallback, realTime + t);
 			return;
 		end
@@ -295,15 +311,15 @@ function doMoveToTarget(realTime, mo, maxDist)
 		local moveEndTime = STATE.moveStartTime + (dist - maxDist) / RUN_SPEED;
 		--local timerTime = math.min(moveEndTime, STATE.moveStartTime + 1);
 		local timerTime = moveEndTime;
-		print("still T:", timerTime - realTime);
+		--print("still T:", timerTime - realTime);
 		setTimer(movementTimerCallback, timerTime);
 		return;
 	elseif(STATE.moving) then
-		print("stop");
+		--print("stop");
 		sendStop();
 		if(mo.movement.dx == 0 and mo.movement.dy == 0) then
 			removeTimer(movementTimerCallback);
-			print("removed timer.");
+			--print("removed timer.");
 			return;
 		end
 	end
@@ -320,7 +336,7 @@ function doMoveToTarget(realTime, mo, maxDist)
 		local t1 = (-b + (b^2 - 4*a*c)^0.5) / (2*a);
 		local t2 = (-b - (b^2 - 4*a*c)^0.5) / (2*a);
 		local t = math.max(t1, t2);
-		print("inside t:", t);
+		--print("inside t:", t);
 		assert(t > 0);
 		assert(math.min(t1, t2) < 0);
 		setTimer(movementTimerCallback, realTime + t);
@@ -349,7 +365,7 @@ function updateLeaderPosition(realTime)
 end
 
 function movementTimerCallback(t)
-	print("movementTimerCallback", t)
+	--print("movementTimerCallback", t)
 	updatePosition(t);
 	updateLeaderPosition(t);
 	doMoveToLeader(t);

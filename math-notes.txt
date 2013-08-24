@@ -67,6 +67,7 @@ Third try's the charm:
 0 = diX*diDX+diY*diDY + (diDX²+diDY²)*t	Seems reasonable.
 t = -(diX*diDX+diY*diDY) / (diDX²+diDY²)
 
+14:33 2013-08-24
 OK, mathematically correct, but still not useful; since we're already so close to the closest point we can get,
 we will hit it very soon, thus causing a quick loop of corrections, which is not so nice.
 
@@ -80,16 +81,31 @@ we wanna solve for t, m(t) & n(t), dist = 5
 5*sqrt(a²+b²) = abs(a*m(t)+b*n(t)+c)
 m(t) = x+dx*t
 n(t) = y+dy*t
-5*sqrt(a²+b²) = abs(a*x+a*dx*t+b*y+b*y*dy*t+c)
-5*sqrt(a²+b²) = abs(a*x+b*y+c + t*(a*dx+b*y*dy))
-5*sqrt(a²+b²) = +/- (a*x+b*y+c + t*(a*dx+b*y*dy))
+5*sqrt(a²+b²) = abs(a*x+a*dx*t+b*y+b*dy*t+c)
+5*sqrt(a²+b²) = abs(a*x+b*y+c + t*(a*dx+b*dy))
+5*sqrt(a²+b²) = +/- (a*x+b*y+c + t*(a*dx+b*dy))
 1:
-5*sqrt(a²+b²) = a*x+b*y+c + t*(a*dx+b*y*dy)
-5*sqrt(a²+b²) - a*x+b*y+c = t*(a*dx+b*y*dy)
-(5*sqrt(a²+b²) - a*x+b*y+c) / (a*dx+b*y*dy) = t
+5*sqrt(a²+b²) = a*x+b*y+c + t*(a*dx+b*dy)
+5*sqrt(a²+b²) - a*x+b*y+c = t*(a*dx+b*dy)
+(5*sqrt(a²+b²) - a*x+b*y+c) / (a*dx+b*dy) = t
 2:
-5*sqrt(a²+b²) = -a*x+b*y+c - t*(a*dx+b*y*dy)
-5*sqrt(a²+b²) + a*x+b*y+c = -t*(a*dx+b*y*dy)
-(5*sqrt(a²+b²) + a*x+b*y+c) / -(a*dx+b*y*dy) = t
+5*sqrt(a²+b²) = -a*x+b*y+c - t*(a*dx+b*dy)
+5*sqrt(a²+b²) + a*x+b*y+c = -t*(a*dx+b*dy)
+(5*sqrt(a²+b²) + a*x+b*y+c) / -(a*dx+b*dy) = t
 
 One t is positive, the other is negative. Only the positive one is valid.
+
+As for the line equation:
+y = mx+c
+0 = mx+c-y
+0 = ax+by+c, where b=-1
+c = ax¹+by¹
+c = ax²+by²
+ax¹+by¹=ax²+by²
+a(x¹-x²)=b(y²-y¹)
+a=b(y²-y¹)/(x¹-x²)
+c=bx¹((y²-y¹)/(x¹-x²))+by¹
+c = x¹((y²-y¹)/(x¹-x²))+y¹ if(b != 0)
+b = 0 if(y¹ == y²)
+a = 0 if(x¹ == x²)
+m = (x¹-x²)/(y¹-y²)

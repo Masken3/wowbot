@@ -7,6 +7,7 @@ function setTimer(callback, targetTime)
 		end
 		assert(targetTime > STATE.callbackTime);
 		STATE.newTimers[callback] = targetTime
+		--print("inTimerCallback");
 		return
 	end
 	assert(targetTime > getRealTime()-1);
@@ -69,7 +70,10 @@ function luaTimerCallback(realTime)
 		if(realTime >= t) then
 			removeTimer(k)	-- should erase the element without interrupting the for loop.
 			-- however, this function may add or remove other timers. we must protect the array.
-			k(realTime)
+			local res, err = pcall(k, realTime)
+			if(not res) then
+				print(err);
+			end
 		end
 	end
 
@@ -84,6 +88,7 @@ function luaTimerCallback(realTime)
 	-- check for remaining timers.
 	local first = next(timers)
 	if(not first) then
+		--print("no timers remaining");
 		return
 	end
 	-- reset the C timer.

@@ -103,6 +103,7 @@ void enterWorld(WorldSession* session, uint64 guid) {
 #define IGNORED_PACKET_TYPES(m)\
 	m(MSG_MOVE_HEARTBEAT)\
 	m(SMSG_SET_PROFICIENCY)\
+	m(SMSG_MESSAGECHAT)\
 
 static BOOL checkLuaFunction(lua_State* L, const char* name) {
 	//LOG("checking for Lua function %s...\n", name);
@@ -222,6 +223,7 @@ static int l_setTimer(lua_State* L) {
 	}
 	t = luaL_checknumber(L, 1);
 
+	//printf("socketSetTimer(%f)\n", t);
 	socketSetTimer(t, luaTimerCallback, L);
 	return 0;
 }
