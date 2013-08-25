@@ -12,6 +12,8 @@
 #include "worldPacketGeneratorsLua.h"
 #include "movement.h"
 #include "getRealTime.h"
+#include "spellStrings.h"
+#include "cDbc.h"
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -245,6 +247,16 @@ static void luaTimerCallback(double t, void* user) {
 	luaPcall(L, 1);
 }
 
+static int l_spellEffectName(lua_State* L) {
+	int narg = lua_gettop(L);
+	if(narg != 1) {
+		lua_pushstring(L, "spellEffectName error: args!");
+		lua_error(L);
+	}
+	lua_pushstring(L, spellEffectName(luaL_checkint(L, 1)));
+	return 1;
+}
+
 void initLua(WorldSession* session) {
 	lua_State* L = session->L;
 
@@ -255,6 +267,8 @@ void initLua(WorldSession* session) {
 	lua_register(L, "getRealTime", l_getRealTime);
 	lua_register(L, "cSetTimer", l_setTimer);
 	lua_register(L, "cRemoveTimer", l_removeTimer);
+	lua_register(L, "cSpellEffectName", l_spellEffectName);
+	lua_register(L, "cSpell", l_spell);
 
 	opcodeLua(L);
 	movementFlagsLua(L);

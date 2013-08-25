@@ -16,7 +16,7 @@ TOONS = {
 		class = PRIEST,
 		race = DWARF,
 		gender = FEMALE,
-		professions = { TAILORING, ENCHANTING },
+		professions = { TAILORING, ENCHANTING, FISHING },
 	},
 	{
 		accountName = "wowbot3",
@@ -31,12 +31,12 @@ TOONS = {
 		class = ROGUE,
 		race = GNOME,
 		gender = FEMALE,
-		professions = { SKINNING, LEATHERWORKING, COOKING, FISHING },
+		professions = { SKINNING, LEATHERWORKING, COOKING },
 	},
 --	player
 --	leaving herbalism to a bot because I don't want or need to do gathering myself.
 --	{
---		class = WARLOCK,
+--		class = MAGE,
 --		race = GNOME,
 --		gender = FEMALE,
 --		professions = { ALCHEMY },

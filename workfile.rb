@@ -4,6 +4,7 @@ CONFIG_CCOMPILE_DEFAULT = 'debug'
 
 require File.expand_path 'rules/cExe.rb'
 require './genLuaFromHeader.rb'
+require './libs.rb'
 
 class GenTask < MultiFileTask
 	def initialize(name)
@@ -18,6 +19,9 @@ end
 
 work = ExeWork.new do
 	@SOURCES = ['src', 'src/worldMsgHandlers', 'server-code/Auth']
+	@SOURCE_FILES = [
+		"#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers/spell/spellStrings.cpp",
+	]
 	@SOURCE_TASKS = @REQUIREMENTS = [
 		GenTask.new('Opcodes'),
 		GenTask.new('movementFlags'),
@@ -26,15 +30,25 @@ work = ExeWork.new do
 	]
 	@SPECIFIC_CFLAGS = {
 		'worldPacketParsersLua.c' => ' -Wno-vla',
+		'cDbc.cpp' => " -I#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers"+
+			" -I#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp",
+		'exception.cpp' => " -I#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp",
 	}
-	@EXTRA_INCLUDES = ['build', 'src', 'server-code', 'server-code/Auth']
+	@EXTRA_INCLUDES = ['build', 'src', 'server-code', 'server-code/Auth',
+		"#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers/spell",
+	]
+	@EXTRA_OBJECTS = [DBC_SPELL]
 	@LIBRARIES = ['crypto', 'z']
 	if(HOST == :win32)
-		@LIBRARIES += ['lua', 'wsock32', 'gdi32']
+		@SOURCES << "#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/util/win32"
+		@SOURCES << "#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/util/win32/sym_engine"
+		@LIBRARIES += ['lua', 'wsock32', 'gdi32', 'imagehlp']
 	elsif(HOST == :linux)
+		@SOURCES << "#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/util/unix"
 		@EXTRA_CFLAGS = ' '+open('|pkg-config --cflags lua5.2').read.strip
 		@EXTRA_LINKFLAGS = ' '+open('|pkg-config --libs lua5.2').read.strip
 		@LIBRARIES += ['rt']
+		#@LIBRARIES = ['dl']
 	else
 		raise "Unsupported platform: #{HOST}"
 	end

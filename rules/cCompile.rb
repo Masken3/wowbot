@@ -161,6 +161,10 @@ class CCompileWork < FileTask
 
 		set_defaults
 
+		@SOURCES.each do |s|
+			raise "Source directory #{s} does not exist!" if(!File.directory?(s))
+		end
+
 		# find source files
 		cfiles = collect_source_files('.c')
 		@cppfiles = collect_source_files('.cpp') + collect_source_files('.cc') + collect_source_files('.C')

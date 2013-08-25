@@ -3,6 +3,7 @@
 #include "log.h"
 #include "world.h"
 #include "auth.h"
+#include "cDbc.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -20,6 +21,8 @@ int main(void) {
 	WorldSession session;
 	lua_State* L;
 	int res;
+
+	loadDBC();
 
 	memset(&session, 0, sizeof(session));
 

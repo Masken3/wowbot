@@ -14,3 +14,4 @@ ipch
 log.txt
 log.*.txt
 config.lua
+config.rb

@@ -1,0 +1,2 @@
+CONFIG_WOWFOOT_DIR = 'c:/code/wowfoot'
+CONFIG_WOW_VERSION = 11200
