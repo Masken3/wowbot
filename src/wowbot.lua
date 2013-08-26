@@ -31,6 +31,8 @@ if(STATE == nil) then
 		moving = false,
 		moveStartTime = 0,	-- floating point, in seconds. valid if moving == true.
 
+		attackSpells = {},	-- Spells we know that are useful for attacking other creatures.
+
 		-- timer-related stuff
 		timers = {},
 		inTimerCallback = false,
@@ -137,10 +139,27 @@ local function spellEffectNames(s)
 	return (res);
 end
 
+local SPELL_ATTACK_EFFECTS = {
+	SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL=true,
+	SPELL_EFFECT_FORCE_CRITICAL_HIT=true,
+	SPELL_EFFECT_GUARANTEE_HIT=true,
+	SPELL_EFFECT_WEAPON_DAMAGE=true,	--?
+	SPELL_EFFECT_ATTACK=true,
+	SPELL_EFFECT_ADD_COMBO_POINTS=true,
+	SPELL_EFFECT_SCHOOL_DAMAGE=true,
+	SPELL_EFFECT_ADD_EXTRA_ATTACKS=true,
+	SPELL_EFFECT_ENVIRONMENTAL_DAMAGE=true,	--?
+}
+
 function hSMSG_INITIAL_SPELLS(p)
 	print("SMSG_INITIAL_SPELLS", dump(p));
 	for i,id in ipairs(p.spells) do
 		local s = cSpell(id);
 		print(id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+		for i, e in ipairs(s.effect) do
+			if(SPELL_ATTACK_EFFECTS[e.id]) then
+				attackSpells[id] = s
+			end
+		end
 	end
 end

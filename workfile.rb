@@ -27,12 +27,16 @@ work = ExeWork.new do
 		GenTask.new('movementFlags'),
 		GenLuaFromHeaderTask.new('UpdateFields', 'server-code/UpdateFields.h'),
 		GenLuaFromHeaderTask.new('updateBlockFlags', 'src/updateBlockFlags.h'),
+		GenLuaFromHeaderTask.new('SharedDefines', 'server-code/SharedDefines.h',
+			{:includedEnums=>['SpellEffects']}),
 	]
 	@SPECIFIC_CFLAGS = {
 		'worldPacketParsersLua.c' => ' -Wno-vla',
 		'cDbc.cpp' => " -I#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers"+
 			" -I#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp",
 		'exception.cpp' => " -I#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp",
+		'stackTrace.cpp' => " -I#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp",
+		'process.cpp' => " -I#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp -Wno-missing-format-attribute",
 	}
 	@EXTRA_INCLUDES = ['build', 'src', 'server-code', 'server-code/Auth',
 		"#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers/spell",
@@ -45,8 +49,10 @@ work = ExeWork.new do
 		@LIBRARIES += ['lua', 'wsock32', 'gdi32', 'imagehlp']
 	elsif(HOST == :linux)
 		@SOURCES << "#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/util/unix"
-		@EXTRA_CFLAGS = ' '+open('|pkg-config --cflags lua5.2').read.strip
-		@EXTRA_LINKFLAGS = ' '+open('|pkg-config --libs lua5.2').read.strip
+		@SOURCE_FILES << "#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/util/process.cpp"
+		@EXTRA_CFLAGS = LUA_CFLAGS
+		@EXTRA_CPPFLAGS = LUA_CFLAGS
+		@EXTRA_LINKFLAGS = LUA_LINKFLAGS
 		@LIBRARIES += ['rt']
 		#@LIBRARIES = ['dl']
 	else

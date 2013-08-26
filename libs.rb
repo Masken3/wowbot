@@ -4,6 +4,11 @@ require "#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers/dbc/dbc.rb"
 
 commonFlags = ' -Wno-all -Wno-extra -Wno-c++-compat -Wno-missing-prototypes -Wno-missing-declarations -Wno-shadow'
 
+if(HOST == :linux)
+	LUA_CFLAGS = ' '+open('|pkg-config --cflags lua5.2').read.strip
+	LUA_LINKFLAGS = ' '+open('|pkg-config --libs lua5.2').read.strip
+end
+
 LIBMPQ = DllWork.new do
 	@SOURCES = [
 		"#{CONFIG_WOWFOOT_DIR}/wowfoot-ex/src/libs/libmpq/libmpq",
@@ -54,8 +59,8 @@ class DbcWork < DllWork
 			if(HOST == :win32)
 				@LIBRARIES = ['lua']
 			elsif(HOST == :linux)
-				@EXTRA_CFLAGS = ' '+open('|pkg-config --cflags lua5.2').read.strip
-				@EXTRA_LINKFLAGS = ' '+open('|pkg-config --libs lua5.2').read.strip
+				@EXTRA_CPPFLAGS = LUA_CFLAGS
+				@EXTRA_LINKFLAGS = LUA_LINKFLAGS
 			end
 			@NAME = name
 			instance_eval(&block) if(block)

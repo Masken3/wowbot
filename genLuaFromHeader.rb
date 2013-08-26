@@ -1,13 +1,16 @@
 
 # Generates C code that sets Lua constants matching enum values in the source header file.
 # Generates one .c and one .h file.
+# options:
+# :includedEnums, array of strings. if set, all enums not in this set will be discarded.
 class GenLuaFromHeaderTask < MultiFileTask
-	def initialize(name, srcName)
+	def initialize(name, srcName, options = {})
 		@name = name
 		@src = srcName
 		@prerequisites = [FileTask.new(@src), FileTask.new(__FILE__)]
 		@cName = "build/#{name}Lua.c"
 		@hName = "build/#{name}Lua.h"
+		@options = options
 		super(@cName, [@hName])
 	end
 	def fileExecute
@@ -62,7 +65,12 @@ class GenLuaFromHeaderTask < MultiFileTask
 						end
 					end
 				elsif(line.strip == '{')
-					inEnum = true
+					ie = @options[:includedEnums]
+					if(ie && !ie.include?(eName))
+						next
+					else
+						inEnum = true
+					end
 				end
 			end
 		end
