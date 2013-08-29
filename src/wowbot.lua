@@ -3,6 +3,7 @@ dofile("src/lua/dump.lua")
 dofile("src/lua/timers.lua")
 dofile("src/lua/struct.lua")
 dofile("src/lua/movement.lua")
+dofile("src/lua/decision.lua")
 
 -- Position: x, y, z
 -- Location: {mapId, position{x,y,z}, orientation}.
@@ -25,6 +26,8 @@ if(STATE == nil) then
 
 		knownObjects = {},
 
+		enemies = {},	-- key:guid. value:knownObject.
+
 		reloadCount = 0,
 		myGuid = '',	-- set by C function enterWorld.
 		myLocation = Location.new(),	-- set by hSMSG_LOGIN_VERIFY_WORLD.
@@ -32,6 +35,7 @@ if(STATE == nil) then
 		moveStartTime = 0,	-- floating point, in seconds. valid if moving == true.
 
 		attackSpells = {},	-- Spells we know that are useful for attacking other creatures.
+		meleeSpell = false,
 
 		-- timer-related stuff
 		timers = {},
@@ -42,6 +46,7 @@ if(STATE == nil) then
 	}
 	-- type-securing STATE is too much work, but at least we can prevent unregistered members.
 	local mt = {
+		__index = "not implemented",
 		__newindex = "no go",
 	}
 	setmetatable(STATE, mt);
@@ -118,25 +123,60 @@ function hSMSG_UPDATE_OBJECT(p)
 		end
 		--UNIT_FIELD_TARGET
 	end
+	decision();
 end
 function updateValues(o, b)
-	local j = 0
+	local j = 1;
+	-- first write the values
 	for i, m in ipairs(b.updateMask) do
+		for k=0,31 do
+			if(bit32.extract(m, k) ~= 0) then
+				o.values[1+k+(i-1)*32] = b.values[j];
+				j = j+1;
+			end
+		end
+	end
+	-- then react to updates
+	for i, m in ipairs(b.updateMask) do
+		for k=0,31 do
+			if(bit32.extract(m, k) ~= 0) then
+				local idx = 1+k+(i-1)*32;
+				valueUpdated(o, idx);
+			end
+		end
 	end
 end
+-- may need reversing.
+function bit32.bytes(x)
+	return bit32.extract(x,0,8),bit32.extract(x,8,8),bit32.extract(x,16,8),bit32.extract(x,24,8)
+end
+local guidFromValues(o, idx)
+	return string.char(bit32.bytes(o.values[idx]), bit32.bytes(o.values[idx+1]))
+end
+-- returns true iff o is a member of my group.
+local function isGroupMember(o)
+	for i,m in ipairs(STATE.members) do
+		if(m.guid == o.guid) then
+			return true
+		end
+	end
+	return false;
+end
+-- returns true iff o is a member of my group, or a pet or summon belonging to a member.
+local function isAlly(o)
+	return isGroupMember(o) or isGroupMember(guidFromValues(o, UNIT_FIELD_SUMMONEDBY));
+end
+local function valueUpdated(o, idx)
+	if(idx == UNIT_FIELD_TARGET and not isAlly(o)) then
+		-- if a non-ally targets an ally, they become an enemy.
+		if(isAlly(guidFromValues(o, idx))) then
+			STATE.enemies[o.guid] = o;
+		end
+	end
+end
+
 function updateMovement(o, b)
-end
-
-local function spacify(s, len)
-	return s..string.rep(' ', len-#s)
-end
-
-local function spellEffectNames(s)
-	local res = {};
-	for i, e in ipairs(s.effect) do
-		res[i] = spacify(cSpellEffectName(e.id), 15);
-	end
-	return (res);
+	o.movement = b;
 end
 
 local SPELL_ATTACK_EFFECTS = {
@@ -158,8 +198,22 @@ function hSMSG_INITIAL_SPELLS(p)
 		print(id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
 		for i, e in ipairs(s.effect) do
 			if(SPELL_ATTACK_EFFECTS[e.id]) then
-				attackSpells[id] = s
+				STATE.attackSpells[id] = s
+			end
+			if(e.id == SPELL_EFFECT_ATTACK) then
+				-- assuming that there's only one melee spell
+				assert(not STATE.meleeSpell);
+				STATE.meleeSpell = id;
 			end
 		end
 	end
+end
+
+function castSpell(spellId, target)
+	local data = {
+		spellId = spellId,
+		targetFlags = TARGET_FLAG_UNIT,
+		unitTarget = target.guid,
+	}
+	send(CMSG_CAST_SPELL, data);
 end

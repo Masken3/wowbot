@@ -11,3 +11,15 @@ function dump(o)
 		return tostring(o)
 	end
 end
+
+local function spacify(s, len)
+	return s..string.rep(' ', len-#s)
+end
+
+local function spellEffectNames(s)
+	local res = {};
+	for i, e in ipairs(s.effect) do
+		res[i] = spacify(cSpellEffectName(e.id), 15);
+	end
+	return (res);
+end

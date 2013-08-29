@@ -31,6 +31,10 @@ local function orient2(v)
 	return math.atan2(v.y, v.x);
 end
 
+function distanceToObject(o)
+	return distance3(STATE.myLocation.position, o.movement.pos);
+end
+
 -- In yards, the same unit as world coordinates.
 -- Bot will run until it's within TOLERANCE of DIST yards from leader.
 -- Then it will follow leader's movements:
@@ -38,7 +42,7 @@ end
 -- This is the lowest-priority action a bot will take.
 -- All other activities will take precedence.
 FOLLOW_DIST = 5
-FOLLOW_TOLERANCE = 0.5
+FOLLOW_TOLERANCE = 1
 
 -- Bot will stop if it's farther away than this.
 FOLLOW_MAX_DIST = 100
@@ -81,14 +85,14 @@ function hMovement(opcode, p)
 	if(p.guid == STATE.leader.guid) then
 		local realTime = getRealTime();
 		updatePosition(realTime);
-		if(STATE.leader.movement.startTime) then
-			updateLeaderPosition(realTime);
+		--if(STATE.leader.movement.startTime) then
+			--updateLeaderPosition(realTime);
 			-- calculated leader position
-			local clp = STATE.leader.location.position;
+			--local clp = STATE.leader.location.position;
 			--print("clp, p:", dump(clp), dump(p.pos));
-			local d = diff3(clp, p.pos);
+			--local d = diff3(clp, p.pos);
 			--print("diff:", d.x, d.y);
-		end
+		--end
 		STATE.leader.location.position.x = p.pos.x;
 		STATE.leader.location.position.y = p.pos.y;
 		STATE.leader.location.position.z = p.pos.z;
@@ -142,7 +146,8 @@ function hMovement(opcode, p)
 
 		-- todo: handle the case of being on different maps.
 		--print("leaderMovement", realTime);
-		doMoveToTarget(realTime, STATE.leader, FOLLOW_DIST);
+		--doMoveToTarget(realTime, STATE.leader, FOLLOW_DIST);
+		decision();
 	end
 end
 
@@ -266,6 +271,7 @@ local function movementTimerCallback(t)
 	--print("movementTimerCallback", t)
 	updatePosition(t);
 	updateLeaderPosition(t);
-	doMoveToLeader(t);
+	decision();
+	--doMoveToLeader(t);
 	--print("movementTimerCallback ends", t)
 end
