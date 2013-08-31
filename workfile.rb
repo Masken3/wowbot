@@ -29,6 +29,8 @@ work = ExeWork.new do
 		GenLuaFromHeaderTask.new('updateBlockFlags', 'src/updateBlockFlags.h'),
 		GenLuaFromHeaderTask.new('SharedDefines', 'server-code/SharedDefines.h',
 			{:includedEnums=>['SpellEffects']}),
+		GenLuaFromHeaderTask.new('Unit', 'server-code/Unit.h',
+			{:includedEnums=>['UnitFlags', 'NPCFlags']}),
 	]
 	@SPECIFIC_CFLAGS = {
 		'worldPacketParsersLua.c' => ' -Wno-vla',

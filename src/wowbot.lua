@@ -173,6 +173,9 @@ local function valueUpdated(o, idx)
 			STATE.enemies[o.guid] = o;
 		end
 	end
+	if(idx == UNIT_NPC_FLAGS) then
+		local flags = o.values[idx];
+	end
 end
 
 function updateMovement(o, b)

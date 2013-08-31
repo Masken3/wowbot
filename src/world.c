@@ -25,6 +25,7 @@
 #include "UpdateFieldsLua.h"
 #include "updateBlockFlagsLua.h"
 #include "SharedDefinesLua.h"
+#include "UnitLua.h"
 
 #define DEFAULT_WORLDSERVER_PORT 8085
 
@@ -276,6 +277,7 @@ void initLua(WorldSession* session) {
 	UpdateFieldsLua(L);
 	updateBlockFlagsLua(L);
 	SharedDefinesLua(L);
+	UnitLua(L);
 }
 
 static void luaPcall(lua_State* L, int nargs) {
