@@ -70,7 +70,7 @@ function luaTimerCallback(realTime)
 		if(realTime >= t) then
 			removeTimer(k)	-- should erase the element without interrupting the for loop.
 			-- however, this function may add or remove other timers. we must protect the array.
-			local res, err = pcall(k, realTime)
+			local res, err = xpcall(k, cTraceback, realTime)
 			if(not res) then
 				print(err);
 			end

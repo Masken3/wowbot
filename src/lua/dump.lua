@@ -12,14 +12,18 @@ function dump(o)
 	end
 end
 
-local function spacify(s, len)
+function spacify(s, len)
 	return s..string.rep(' ', len-#s)
 end
 
-local function spellEffectNames(s)
+function spellEffectNames(s)
 	local res = {};
 	for i, e in ipairs(s.effect) do
 		res[i] = spacify(cSpellEffectName(e.id), 15);
 	end
 	return (res);
+end
+
+function string.hex(s)
+	return string.format(string.rep("%02X", #s), s:byte(1, #s));
 end

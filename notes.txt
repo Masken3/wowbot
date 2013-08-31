@@ -42,3 +42,6 @@ If not in combat:
 ** If leading is walking and within FOLLOW_DIST*2, we too should be walking.
 ** Attempt to stay FOLLOW_DIST/2 away from every party member, excluding leader.
 *** This should cause a decent emergent formation.
+
+23:28 2013-08-29
+Send CMSG_QUESTGIVER_STATUS_MULTIPLE_QUERY to get SMSG_QUESTGIVER_STATUS_MULTIPLE for every giver in range?

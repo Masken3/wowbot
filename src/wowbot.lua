@@ -97,12 +97,98 @@ function hSMSG_LOGIN_VERIFY_WORLD(p)
 	STATE.myLocation = p;
 end
 
+-- may need reversing.
+function bit32.bytes(x)
+	return bit32.extract(x,0,8),bit32.extract(x,8,8),bit32.extract(x,16,8),bit32.extract(x,24,8)
+end
+local function guidFromValues(o, idx)
+	local a = o.values[idx];
+	local b = o.values[idx+1];
+	print("guidFromValues", idx, a, b);
+	--local s = string.char(bit32.bytes(a)) .. string.char(bit32.bytes(b));
+	local s = string.format("%08X%08X", a, b);
+	print("guidFromValues", s);
+	assert(#s == 8);
+	print("guidFromValues", s:hex());
+	return s;
+end
+local function isValidGuid(g)
+	return g ~= string.rep(string.char(0), 8);
+end
+-- returns true iff o is a member of my group.
+local function isGroupMember(o)
+	if(not STATE.inGroup) then
+		return false;
+	end
+	for i,m in ipairs(STATE.members) do
+		if(m.guid == o.guid) then
+			return true
+		end
+	end
+	return false;
+end
+-- returns true iff o is a member of my group, or a pet or summon belonging to a member.
+local function isUnit(o)
+	return (o.values[OBJECT_FIELD_TYPE] == TYPEMASK_UNIT);
+end
+local function isAlly(o)
+	if(not isUnit(o)) then return false; end
+	local g = guidFromValues(o, UNIT_FIELD_SUMMONEDBY);
+	return isGroupMember(o) or isGroupMember(STATE.knownObjects[g]);
+end
+local function valueUpdated(o, idx)
+	if(not isUnit(o)) then return; end
+	if(idx == UNIT_FIELD_TARGET and not isAlly(o)) then
+		-- if a non-ally targets an ally, they become an enemy.
+		local g = guidFromValues(o, idx);
+		if(isValidGuid(g) and isAlly(STATE.knownObjects[g])) then
+			print("enemy:", o.guid:hex());
+			STATE.enemies[o.guid] = o;
+		end
+	end
+	if(idx == UNIT_NPC_FLAGS) then
+		local flags = o.values[idx];
+	end
+end
+-- first write the values
+local function updateValues(o, b)
+	local j = 1;
+	for i, m in ipairs(b.updateMask) do
+		for k=0,31 do
+			if(bit32.extract(m, k) ~= 0) then
+				local idx = 1+k+(i-1)*32;
+				--print(idx, b.values[j]);
+				assert(b.values[j] ~= nil);
+				o.values[idx] = b.values[j];
+				j = j+1;
+			end
+		end
+	end
+end
+-- then react to updates
+local function valuesUpdated(o, b)
+	for i, m in ipairs(b.updateMask) do
+		for k=0,31 do
+			if(bit32.extract(m, k) ~= 0) then
+				local idx = 1+k+(i-1)*32;
+				--print(idx, o.values[idx]);
+				valueUpdated(o, idx);
+			end
+		end
+	end
+end
+
+local function updateMovement(o, b)
+	o.movement = b;
+end
+
 function hSMSG_COMPRESSED_UPDATE_OBJECT(p)
 	--print("SMSG_COMPRESSED_UPDATE_OBJECT", dump(p));
 	hSMSG_UPDATE_OBJECT(p);
 end
 function hSMSG_UPDATE_OBJECT(p)
 	--print("SMSG_UPDATE_OBJECT", dump(p));
+	print("SMSG_UPDATE_OBJECT", #p.blocks);
 	-- todo: get notified when someone is in combat with a party member.
 	for i,b in ipairs(p.blocks) do
 		if(b.type == UPDATETYPE_OUT_OF_RANGE_OBJECTS) then
@@ -110,7 +196,8 @@ function hSMSG_UPDATE_OBJECT(p)
 				STATE.knownObjects[guid] = nil;
 			end
 		elseif(b.type == UPDATETYPE_CREATE_OBJECT or b.type == UPDATETYPE_CREATE_OBJECT2) then
-			local o = {}
+			local o = {guid=b.guid, values={}}
+			print("CREATE_OBJECT", b.guid:hex());
 			updateValues(o, b);
 			updateMovement(o, b);
 			STATE.knownObjects[b.guid] = o;
@@ -123,63 +210,12 @@ function hSMSG_UPDATE_OBJECT(p)
 		end
 		--UNIT_FIELD_TARGET
 	end
+	for i,b in ipairs(p.blocks) do
+		if(b.updateMask and b.guid) then
+			valuesUpdated(STATE.knownObjects[b.guid], b);
+		end
+	end
 	decision();
-end
-function updateValues(o, b)
-	local j = 1;
-	-- first write the values
-	for i, m in ipairs(b.updateMask) do
-		for k=0,31 do
-			if(bit32.extract(m, k) ~= 0) then
-				o.values[1+k+(i-1)*32] = b.values[j];
-				j = j+1;
-			end
-		end
-	end
-	-- then react to updates
-	for i, m in ipairs(b.updateMask) do
-		for k=0,31 do
-			if(bit32.extract(m, k) ~= 0) then
-				local idx = 1+k+(i-1)*32;
-				valueUpdated(o, idx);
-			end
-		end
-	end
-end
--- may need reversing.
-function bit32.bytes(x)
-	return bit32.extract(x,0,8),bit32.extract(x,8,8),bit32.extract(x,16,8),bit32.extract(x,24,8)
-end
-local guidFromValues(o, idx)
-	return string.char(bit32.bytes(o.values[idx]), bit32.bytes(o.values[idx+1]))
-end
--- returns true iff o is a member of my group.
-local function isGroupMember(o)
-	for i,m in ipairs(STATE.members) do
-		if(m.guid == o.guid) then
-			return true
-		end
-	end
-	return false;
-end
--- returns true iff o is a member of my group, or a pet or summon belonging to a member.
-local function isAlly(o)
-	return isGroupMember(o) or isGroupMember(guidFromValues(o, UNIT_FIELD_SUMMONEDBY));
-end
-local function valueUpdated(o, idx)
-	if(idx == UNIT_FIELD_TARGET and not isAlly(o)) then
-		-- if a non-ally targets an ally, they become an enemy.
-		if(isAlly(guidFromValues(o, idx))) then
-			STATE.enemies[o.guid] = o;
-		end
-	end
-	if(idx == UNIT_NPC_FLAGS) then
-		local flags = o.values[idx];
-	end
-end
-
-function updateMovement(o, b)
-	o.movement = b;
 end
 
 local SPELL_ATTACK_EFFECTS = {
@@ -195,10 +231,10 @@ local SPELL_ATTACK_EFFECTS = {
 }
 
 function hSMSG_INITIAL_SPELLS(p)
-	print("SMSG_INITIAL_SPELLS", dump(p));
+	--print("SMSG_INITIAL_SPELLS", dump(p));
 	for i,id in ipairs(p.spells) do
 		local s = cSpell(id);
-		print(id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+		--print(id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
 		for i, e in ipairs(s.effect) do
 			if(SPELL_ATTACK_EFFECTS[e.id]) then
 				STATE.attackSpells[id] = s

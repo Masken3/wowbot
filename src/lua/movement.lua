@@ -78,6 +78,36 @@ local function sendStop()
 	send(MSG_MOVE_STOP, data);
 end
 
+local function updatePosition(realTime)
+	if(not STATE.moving) then
+		return;
+	end
+	local diffTime = realTime - STATE.moveStartTime;
+	local p = STATE.myLocation.position;
+	local o = STATE.myLocation.orientation;
+	p.x = p.x + math.cos(o) * diffTime * RUN_SPEED;
+	p.y = p.y + math.sin(o) * diffTime * RUN_SPEED;
+	STATE.moveStartTime = realTime;
+end
+
+local function updateLeaderPosition(realTime)
+	local p = STATE.leader.location.position;
+	local m = STATE.leader.movement;
+	local diffTime = realTime - m.startTime;
+	p.x = p.x + m.dx * diffTime;
+	p.y = p.y + m.dy * diffTime;
+	m.startTime = realTime;
+end
+
+local function movementTimerCallback(t)
+	--print("movementTimerCallback", t)
+	updatePosition(t);
+	updateLeaderPosition(t);
+	decision();
+	--doMoveToLeader(t);
+	--print("movementTimerCallback ends", t)
+end
+
 function hMovement(opcode, p)
 	--print("hMovement", fg(p.guid), opcode, p.flags)
 
@@ -151,11 +181,11 @@ function hMovement(opcode, p)
 	end
 end
 
-local function doMoveToLeader(realTime)
+function doMoveToLeader(realTime)
 	return doMoveToTarget(realTime, STATE.leader, FOLLOW_DIST)
 end
 
-local function doMoveToTarget(realTime, mo, maxDist)
+function doMoveToTarget(realTime, mo, maxDist)
 	local myPos = STATE.myLocation.position;
 	local tarPos = mo.location.position;
 	local diff = diff3(myPos, tarPos);
@@ -244,34 +274,4 @@ local function doMoveToTarget(realTime, mo, maxDist)
 		assert(math.min(t1, t2) < 0);
 		setTimer(movementTimerCallback, realTime + t);
 	end
-end
-
-local function updatePosition(realTime)
-	if(not STATE.moving) then
-		return;
-	end
-	local diffTime = realTime - STATE.moveStartTime;
-	local p = STATE.myLocation.position;
-	local o = STATE.myLocation.orientation;
-	p.x = p.x + math.cos(o) * diffTime * RUN_SPEED;
-	p.y = p.y + math.sin(o) * diffTime * RUN_SPEED;
-	STATE.moveStartTime = realTime;
-end
-
-local function updateLeaderPosition(realTime)
-	local p = STATE.leader.location.position;
-	local m = STATE.leader.movement;
-	local diffTime = realTime - m.startTime;
-	p.x = p.x + m.dx * diffTime;
-	p.y = p.y + m.dy * diffTime;
-	m.startTime = realTime;
-end
-
-local function movementTimerCallback(t)
-	--print("movementTimerCallback", t)
-	updatePosition(t);
-	updateLeaderPosition(t);
-	decision();
-	--doMoveToLeader(t);
-	--print("movementTimerCallback ends", t)
 end

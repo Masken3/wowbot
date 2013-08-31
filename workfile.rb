@@ -31,6 +31,8 @@ work = ExeWork.new do
 			{:includedEnums=>['SpellEffects']}),
 		GenLuaFromHeaderTask.new('Unit', 'server-code/Unit.h',
 			{:includedEnums=>['UnitFlags', 'NPCFlags']}),
+		GenLuaFromHeaderTask.new('ObjectGuid', 'server-code/ObjectGuid.h',
+			{:includedEnums=>['TypeMask']}),
 	]
 	@SPECIFIC_CFLAGS = {
 		'worldPacketParsersLua.c' => ' -Wno-vla',

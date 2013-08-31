@@ -12,7 +12,8 @@ function decision()
 		attack(enemy);
 		return;
 	end
-	if(STATE.inGroup) then
+	-- guid is set only if leader is online.
+	if(STATE.inGroup and STATE.leader.guid) then
 		follow(STATE.leader);
 		return;
 	end

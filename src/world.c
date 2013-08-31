@@ -26,12 +26,13 @@
 #include "updateBlockFlagsLua.h"
 #include "SharedDefinesLua.h"
 #include "UnitLua.h"
+#include "ObjectGuidLua.h"
 
 #define DEFAULT_WORLDSERVER_PORT 8085
 
 static void handleServerPacket(WorldSession*, ServerPktHeader, char* buf);
 static void luaTimerCallback(double t, void* user);
-static void luaPcall(lua_State* L, int nargs);
+static BOOL luaPcall(lua_State* L, int nargs);
 
 static int runWorld2(WorldSession* session) {
 	Socket sock = session->sock;
@@ -145,10 +146,8 @@ BOOL readLua(WorldSession* session) {
 		return FALSE;
 	}
 	// Run file (parses functions, sets up global variables).
-	res = lua_pcall(L, 0, 0, 0);
-	if(res != LUA_OK) {
+	if(!luaPcall(L, 0)) {
 		LOG("LUA run error!\n");
-		LOG("%s\n", lua_tostring(L, -1));
 		return FALSE;
 	}
 
@@ -259,6 +258,27 @@ static int l_spellEffectName(lua_State* L) {
 	return 1;
 }
 
+static int l_traceback(lua_State* L) {
+	luaL_traceback(L, L, lua_tostring(L, -1), 1);
+	LOG("%s\n", lua_tostring(L, -1));
+	return 1;
+}
+
+#if 0
+// bad idea; strings don't have individual metatables.
+static int l_setGuid(lua_State* L) {
+	lua_createtable(L, 0, 2);
+	lua_pushstring(L, "__tostring");
+	lua_getglobal(L, "dumpGuid");
+	lua_settable(L, -3);
+	lua_pushstring(L, "__index");
+	lua_getglobal(L, "string");
+	lua_settable(L, -3);
+	lua_setmetatable(L, -2);
+	return 0;
+}
+#endif
+
 void initLua(WorldSession* session) {
 	lua_State* L = session->L;
 
@@ -271,6 +291,7 @@ void initLua(WorldSession* session) {
 	lua_register(L, "cRemoveTimer", l_removeTimer);
 	lua_register(L, "cSpellEffectName", l_spellEffectName);
 	lua_register(L, "cSpell", l_spell);
+	lua_register(L, "cTraceback", l_traceback);
 
 	opcodeLua(L);
 	movementFlagsLua(L);
@@ -278,17 +299,23 @@ void initLua(WorldSession* session) {
 	updateBlockFlagsLua(L);
 	SharedDefinesLua(L);
 	UnitLua(L);
+	ObjectGuidLua(L);
 }
 
-static void luaPcall(lua_State* L, int nargs) {
-	int res = lua_pcall(L, nargs, 0, 0);
+static BOOL luaPcall(lua_State* L, int nargs) {
+	int res;
+	lua_pushcfunction(L, l_traceback);
+	lua_insert(L, 1);
+	res = lua_pcall(L, nargs, 0, 1);
+	lua_remove(L, 1);
 	if(res == LUA_OK)
-		return;
+		return TRUE;
 	// if not OK, an error has occurred.
 	// print it.
-	LOG("Lua error: %s\n", lua_tostring(L, -1));
+	//LOG("Lua error: %s\n", lua_tostring(L, -1));
 	lua_pop(L, 1);
 	// at some point, we'll want to reload the Lua code, if you've fixed the error.
+	return FALSE;
 }
 
 static void handleServerPacket(WorldSession* session, ServerPktHeader sph, char* buf) {
