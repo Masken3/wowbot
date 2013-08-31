@@ -138,14 +138,6 @@ local function isAlly(o)
 end
 local function valueUpdated(o, idx)
 	if(not isUnit(o)) then return; end
-	if(idx == UNIT_FIELD_TARGET and not isAlly(o)) then
-		-- if a non-ally targets an ally, they become an enemy.
-		local g = guidFromValues(o, idx);
-		if(isValidGuid(g) and isAlly(STATE.knownObjects[g])) then
-			print("enemy:", o.guid:hex());
-			STATE.enemies[o.guid] = o;
-		end
-	end
 	if(idx == UNIT_NPC_FLAGS) then
 		local flags = o.values[idx];
 	end
