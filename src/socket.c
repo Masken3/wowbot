@@ -37,6 +37,7 @@ int receiveExact(Socket sock, void* dst, size_t dstSize) {
 	int remain = dstSize;
 	char* dstP = (char*)dst;
 	int res;
+	assert(dstSize > 0);
 	//LOG("recv...\n");
 	do {
 		// handle timer.

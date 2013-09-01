@@ -48,6 +48,7 @@ function attack(enemy)
 		print("start melee");
 		setTarget(enemy);
 		castSpell(STATE.meleeSpell, enemy);
+		send(CMSG_ATTACKSWING, {target=enemy.guid});
 		STATE.meleeing = true;
 	end
 end

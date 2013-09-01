@@ -329,3 +329,7 @@ function hSMSG_ATTACKSTOP(p)
 		STATE.enemies[p.attacker] = nil;
 	end
 end
+
+function hSMSG_CAST_FAILED(p)
+	print("SMSG_CAST_FAILED", dump(p));
+end

@@ -211,6 +211,12 @@ static uint16 genCMSG_SET_SELECTION(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+static uint16 genCMSG_ATTACKSWING(lua_State* L, byte* buf) {
+	GL_START;
+	M(Guid, target);
+	GL_END;
+}
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -219,6 +225,7 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_CAST_SPELL);
 		GEN_CASE(CMSG_CANCEL_CAST);
 		GEN_CASE(CMSG_SET_SELECTION);
+		GEN_CASE(CMSG_ATTACKSWING);
 		default: return NULL;
 	}
 }

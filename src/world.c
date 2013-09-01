@@ -46,8 +46,9 @@ static int runWorld2(WorldSession* session) {
 		//sph.cmd = ntohs(sph.cmd); // cmd is not swapped
 		sph.size = ntohs(sph.size);
 		//LOG("Packet: cmd 0x%x, size %i\n", sph.cmd, sph.size);
-		if(receiveExact(sock, buf, sph.size - 2) <= 0)
-			return 0;
+		if(sph.size > 2)
+			if(receiveExact(sock, buf, sph.size - 2) <= 0)
+				return 0;
 		if(sph.cmd == SMSG_LOGOUT_COMPLETE) {
 			LOG("SMSG_LOGOUT_COMPLETE\n");
 			return 1;

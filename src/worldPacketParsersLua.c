@@ -14,6 +14,7 @@
 #include "world.h"
 #include "log.h"
 #include "dumpPacket.h"
+#include "SharedDefines.h"
 
 #ifdef WIN32
 static size_t strnlen(const char* str, size_t maxlen) {
@@ -447,4 +448,26 @@ void pSMSG_ATTACKSTOP(pLUA_ARGS) {
 	MV(PackedGuid, attacker);
 	MV(PackedGuid, victim);
 	M(uint32, unk);
+}
+
+void pSMSG_CAST_FAILED(pLUA_ARGS) {
+	PL_START;
+	M(uint32, spellId);
+	{
+		MM(byte, status);
+		if(status == 0) {	// success
+			return;
+		} else if(status == 2) {	// fail
+			MM(byte, result);
+			if(result == SPELL_FAILED_REQUIRES_SPELL_FOCUS) {
+				M(uint32, focus);
+			} else if(result == SPELL_FAILED_EQUIPPED_ITEM_CLASS) {
+				M(uint32, itemClass);
+				M(uint32, itemSubClass);
+				M(uint32, itemInventoryType);
+			}
+		} else {
+			LOG("pSMSG_CAST_FAILED: unknown status %i\n", status);
+		}
+	}
 }
