@@ -279,8 +279,9 @@ static void spValuesUpdate(lua_State* L, const char** src, const char* buf, int 
 			count += pc;
 		}
 	}
-	assert(count > 0);
-	MA(uint32, values, count);
+	if(count > 0) {
+		MA(uint32, values, count);
+	}
 	*src = ptr;
 }
 
@@ -433,4 +434,17 @@ void pSMSG_INITIAL_SPELLS(pLUA_ARGS) {
 		}
 		lua_settable(L, -3);
 	}
+}
+
+void pSMSG_ATTACKSTART(pLUA_ARGS) {
+	PL_START;
+	M(Guid, attacker);
+	M(Guid, victim);
+}
+
+void pSMSG_ATTACKSTOP(pLUA_ARGS) {
+	PL_START;
+	MV(PackedGuid, attacker);
+	MV(PackedGuid, victim);
+	M(uint32, unk);
 }

@@ -1,17 +1,4 @@
 
-function dump(o)
-	if type(o) == 'table' then
-		local s = '{ '
-		for k,v in pairs(o) do
-			if type(k) ~= 'number' then k = '"'..k..'"' end
-			s = s .. '['..k..'] = ' .. dump(v) .. ','
-		end
-		return s .. '} '
-	else
-		return tostring(o)
-	end
-end
-
 function makeReadOnly(t)
 	local copy = {}
 	for k, v in pairs(t) do
@@ -67,7 +54,7 @@ new = function(members)
 						--print(dump(memberType));
 						memberType = memberType.members;
 					end
-					if(type(v) == 'table') then
+					if(type(v) == 'table' and memberType ~= 'table') then
 						local metaV = getmetatable(v)
 						if(memberType ~= metaV) then
 							error(k.." has wrong type: "..dump(metaV)..". "..dump(memberType).." needed.", 2)

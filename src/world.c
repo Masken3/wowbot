@@ -27,6 +27,7 @@
 #include "SharedDefinesLua.h"
 #include "UnitLua.h"
 #include "ObjectGuidLua.h"
+#include "DBCEnumsLua.h"
 
 #define DEFAULT_WORLDSERVER_PORT 8085
 
@@ -300,6 +301,7 @@ void initLua(WorldSession* session) {
 	SharedDefinesLua(L);
 	UnitLua(L);
 	ObjectGuidLua(L);
+	DBCEnumsLua(L);
 }
 
 static BOOL luaPcall(lua_State* L, int nargs) {

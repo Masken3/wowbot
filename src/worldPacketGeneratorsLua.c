@@ -14,12 +14,18 @@
 #define GL_END assert(ptr - buf < UINT16_MAX); return ptr - buf
 
 static void lua_gen_uint32(lua_State* L, const char* name, byte** pp) {
-	*(uint32*)(*pp) = luaL_checkunsigned(L, -1);
+	if(!lua_isnumber(L, -1)) {
+		luaL_error(L, "gen error: %s is not a number!", name);
+	}
+	*(uint32*)(*pp) = lua_tounsigned(L, -1);
 	(*pp) += 4;
 }
 
 static void lua_gen_uint16(lua_State* L, const char* name, byte** pp) {
-	uint32 num = luaL_checkunsigned(L, -1);
+	uint32 num = lua_tounsigned(L, -1);
+	if(!lua_isnumber(L, -1)) {
+		luaL_error(L, "gen error: %s is not a number!", name);
+	}
 	if(num > 0xFFFF) {
 		luaL_error(L, "gen error: %s is too big to fit in an uint16 (0x%x)!", name, num);
 	}
@@ -29,7 +35,10 @@ static void lua_gen_uint16(lua_State* L, const char* name, byte** pp) {
 
 #if 0
 static void lua_gen_byte(lua_State* L, const char* name, byte** pp) {
-	uint32 num = luaL_checkunsigned(L, -1);
+	uint32 num = lua_tounsigned(L, -1);
+	if(!lua_isnumber(L, -1)) {
+		luaL_error(L, "gen error: %s is not a number!", name);
+	}
 	if(num > 0xFF) {
 		luaL_error(L, "gen error: %s is too big to fit in a byte (0x%x)!", name, num);
 	}
@@ -39,7 +48,10 @@ static void lua_gen_byte(lua_State* L, const char* name, byte** pp) {
 #endif
 
 static void lua_gen_float(lua_State* L, const char* name, byte** pp) {
-	*(float*)(*pp) = (float)luaL_checknumber(L, -1);
+	if(!lua_isnumber(L, -1)) {
+		luaL_error(L, "gen error: %s is not a number!", name);
+	}
+	*(float*)(*pp) = (float)lua_tonumber(L, -1);
 	(*pp) += 4;
 }
 
@@ -193,6 +205,12 @@ static uint16 genCMSG_CANCEL_CAST(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+static uint16 genCMSG_SET_SELECTION(lua_State* L, byte* buf) {
+	GL_START;
+	M(Guid, target);
+	GL_END;
+}
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -200,6 +218,7 @@ PacketGenerator getPacketGenerator(int opcode) {
 		MOVEMENT_OPCODES(MOVEMENT_CASE);
 		GEN_CASE(CMSG_CAST_SPELL);
 		GEN_CASE(CMSG_CANCEL_CAST);
+		GEN_CASE(CMSG_SET_SELECTION);
 		default: return NULL;
 	}
 }

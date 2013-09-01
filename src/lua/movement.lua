@@ -32,7 +32,7 @@ local function orient2(v)
 end
 
 function distanceToObject(o)
-	return distance3(STATE.myLocation.position, o.movement.pos);
+	return distance3(STATE.myLocation.position, o.location.position);
 end
 
 -- In yards, the same unit as world coordinates.
@@ -49,7 +49,7 @@ FOLLOW_MAX_DIST = 100
 
 -- This is modified by target hitbox size.
 MELEE_RANGE = 5
-MELEE_DIST = 3
+MELEE_DIST = 4
 MELEE_TOLERANCE = FOLLOW_TOLERANCE
 
 -- In yards per second.
@@ -93,6 +93,7 @@ end
 local function updateLeaderPosition(realTime)
 	local p = STATE.leader.location.position;
 	local m = STATE.leader.movement;
+	if(not m.startTime) then return; end
 	local diffTime = realTime - m.startTime;
 	p.x = p.x + m.dx * diffTime;
 	p.y = p.y + m.dy * diffTime;
@@ -188,6 +189,7 @@ end
 function doMoveToTarget(realTime, mo, maxDist)
 	local myPos = STATE.myLocation.position;
 	local tarPos = mo.location.position;
+	local mov = mo.movement;
 	local diff = diff3(myPos, tarPos);
 	local dist = length3(diff);
 	--  or dist < (FOLLOW_DIST - FOLLOW_TOLERANCE)
@@ -210,8 +212,7 @@ function doMoveToTarget(realTime, mo, maxDist)
 		-- if target is close, and moving in roughly the same direction and speed as us,
 		-- wait longer before resetting our movement. otherwise,
 		-- a target running away will cause tons of unneeded update packets.
-		local mov = mo.movement;
-		if(mov.dx ~=0 or mov.dy ~=0) then
+		if(mov and (mov.dx ~=0 or mov.dy ~=0)) then
 			--see math-notes.txt, 14:33 2013-08-24
 			local a, b, c;
 			if(mov.dy == 0) then
@@ -249,19 +250,21 @@ function doMoveToTarget(realTime, mo, maxDist)
 		return;
 	elseif(STATE.moving) then
 		--print("stop");
+		myPos.z = tarPos.z;	--hack
+		STATE.myLocation.orientation = orient2(diff);
 		sendStop();
-		if(mo.movement.dx == 0 and mo.movement.dy == 0) then
+		if(not mov or (mov.dx == 0 and mov.dy == 0)) then
 			removeTimer(movementTimerCallback);
 			--print("removed timer.");
 			return;
 		end
 	end
-	if(mo.movement.dx ~= 0 or mo.movement.dy ~= 0) then
+	if(mov and (mov.dx ~= 0 or mov.dy ~= 0)) then
 		-- see math-notes.txt, 2013-08-18 20:03:46
-		local dx = STATE.leader.movement.dx;
-		local dy = STATE.leader.movement.dy;
-		local x = mo.location.position.x - myPos.x;
-		local y = mo.location.position.y - myPos.y;
+		local dx = mov.dx;
+		local dy = mov.dy;
+		local x = tarPos.x - myPos.x;
+		local y = tarPos.y - myPos.y;
 		local a = dx^2 + dy^2;
 		local b = 2*(x*dx+y*dy);
 		local c = (x^2+y^2-FOLLOW_DIST^2);
