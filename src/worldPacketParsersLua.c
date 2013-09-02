@@ -142,7 +142,7 @@ void pSMSG_MONSTER_MOVE(pLUA_ARGS) {
 	//dumpPacket(buf, bufSize);
 	MV(PackedGuid, guid);
 	M(Vector3, point);
-	M(uint32, id);
+	M(uint32, curTime);
 	{
 		MM(byte, type);
 		switch(type) {
@@ -470,4 +470,9 @@ void pSMSG_CAST_FAILED(pLUA_ARGS) {
 			LOG("pSMSG_CAST_FAILED: unknown status %i\n", status);
 		}
 	}
+}
+
+void pEmpty(pLUA_ARGS) {
+	PL_START;
+	assert(bufSize == 0);
 }

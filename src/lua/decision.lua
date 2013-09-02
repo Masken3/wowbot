@@ -1,8 +1,12 @@
 
 -- implementation of the decision tree from notes.txt
-function decision()
+function decision(realTime)
+	updateEnemyPositions(realTime);
+	updateMyPosition(realTime);
+	updateLeaderPosition(realTime);
 	--print("decision...");
 	-- if we're already attacking someone, keep at it.
+	-- todo: handle multiple enemies here.
 	if(false) then--STATE.meleeing) then
 		if(keepAttacking()) then
 			print("keep meleeing.");
@@ -41,9 +45,10 @@ function attack(enemy)
 	-- otherwise, go to melee.
 	local dist = distanceToObject(enemy);
 	print("attack, dist", dist);
-	if(dist > MELEE_RANGE or STATE.moving) then
-		doMoveToTarget(getRealTime(), enemy, MELEE_DIST);
-	end
+
+	-- also sets orientation, so is worthwhile to do even if we're already in range.
+	doMoveToTarget(getRealTime(), enemy, MELEE_DIST);
+
 	if(dist < MELEE_RANGE and not STATE.meleeing) then
 		print("start melee");
 		setTarget(enemy);

@@ -48,6 +48,7 @@ new = function(members)
 					local meta = getmetatable(t);
 					local memberType = m[k]
 					if(not memberType) then
+						print(dump(m));
 						error(k.." is not a valid member.", 2);
 					end
 					if(type(memberType) == 'table') then

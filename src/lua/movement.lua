@@ -66,7 +66,7 @@ function fg(guid)
 	return res
 end
 
-local function sendStop()
+local function sendMovement(opcode)
 	STATE.moving = false;
 	local data = {
 		flags = 0,
@@ -75,10 +75,10 @@ local function sendStop()
 		time = 0,
 		fallTime = 0,
 	}
-	send(MSG_MOVE_STOP, data);
+	send(opcode, data);
 end
 
-local function updatePosition(realTime)
+function updateMyPosition(realTime)
 	if(not STATE.moving) then
 		return;
 	end
@@ -90,7 +90,7 @@ local function updatePosition(realTime)
 	STATE.moveStartTime = realTime;
 end
 
-local function updateLeaderPosition(realTime)
+function updateLeaderPosition(realTime)
 	local p = STATE.leader.location.position;
 	local m = STATE.leader.movement;
 	if(not m.startTime) then return; end
@@ -102,10 +102,7 @@ end
 
 local function movementTimerCallback(t)
 	--print("movementTimerCallback", t)
-	updatePosition(t);
-	updateLeaderPosition(t);
-	decision();
-	--doMoveToLeader(t);
+	decision(t);
 	--print("movementTimerCallback ends", t)
 end
 
@@ -115,7 +112,7 @@ function hMovement(opcode, p)
 	--print("p,l:", fg(p.guid), fg(STATE.leaderGuid));
 	if(p.guid == STATE.leader.guid) then
 		local realTime = getRealTime();
-		updatePosition(realTime);
+		updateMyPosition(realTime);
 		--if(STATE.leader.movement.startTime) then
 			--updateLeaderPosition(realTime);
 			-- calculated leader position
@@ -177,13 +174,8 @@ function hMovement(opcode, p)
 
 		-- todo: handle the case of being on different maps.
 		--print("leaderMovement", realTime);
-		--doMoveToTarget(realTime, STATE.leader, FOLLOW_DIST);
-		decision();
+		decision(realTime);
 	end
-end
-
-function doMoveToLeader(realTime)
-	return doMoveToTarget(realTime, STATE.leader, FOLLOW_DIST)
 end
 
 function doMoveToTarget(realTime, mo, maxDist)
@@ -192,17 +184,19 @@ function doMoveToTarget(realTime, mo, maxDist)
 	local mov = mo.movement;
 	local diff = diff3(myPos, tarPos);
 	local dist = length3(diff);
+	local newOrientation = orient2(diff);
+	local oChanged = (STATE.myLocation.orientation ~= newOrientation);
+	STATE.myLocation.orientation = newOrientation;
 	--  or dist < (FOLLOW_DIST - FOLLOW_TOLERANCE)
 	if(dist > maxDist) then
 		--print("dist:", dist);
 		local data = {
 			flags = MOVEFLAG_FORWARD,
 			pos = myPos,
-			o = orient2(diff),
+			o = newOrientation,
 			time = 0,
 			fallTime = 0,
 		}
-		STATE.myLocation.orientation = data.o;
 		STATE.moving = true;
 		--print(dump(data));
 		send(MSG_MOVE_START_FORWARD, data);
@@ -228,12 +222,18 @@ function doMoveToTarget(realTime, mo, maxDist)
 			local dy = math.sin(data.o) * RUN_SPEED;
 			local t1 = (maxDist*((a^2+b^2)^0.5) - (a*x+b*y+c)) / (a*dx+b*dy);
 			local t2 = (maxDist*((a^2+b^2)^0.5) + a*x+b*y+c) / -(a*dx+b*dy);
-			local t = math.max(t1, t2);
+			local tMax = math.max(t1, t2);
 			local tMin = math.min(t1, t2);
+			local t;
+			if(tMin > 0) then
+				t = tMin;
+			else
+				t = tMax;
+			end
 
 			--print("a, b, c:", a, b, c);
 			--print("dx, dy:", dx, dy);
-			--print("moving T:", t);
+			print("moving T:", t);
 			assert(t > 0);
 			--assert(tMin < 0);
 			setTimer(movementTimerCallback, realTime + t);
@@ -245,19 +245,21 @@ function doMoveToTarget(realTime, mo, maxDist)
 		local moveEndTime = STATE.moveStartTime + (dist - maxDist) / RUN_SPEED;
 		--local timerTime = math.min(moveEndTime, STATE.moveStartTime + 1);
 		local timerTime = moveEndTime;
-		--print("still T:", timerTime - realTime);
+		print("still T:", timerTime - realTime);
 		setTimer(movementTimerCallback, timerTime);
 		return;
 	elseif(STATE.moving) then
 		--print("stop");
 		myPos.z = tarPos.z;	--hack
-		STATE.myLocation.orientation = orient2(diff);
-		sendStop();
+		sendMovement(MSG_MOVE_STOP);
 		if(not mov or (mov.dx == 0 and mov.dy == 0)) then
 			removeTimer(movementTimerCallback);
 			--print("removed timer.");
 			return;
 		end
+	end
+	if(oChanged) then
+		sendMovement(MSG_MOVE_SET_FACING);
 	end
 	if(mov and (mov.dx ~= 0 or mov.dy ~= 0)) then
 		-- see math-notes.txt, 2013-08-18 20:03:46

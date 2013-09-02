@@ -13,7 +13,8 @@ Position = Struct.new{x='number', y='number', z='number'}
 Location = Struct.new{mapId='number', position=Position, orientation='number'}
 Movement = Struct.new{dx='number', dy='number', startTime='number'}
 MovingObject = Struct.new{guid='string', location=Location, movement=Movement}
-KnownObject = Struct.new{guid='string', values='table', location=Location, movement=Movement}
+KnownObject = Struct.new{guid='string', values='table', monsterMovement='table',
+	location=Location, movement=Movement}
 
 if(STATE == nil) then
 	STATE = {
@@ -64,9 +65,70 @@ else
 	print("STATE.reloadCount", STATE.reloadCount);
 end
 
+local updateMonsterPosition;
+
 function hSMSG_MONSTER_MOVE(p)
 	--print("SMSG_MONSTER_MOVE", dump(p));
+	local o = STATE.knownObjects[p.guid];
+	if(not o) then return; end
+	o.monsterMovement = p;
+	o.location.position = Position.new(p.point);
+	if(p.type == MonsterMoveFacingAngle) then
+		o.location.orientation = p.angle;
+	end
+	if(not o.movement) then o.movement = Movement.new(); end
+	local mov = o.movement;
+	mov.dx = 0;
+	mov.dy = 0;
+	if(p.type == MonsterMoveStop) then return; end
+	local dur = p.duration / 1000;
+	-- save destination in unused key "dst".
+	if(p.count) then
+		assert(p.count <= 1);
+		if(p.count == 0) then return; end
+		-- todo: enable handling of more than 1 points.
+		p.dst = p.points[1];
+	else
+		p.dst = p.destination;
+	end
+	mov.dx = (p.dst.x - p.point.x) / dur;
+	mov.dy = (p.dst.y - p.point.y) / dur;
+	mov.startTime = getRealTime();
+	-- don't bother with timers; we can update all of them at decision time.
 end
+
+function updateMonsterPosition(realTime, o)
+	--print("updateMonsterPosition", o.guid:hex());
+	-- todo: enable handling of more than 1 points.
+	local mm = o.monsterMovement;
+	local mov = o.movement;
+	local dst = mm.dst;
+	if(not mm or not mov or not dst) then return; end
+	local elapsedTime = realTime - mov.startTime;
+	if(elapsedTime >= mm.duration / 1000) then
+		o.location.position = Position.new(dst);
+		mov.dx = 0;
+		mov.dy = 0;
+		return;
+	else
+		local pos = o.location.position;
+		pos.x = pos.x + mov.dx * elapsedTime;
+		pos.y = pos.y + mov.dy * elapsedTime;
+		mov.startTime = realTime;
+	end
+end
+
+function updateEnemyPositions(realTime)
+	local c = 0;
+	for guid, o in pairs(STATE.enemies) do
+		updateMonsterPosition(realTime, o);
+		c = c + 1;
+	end
+	if(c > 1) then
+		print(c.." enemies.");
+	end
+end
+
 function hMSG_MOVE_HEARTBEAT(p)
 	print("MSG_MOVE_HEARTBEAT", dump(p));
 end
@@ -130,11 +192,10 @@ local function isValidGuid(g)
 	return g ~= string.rep(string.char(0), 8);
 end
 
--- returns true iff o is a member of my group.
+-- returns true iff o is me or a member of my group.
 local function isGroupMember(o)
-	if(not STATE.inGroup) then
-		return false;
-	end
+	if(o.guid == STATE.myGuid) then return true; end
+	if(not STATE.inGroup) then return false; end
 	for i,m in ipairs(STATE.groupMembers) do
 		if(m.guid == o.guid) then
 			return true
@@ -168,7 +229,7 @@ local function isSummonedByGroupMember(o)
 	return isGroupMember(STATE.knownObjects[g]);
 end
 
--- returns true iff o is a member of my group, or a pet or summon belonging to a member.
+-- returns true iff o is a member of my group (including me), or a pet or summon belonging to a member.
 local function isAlly(o)
 	if(not isUnit(o)) then return false; end
 	return isGroupMember(o) or isSummonedByGroupMember(o);
@@ -207,12 +268,6 @@ local function valuesUpdated(o, b)
 		end
 	end
 end
-
-Position = Struct.new{x='number', y='number', z='number'}
-Location = Struct.new{mapId='number', position=Position, orientation='number'}
-Movement = Struct.new{dx='number', dy='number', startTime='number'}
-MovingObject = Struct.new{guid='string', location=Location, movement=Movement}
-KnownObject = Struct.new{guid='string', values='table', location=Location, movement=Movement}
 
 local function updateMovement(o, b)
 	if(b.pos) then
@@ -269,7 +324,7 @@ function hSMSG_UPDATE_OBJECT(p)
 			valuesUpdated(STATE.knownObjects[b.guid], b);
 		end
 	end
-	decision();
+	decision(getRealTime());
 end
 
 local SPELL_ATTACK_EFFECTS = {
@@ -330,6 +385,41 @@ function hSMSG_ATTACKSTOP(p)
 	end
 end
 
+-- misleading name; also sent when cast succeeds.
 function hSMSG_CAST_FAILED(p)
 	print("SMSG_CAST_FAILED", dump(p));
+end
+
+local function handleAttackCanceled()
+	STATE.meleeing = false;
+	decision(getRealTime());
+end
+
+function hSMSG_ATTACKSWING_NOTINRANGE(p)
+	print("SMSG_ATTACKSWING_NOTINRANGE");
+	handleAttackCanceled();
+end
+function hSMSG_ATTACKSWING_BADFACING(p)
+	print("SMSG_ATTACKSWING_BADFACING");
+	handleAttackCanceled();
+end
+function hSMSG_ATTACKSWING_NOTSTANDING(p)
+	print("SMSG_ATTACKSWING_NOTSTANDING");
+	handleAttackCanceled();
+end
+function hSMSG_ATTACKSWING_DEADTARGET(p)
+	print("SMSG_ATTACKSWING_DEADTARGET");
+	handleAttackCanceled();
+end
+function hSMSG_ATTACKSWING_CANT_ATTACK(p)
+	print("SMSG_ATTACKSWING_CANT_ATTACK");
+	handleAttackCanceled();
+end
+function hSMSG_CANCEL_COMBAT(p)
+	print("SMSG_CANCEL_COMBAT");
+	handleAttackCanceled();
+end
+function hSMSG_CANCEL_AUTO_REPEAT(p)
+	print("SMSG_CANCEL_AUTO_REPEAT");
+	handleAttackCanceled();
 end

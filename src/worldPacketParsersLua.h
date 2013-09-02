@@ -31,5 +31,6 @@ typedef struct WorldSession WorldSession;
 LUA_HANDLERS(DECLARE_LUA_HANDLER);
 
 void pMovementInfo(pLUA_ARGS);
+void pEmpty(pLUA_ARGS);
 
 #endif	//WORLDPACKETPARSERSLUA_H

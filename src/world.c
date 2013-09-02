@@ -28,6 +28,7 @@
 #include "UnitLua.h"
 #include "ObjectGuidLua.h"
 #include "DBCEnumsLua.h"
+#include "movementLua.h"
 
 #define DEFAULT_WORLDSERVER_PORT 8085
 
@@ -111,6 +112,16 @@ void enterWorld(WorldSession* session, uint64 guid) {
 	m(MSG_MOVE_HEARTBEAT)\
 	m(SMSG_SET_PROFICIENCY)\
 	m(SMSG_MESSAGECHAT)\
+
+#define EMPTY_PACKET_LUA_HANDLERS(m)\
+	m(SMSG_ATTACKSWING_NOTINRANGE)\
+	m(SMSG_ATTACKSWING_BADFACING)\
+	m(SMSG_ATTACKSWING_NOTSTANDING)\
+	m(SMSG_ATTACKSWING_DEADTARGET)\
+	m(SMSG_ATTACKSWING_CANT_ATTACK)\
+	m(SMSG_CANCEL_COMBAT)\
+	m(SMSG_CANCEL_AUTO_REPEAT)\
+
 
 static BOOL checkLuaFunction(lua_State* L, const char* name) {
 	//LOG("checking for Lua function %s...\n", name);
@@ -303,6 +314,7 @@ void initLua(WorldSession* session) {
 	UnitLua(L);
 	ObjectGuidLua(L);
 	DBCEnumsLua(L);
+	movementLua(L);
 }
 
 static BOOL luaPcall(lua_State* L, int nargs) {
@@ -326,6 +338,7 @@ static void handleServerPacket(WorldSession* session, ServerPktHeader sph, char*
 #define CASE_HANDLER(name) case name: LSP; h##name(session, buf, sph.size - 2); break;
 #define CASE_IGNORED_HANDLER(name) case name: break;
 #define CASE_LUA_HANDLER(name) _CASE_LUA_HANDLER(name, p##name);
+#define CASE_EMPTY_LUA_HANDLER(name) _CASE_LUA_HANDLER(name, pEmpty);
 
 #define CASE_MOVEMENT_OPCODE(name) case name:\
 	lua_getglobal(L, "hMovement");\
@@ -350,6 +363,7 @@ static void handleServerPacket(WorldSession* session, ServerPktHeader sph, char*
 		IGNORED_PACKET_TYPES(CASE_IGNORED_HANDLER);
 		MOVEMENT_OPCODES(CASE_MOVEMENT_OPCODE);
 		LUA_HANDLERS(CASE_LUA_HANDLER);
+		EMPTY_PACKET_LUA_HANDLERS(CASE_EMPTY_LUA_HANDLER);
 		default:
 		{
 			if(s) {

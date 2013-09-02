@@ -1,12 +1,17 @@
 
 function dump(o)
 	if type(o) == 'table' then
-		local s = '{ '
+		local s = '{'
 		for k,v in pairs(o) do
-			if type(k) ~= 'number' then k = '"'..k..'"' end
-			s = s .. '['..k..'] = ' .. dump(v) .. ','
+			local vs;
+			if(k == "guid") then
+				vs = v:hex();
+			else
+				vs = dump(v);
+			end
+			s = s..' ['..k..']'..'='..vs..','
 		end
-		return s .. '} '
+		return s..'}'
 	elseif type(o) == 'number' then
 		if(math.floor(o) == o) then
 			return tostring(o);
@@ -19,9 +24,8 @@ function dump(o)
 end
 
 function dumpKeys(o)
-	local s = '{ '
+	local s = '{'
 	for k,v in pairs(o) do
-		if type(k) ~= 'number' then k = '"'..k..'"' end
 		s = s .. '['..k..'],'
 	end
 	return s .. '} '

@@ -20,6 +20,20 @@ function setTimer(callback, targetTime)
 	cSetTimer(closestTime)
 end
 
+local function argEqual(a, b)
+	if(a.n ~= b.n) then return false; end
+	for i, av in ipairs(a) do
+		if(av ~= b[i]) then return false; end
+	end
+	return true;
+end
+
+-- sets a timer uniquely defined by its function and argument values.
+-- the callback gets the args.
+function setArgTimer(callback, targetTime, ...)
+	error("not implemented");
+end
+
 function countTable(tab)
 	local c = 0;
 	for _ in pairs(tab) do c = c + 1; end
