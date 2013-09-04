@@ -2,7 +2,8 @@
 
 CONFIG_CCOMPILE_DEFAULT = 'debug'
 
-require File.expand_path 'rules/cExe.rb'
+require './config.rb'
+require File.expand_path "#{CONFIG_WOWFOOT_DIR}/rules/cExe.rb"
 require './genLuaFromHeader.rb'
 require './libs.rb'
 

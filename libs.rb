@@ -1,5 +1,5 @@
-require File.expand_path 'rules/cDll.rb'
 require './config.rb'
+require File.expand_path "#{CONFIG_WOWFOOT_DIR}/rules/cDll.rb"
 require "#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers/dbc/dbc.rb"
 
 commonFlags = ' -Wno-all -Wno-extra -Wno-c++-compat -Wno-missing-prototypes -Wno-missing-declarations -Wno-shadow'
