@@ -11,6 +11,7 @@ class GenLuaFromHeaderTask < MultiFileTask
 		@cName = "build/#{name}Lua.c"
 		@hName = "build/#{name}Lua.h"
 		@options = options
+		# todo: cause rebuild if options change.
 		super(@cName, [@hName])
 	end
 	def fileExecute

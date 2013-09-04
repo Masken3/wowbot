@@ -23,6 +23,6 @@ void runWorld(WorldSession*);
 void initLua(WorldSession*);
 BOOL readLua(WorldSession*);
 
-void enterWorld(WorldSession* session, uint64 guid);
+void enterWorld(WorldSession* session, uint64 guid, uint8 level);
 
 #endif	//WORLD_H

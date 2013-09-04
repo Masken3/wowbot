@@ -143,7 +143,7 @@ class Works
 	def self.run(doGoals = true)
 		raise "Multiple runs are not allowed!" if(doGoals && @@goalsDone)
 		run2
-		return if(!doGoals)
+		return if(!doGoals || @@error)
 		@@goalsDone = true
 		parseArgs(ARGV)
 		@@goals.each do |g|

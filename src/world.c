@@ -90,13 +90,19 @@ void runWorld(WorldSession* session) {
 	} while(1);
 }
 
-void enterWorld(WorldSession* session, uint64 guid) {
+void enterWorld(WorldSession* session, uint64 guid, uint8 level) {
 	// set Lua STATE.myGuid.
 	lua_State* L = session->L;
 	lua_getglobal(L, "STATE");
+
 	lua_pushstring(L, "myGuid");
 	lua_pushlstring(L, (char*)&guid, 8);
 	lua_settable(L, -3);
+
+	lua_pushstring(L, "myLevel");
+	lua_pushnumber(L, level);
+	lua_settable(L, -3);
+
 	lua_pop(L, 1);
 
 	sendWorld(session, CMSG_PLAYER_LOGIN, &guid, sizeof(guid));
@@ -304,6 +310,8 @@ void initLua(WorldSession* session) {
 	lua_register(L, "cRemoveTimer", l_removeTimer);
 	lua_register(L, "cSpellEffectName", l_spellEffectName);
 	lua_register(L, "cSpell", l_spell);
+	lua_register(L, "cSpellDuration", l_spellDuration);
+	lua_register(L, "cSpellRange", l_spellRange);
 	lua_register(L, "cTraceback", l_traceback);
 
 	opcodeLua(L);

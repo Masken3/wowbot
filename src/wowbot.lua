@@ -32,6 +32,7 @@ if(STATE == nil) then
 
 		reloadCount = 0,
 		myGuid = '',	-- set by C function enterWorld.
+		myLevel = 0,	-- set by C function enterWorld.
 		myLocation = Location.new(),	-- set by hSMSG_LOGIN_VERIFY_WORLD.
 		moving = false,
 		moveStartTime = 0,	-- floating point, in seconds. valid if moving == true.
@@ -247,7 +248,7 @@ local function updateValues(o, b)
 	for i, m in ipairs(b.updateMask) do
 		for k=0,31 do
 			if(bit32.extract(m, k) ~= 0) then
-				local idx = 1+k+(i-1)*32;
+				local idx = k+(i-1)*32;
 				--print(idx, b.values[j]);
 				assert(b.values[j] ~= nil);
 				o.values[idx] = b.values[j];
@@ -261,7 +262,7 @@ local function valuesUpdated(o, b)
 	for i, m in ipairs(b.updateMask) do
 		for k=0,31 do
 			if(bit32.extract(m, k) ~= 0) then
-				local idx = 1+k+(i-1)*32;
+				local idx = k+(i-1)*32;
 				--print(idx, o.values[idx]);
 				valueUpdated(o, idx);
 			end
@@ -367,6 +368,7 @@ function castSpell(spellId, target)
 		targetFlags = TARGET_FLAG_UNIT,
 		unitTarget = target.guid,
 	}
+	print("castSpell "..spellId.." @"..target.guid:hex());
 	send(CMSG_CAST_SPELL, data);
 end
 

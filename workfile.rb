@@ -28,7 +28,7 @@ work = ExeWork.new do
 		GenLuaFromHeaderTask.new('UpdateFields', 'server-code/UpdateFields.h'),
 		GenLuaFromHeaderTask.new('updateBlockFlags', 'src/updateBlockFlags.h'),
 		GenLuaFromHeaderTask.new('SharedDefines', 'server-code/SharedDefines.h',
-			{:includedEnums=>['SpellEffects']}),
+			{:includedEnums=>['SpellEffects', 'SpellRangeIndex']}),
 		GenLuaFromHeaderTask.new('Unit', 'server-code/Unit.h',
 			{:includedEnums=>['UnitFlags', 'NPCFlags']}),
 		GenLuaFromHeaderTask.new('ObjectGuid', 'server-code/ObjectGuid.h',
@@ -49,7 +49,7 @@ work = ExeWork.new do
 	@EXTRA_INCLUDES = ['build', 'src', 'server-code', 'server-code/Auth',
 		"#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers/spell",
 	]
-	@EXTRA_OBJECTS = [DBC_SPELL]
+	@EXTRA_OBJECTS = [DBC_SPELL, DBC_SPELL_DURATION, DBC_SPELL_RANGE]
 	@LIBRARIES = ['crypto', 'z']
 	if(HOST == :win32)
 		@SOURCES << "#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/util/win32"

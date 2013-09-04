@@ -111,7 +111,7 @@ void hSMSG_CHAR_ENUM(WorldSession* session, char* buf, uint16 size) {
 			LOG("%i: 0x%" PRIx64 " %s r%i c%i g%i\n",
 				i, guid, name, e->race, e->_class, e->gender);
 			if(i == 0) {
-				enterWorld(session, guid);
+				enterWorld(session, guid, e->level);
 			}
 		}
 	}

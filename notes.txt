@@ -10,12 +10,47 @@ Preliminary decision tree:
 
 If a party member is in combat, attack the tank's target.
 * Tanks: if a non-tank is being attacked, taunt the attacker.
+** or use another high-threat ability,
+** or a regular attack.
 * Healers: if a member has lost enough health
   that our most efficient (hp/mana) healing spell will not overheal, use that spell.
 ** todo: have some provision for extra healing (useful in high-damage situations).
 * All: focus attacks on marked targets. This takes priority over the "tank's target" rule.
 * Mage: polymorph Moon.
 * Rogue: sap Diamond. (only works if target is not in combat.)
+
+User should set Diamond first, then Moon, then Skull.
+Diamond will take effect only when Skull is set.
+Also, if Diamond is set, Moon and Skull will not take effect until Diamond has been sapped,
+or combat has started for some other reason.
+If Diamond is not set, Moon will still not take effect until combat has started.
+Setting Skull will cause tank to Charge to that target, gaining initial aggro and starting combat.
+
+Attack choices:
+* Cast the most useful spell that you have enough power for.
+* If you have no useful spells, start melee.
+* The usefulness of a spell is measured in damage per power.
+* For example, a spell that does more damage then the target has health, loses some usefulness.
+* Spells that have cast time, or do Damage over Time (DoT), or do damage after some delay,
+	will have to calculate how long the target is likely to survive, based on past group DPS.
+** For that reason, we should store, in a fifo queue, DPS for the X(5) last fights, calculated thus:
+*** (TimeOfDeath - TimeOfAggro) / Health.
+*** Not good for multiple enemies... except if you modify the value a bit:
+*** (TimeOfLeavingCombat - TimeOfEnteringCombat) / SumHealthOfAllInvolvedEnemies.
+** Average group DPS is then calculated from the X last fights.
+
+Advanced combat choices:
+* Interrupt enemy casters.
+* Stun enemies.
+* Dispel debuffs on allies.
+* Mana burn.
+* Innervate.
+* Silence.
+* Resurrection.
+* Pickpocket.
+** Possible to do in-combat, if you're stealthed, according to 1.12.
+** Resist chance is supposed to be 5% at equal level, so go ahead and do it to all targets.
+* and other effects.
 
 If not in combat:
 * Quests

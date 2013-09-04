@@ -69,3 +69,5 @@ class DbcWork < DllWork
 end
 
 DBC_SPELL = DbcWork.new('dbcSpell')
+DBC_SPELL_DURATION = DbcWork.new('dbcSpellDuration')
+DBC_SPELL_RANGE = DbcWork.new('dbcSpellRange')
