@@ -21,10 +21,12 @@ function decision(realTime)
 		return;
 	end
 	STATE.meleeing = false;
+	local myValues = STATE.knownObjects[STATE.myGuid].values;
 	-- don't try following the leader if we don't know where he is.
 	if(STATE.inGroup and STATE.leader.location.position.x) then
 		follow(STATE.leader);
-		print("Following...");
+		print("Following. XP: "..tostring(myValues[PLAYER_XP])..
+			" / "..tostring(myValues[PLAYER_NEXT_LEVEL_XP]));
 		return;
 	end
 	print("Nothing to do.");
@@ -129,6 +131,15 @@ function attack(enemy)
 				damage = damage + calcAvgDamage(level, e);
 			end
 		end
+
+		print("availablePower("..powerIndex.."): "..tostring(availablePower)..
+			" cost("..s.powerType.."): "..cost..
+			" damage: "..
+			" name: "..s.name.." "..s.rank);
+		if(not availablePower) then availablePower = 0; end
+		--sanity check.
+		assert(availablePower < 100000);
+		if(availablePower < cost) then goto continue; end
 
 		if(cost == 0 and damage > maxDamageForFree) then
 			maxDamageForFree = damage;

@@ -74,16 +74,16 @@ typedef struct sCMSG_CHAR_CREATE {
 #pragma pack(pop)
 #endif
 
-#define TOON_NAME "Warrior"
+#define TOON_NAME "Mage"
 
 static void createToon(WorldSession* session) {
 	char buf[1024];
 	sCMSG_CHAR_CREATE c;
 
 	memset(&c, 0, sizeof(c));
-	c.race = RACE_DWARF;
-	c._class = CLASS_WARRIOR;
-	c.gender = 0;
+	c.race = RACE_GNOME;
+	c._class = CLASS_MAGE;
+	c.gender = 1;
 
 	strcpy(buf, TOON_NAME);
 	memcpy(buf + sizeof(TOON_NAME), &c, sizeof(c));
@@ -93,28 +93,27 @@ static void createToon(WorldSession* session) {
 
 void hSMSG_CHAR_ENUM(WorldSession* session, char* buf, uint16 size) {
 	uint8 num = buf[0];
+	char* ptr = buf+1;
 	LOG("%i toons:\n", num);
 
-	if(num == 0) {
-		createToon(session);
-		// hSMSG_CHAR_CREATE will enterWorld.
-	} else {
-		char* ptr = buf+1;
-		for(uint8 i=0; i<num; i++) {
-			sSMSG_CHAR_ENUM_ENTRY* e;
-			const char* name;
-			uint64 guid = *(uint64*)ptr;
-			ptr += 8;
-			name = ptr;
-			ptr += strlen(name) + 1;
-			e = (sSMSG_CHAR_ENUM_ENTRY*)ptr;
-			LOG("%i: 0x%" PRIx64 " %s r%i c%i g%i\n",
-				i, guid, name, e->race, e->_class, e->gender);
-			if(i == 0) {
-				enterWorld(session, guid, e->level);
-			}
+	for(uint8 i=0; i<num; i++) {
+		sSMSG_CHAR_ENUM_ENTRY* e;
+		const char* name;
+		uint64 guid = *(uint64*)ptr;
+		ptr += 8;
+		name = ptr;
+		ptr += strlen(name) + 1;
+		e = (sSMSG_CHAR_ENUM_ENTRY*)ptr;
+		LOG("%i: 0x%" PRIx64 " %s r%i c%i g%i\n",
+			i, guid, name, e->race, e->_class, e->gender);
+		if(strcmp(name, TOON_NAME) == 0) {
+			enterWorld(session, guid, e->level);
+			return;
 		}
+		ptr += sizeof(sSMSG_CHAR_ENUM_ENTRY);
 	}
+	// hSMSG_CHAR_CREATE will enterWorld.
+	createToon(session);
 }
 
 void hSMSG_CHAR_CREATE(WorldSession* session, char* buf, uint16 size) {

@@ -178,6 +178,17 @@ function hMovement(opcode, p)
 	end
 end
 
+-- returns the smallest number greater than or equal to zero.
+local function minGEZ(a, b)
+	local tMax = math.max(a, b);
+	local tMin = math.min(a, b);
+	if(tMin > 0) then
+		return tMin;
+	else
+		return tMax;
+	end
+end
+
 function doMoveToTarget(realTime, mo, maxDist)
 	local myPos = STATE.myLocation.position;
 	local tarPos = mo.location.position;
@@ -222,14 +233,7 @@ function doMoveToTarget(realTime, mo, maxDist)
 			local dy = math.sin(data.o) * RUN_SPEED;
 			local t1 = (maxDist*((a^2+b^2)^0.5) - (a*x+b*y+c)) / (a*dx+b*dy);
 			local t2 = (maxDist*((a^2+b^2)^0.5) + a*x+b*y+c) / -(a*dx+b*dy);
-			local tMax = math.max(t1, t2);
-			local tMin = math.min(t1, t2);
-			local t;
-			if(tMin > 0) then
-				t = tMin;
-			else
-				t = tMax;
-			end
+			local t = minGEZ(t1, t2);
 
 			--print("a, b, c:", a, b, c);
 			--print("dx, dy:", dx, dy);
@@ -265,18 +269,18 @@ function doMoveToTarget(realTime, mo, maxDist)
 		-- see math-notes.txt, 2013-08-18 20:03:46
 		local dx = mov.dx;
 		local dy = mov.dy;
-		local x = tarPos.x - myPos.x;
-		local y = tarPos.y - myPos.y;
+		local x = math.abs(tarPos.x - myPos.x);
+		local y = math.abs(tarPos.y - myPos.y);
 		local a = dx^2 + dy^2;
 		local b = 2*(x*dx+y*dy);
 		local c = (x^2+y^2-FOLLOW_DIST^2);
 		assert(a ~= 0);
 		local t1 = (-b + (b^2 - 4*a*c)^0.5) / (2*a);
 		local t2 = (-b - (b^2 - 4*a*c)^0.5) / (2*a);
-		local t = math.max(t1, t2);
-		--print("inside t:", t);
-		assert(t > 0);
-		assert(math.min(t1, t2) < 0);
+		local t = minGEZ(t1, t2);
+		--print("inside t: "..t, "t1t2", t1, t2, "temp", (b^2 - 4*a*c), (b^2 - 4*a*c)^0.5,
+			--"xyabc", x, y, a, b, c, "mov:"..dump(mov));
+		if(not t > 0) then return; end
 		setTimer(movementTimerCallback, realTime + t);
 	end
 end
