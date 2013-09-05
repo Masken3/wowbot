@@ -431,3 +431,7 @@ function hSMSG_QUESTGIVER_QUEST_DETAILS(p)
 	send(CMSG_QUESTGIVER_ACCEPT_QUEST, p);
 	print("accepted quest "..p.questId);
 end
+
+function hSMSG_MESSAGECHAT(p)
+	print("SMSG_MESSAGECHAT", dump(p));
+end

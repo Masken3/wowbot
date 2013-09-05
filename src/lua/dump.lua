@@ -1,10 +1,13 @@
+function string.endWith(s, o)
+	return s:sub(-#o) == o;
+end
 
 function dump(o)
 	if type(o) == 'table' then
 		local s = '{'
 		for k,v in pairs(o) do
 			local vs;
-			if(k == "guid") then
+			if(type(k) == 'string' and (k == "guid" or k:endWith('Guid'))) then
 				vs = v:hex();
 			else
 				vs = dump(v);

@@ -36,6 +36,7 @@ static void crash(void) {
 
 typedef uint64 Guid;
 #define lua_push_Guid	lua_pushlstring(L, cur, 8)
+static Guid local_Guid(const char* p) { return *(Guid*)p; }
 
 #define lua_push_float lua_pushnumber(L, *(float*)cur)
 
@@ -539,4 +540,77 @@ void pSMSG_QUESTGIVER_QUEST_DETAILS(pLUA_ARGS) {
 		lua_rawseti(L, -2, i);
 	}
 	lua_settable(L, -3);
+}
+
+static BOOL guidIsPlayer(Guid g) {
+	return (g & 0xFFFF) == 0;
+}
+
+void pSMSG_MESSAGECHAT(pLUA_ARGS) {
+	BOOL hasSenderGuid = FALSE;
+	BOOL hasTargetGuid = FALSE;
+	BOOL hasSenderName = FALSE;
+	PL_START;
+	{
+		MM(byte, type);
+		M(uint32, language);
+		switch(type) {
+		case CHAT_MSG_CHANNEL:
+			MV(string, channelName);
+			M(uint32, targetGuid2);	// always zero?
+			hasSenderGuid = TRUE;
+			break;
+		case CHAT_MSG_SYSTEM:
+			hasSenderGuid = TRUE;
+			break;
+		case CHAT_MSG_SAY:
+		case CHAT_MSG_YELL:
+		case CHAT_MSG_PARTY:
+			M(Guid, senderGuid);
+			// indentional fallthrough
+		case CHAT_MSG_RAID:
+		case CHAT_MSG_GUILD:
+		case CHAT_MSG_OFFICER:
+		case CHAT_MSG_WHISPER:
+		case CHAT_MSG_RAID_LEADER:
+		case CHAT_MSG_RAID_WARNING:
+		case CHAT_MSG_BG_SYSTEM_NEUTRAL:
+		case CHAT_MSG_BG_SYSTEM_ALLIANCE:
+		case CHAT_MSG_BG_SYSTEM_HORDE:
+		case CHAT_MSG_BATTLEGROUND:
+		case CHAT_MSG_BATTLEGROUND_LEADER:
+			hasSenderGuid = TRUE;
+			break;
+		case CHAT_MSG_MONSTER_SAY:
+		case CHAT_MSG_MONSTER_PARTY:
+		case CHAT_MSG_MONSTER_YELL:
+		case CHAT_MSG_MONSTER_WHISPER:
+		case CHAT_MSG_MONSTER_EMOTE:
+		case CHAT_MSG_RAID_BOSS_WHISPER:
+		case CHAT_MSG_RAID_BOSS_EMOTE:
+			hasSenderGuid = TRUE;
+			hasTargetGuid = TRUE;
+			hasSenderName = TRUE;
+			break;
+		default:
+			LOG("Error: unknown chat message type: %i\n", type);
+		}
+	}
+	if(hasSenderGuid) {
+		M(Guid, senderGuid);
+	}
+	if(hasSenderName) {
+		M(uint32, senderNameLength);
+		MV(string, senderName);
+	}
+	if(hasTargetGuid) {
+		MM(Guid, targetGuid);
+		if(!guidIsPlayer(targetGuid)) {
+			M(uint32, targetNameLength);
+			MV(string, targetName);
+		}
+	}
+	M(uint32, textLength);
+	MV(string, text);
+	M(byte, tag);
 }

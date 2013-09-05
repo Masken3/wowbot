@@ -78,6 +78,17 @@ If not in combat:
 ** Fishing: normal gathering; get all nodes, or ask for clearing.
 *** If fishing water is nearby and party is not moving, go fish.
 ** Keep Looting at FFA. That way, each bot with a gathering profession can gather any mats that drop.
+*** Actually, if loot-haver opens the corpse and closes it, it becomes FFA.
+*** Still, it is better to keep it FFA from the beginning.
+
+* Looting
+** Loot whatever is useful for your professions and quests.
+** In round-robin styles, be sure to at least open every corpse, to make it FFA for the others.
+** Loot class-specific items for your class.
+** Other items (trash, whites, greens+) should be left for the leader.
+** Certain situations can lead to lots of corpses in one place,
+	making it hard for a human to loot them all.
+	There should be a command to have a bot loot everything in a small (10-20 yards) area.
 
 * Crafting
 ** When new mats are aquired: check if any new recipes can be crafted. If so, notify party.
@@ -85,6 +96,11 @@ If not in combat:
 *** Also, require permission from leader before starting craft.
 ** todo: handle automatic leveling up.
 ** todo: handle equipment requests from party members.
+
+* Trading
+** Accept all incoming trades. No need to offer anything in return.
+** Give money or items on command.
+** On item get, equip it, if it's better. In either case, tell giver.
 
 * Idle movement, only effective if nothing else is being done.
 ** If leader is >FOLLOW_DIST from us, run to him.
