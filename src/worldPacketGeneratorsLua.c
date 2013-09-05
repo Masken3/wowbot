@@ -34,7 +34,6 @@ static void lua_gen_uint16(lua_State* L, const char* name, byte** pp) {
 	(*pp) += 2;
 }
 
-#if 0
 static void lua_gen_byte(lua_State* L, const char* name, byte** pp) {
 	uint32 num = lua_tounsigned(L, -1);
 	if(!lua_isnumber(L, -1)) {
@@ -46,7 +45,6 @@ static void lua_gen_byte(lua_State* L, const char* name, byte** pp) {
 	**pp = (byte)num;
 	(*pp) += 1;
 }
-#endif
 
 static void lua_gen_float(lua_State* L, const char* name, byte** pp) {
 	if(!lua_isnumber(L, -1)) {
@@ -263,6 +261,12 @@ static uint16 genCMSG_MESSAGECHAT(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+static uint16 genCMSG_QUESTLOG_REMOVE_QUEST(lua_State* L, byte* buf) {
+	GL_START;
+	M(byte, slot);
+	GL_END;
+}
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -274,6 +278,7 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_ATTACKSWING);
 		GEN_CASE(CMSG_QUESTGIVER_ACCEPT_QUEST);
 		GEN_CASE(CMSG_MESSAGECHAT);
+		GEN_CASE(CMSG_QUESTLOG_REMOVE_QUEST);
 		default: return NULL;
 	}
 }

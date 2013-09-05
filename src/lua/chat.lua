@@ -19,8 +19,22 @@ local function listQuests(p)
 	reply(p, msg)
 end
 
+local function dropAllQuests(p)
+	local msg = 'Dropped quests:'
+	for i=0,19 do
+		local id = STATE.my.values[PLAYER_QUEST_LOG_1_1 + i*3]
+		if(id ~= 0 and id ~= nil) then
+			msg = msg..' '..id
+			send(CMSG_QUESTLOG_REMOVE_QUEST, {slot=i})
+		end
+	end
+	reply(p, msg)
+end
+
 function handleChatMessage(p)
 	if(p.text == 'lq') then
 		listQuests(p)
+	elseif(p.text == 'daq') then
+		dropAllQuests(p)
 	end
 end
