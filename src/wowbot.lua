@@ -36,7 +36,12 @@ if(STATE == nil) then
 
 		knownObjects = {},
 
-		enemies = {},	-- key:guid. value:knownObject.
+		-- key:guid. value:knownObject from knownObjects.
+		enemies = {},
+		questGivers = {},
+		questFinishers = {},
+
+		checkNewObjectsForQuests = false,	-- set to true after login.
 
 		reloadCount = 0,
 		myGuid = '',	-- set by C function enterWorld.
@@ -179,6 +184,7 @@ end
 function hSMSG_LOGIN_VERIFY_WORLD(p)
 	print("SMSG_LOGIN_VERIFY_WORLD", dump(p));
 	STATE.myLocation = p;
+	send(CMSG_QUESTGIVER_STATUS_MULTIPLE_QUERY);
 end
 
 -- may need reversing.
@@ -324,6 +330,10 @@ function hSMSG_UPDATE_OBJECT(p)
 			end
 			--print("CREATE_OBJECT", b.guid:hex(), hex(o.values[OBJECT_FIELD_TYPE]), dump(b.pos));
 			--, dump(o.movement), dump(o.values));
+
+			if(STATE.checkNewObjectsForQuests) then
+				send(CMSG_QUESTGIVER_STATUS_QUERY, {guid=b.guid});
+			end
 		elseif(b.type == UPDATETYPE_VALUES) then
 			updateValues(STATE.knownObjects[b.guid], b);
 		elseif(b.type == UPDATETYPE_MOVEMENT) then
@@ -448,4 +458,24 @@ end
 function hSMSG_MESSAGECHAT(p)
 	print("SMSG_MESSAGECHAT", dump(p));
 	handleChatMessage(p);
+end
+
+function hSMSG_QUESTGIVER_STATUS_MULTIPLE(p)
+	print("SMSG_QUESTGIVER_STATUS_MULTIPLE", dump(p));
+	for i, giver in ipairs(p.givers) do
+		hSMSG_QUESTGIVER_STATUS(giver);
+	end
+	STATE.checkNewObjectsForQuests = true;
+end
+
+function hSMSG_QUESTGIVER_STATUS(p)
+	print("SMSG_QUESTGIVER_STATUS", dump(p));
+	if(p.status == DIALOG_STATUS_AVAILABLE or
+		p.status == DIALOG_STATUS_CHAT) then
+		STATE.questGivers[p.guid] = STATE.knownObjects[p.guid];
+	end
+	if(p.status == DIALOG_STATUS_REWARD_REP or
+		p.status == DIALOG_STATUS_REWARD2) then
+		STATE.questFinishers[p.guid] = STATE.knownObjects[p.guid];
+	end
 end

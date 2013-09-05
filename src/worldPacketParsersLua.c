@@ -614,3 +614,25 @@ void pSMSG_MESSAGECHAT(pLUA_ARGS) {
 	MV(string, text);
 	M(byte, tag);
 }
+
+void pSMSG_QUESTGIVER_STATUS(pLUA_ARGS) {
+	PL_START;
+	M(Guid, guid);
+	M(uint32, status);
+}
+
+void pSMSG_QUESTGIVER_STATUS_MULTIPLE(pLUA_ARGS) {
+	PL_START;
+	{
+		MM(uint32, count);
+		lua_pushstring(L, "givers");
+		lua_createtable(L, count, 0);
+		for(uint32 i=1; i<=count; i++) {
+			lua_createtable(L, 0, 2);
+			M(Guid, guid);
+			M(byte, status);
+			lua_rawseti(L, -2, i);
+		}
+		lua_settable(L, -3);
+	}
+}

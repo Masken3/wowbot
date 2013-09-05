@@ -1,8 +1,8 @@
 These are chat commands that bots will respond to:
 * lq	List Quests
 * daq	Drop All Quests. Be careful with this one.
-* gq	Get Quests, from commander's target.
 * aqg <off|on>	AutoQuestGet off or on. Default is on.
+* gq	Get Quests, from commander's target. Only useful when agq off.
 
 * give <money|item>
 ** money: <int><g|s|c>	Gold, Silver or Copper.

@@ -60,7 +60,7 @@ If not in combat:
 ** If leader has picked up a quest, and you don't have it, pick up that quest.
 ** todo: deal with class and profession quests.
 * AutoQuestGet:
-** Go to each quest giver (closest first) and get hir quests.
+** Go to closest quest giver with available quests and get their quests.
 ** This behaviour can be turned off "aqg off" or on. Reply "Ack: AutoQuestGet <off|on>".
 ** Store this var to disk, load on startup.
 * Command "gq" GetQuests:
