@@ -2,6 +2,7 @@
 #include "movement.h"
 #include "Opcodes.h"
 #include "DBCEnums.h"
+#include "SharedDefines.h"
 #include "log.h"
 #include <lua.h>
 #include <lauxlib.h>
@@ -224,6 +225,44 @@ static uint16 genCMSG_QUESTGIVER_ACCEPT_QUEST(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+static uint16 genCMSG_MESSAGECHAT(lua_State* L, byte* buf) {
+	GL_START;
+	{
+		MM(uint32, type);
+		M(uint32, language);
+		switch (type) {
+		case CHAT_MSG_SAY:
+		case CHAT_MSG_EMOTE:
+		case CHAT_MSG_YELL:
+		case CHAT_MSG_PARTY:
+		case CHAT_MSG_GUILD:
+		case CHAT_MSG_OFFICER:
+		case CHAT_MSG_RAID:
+		case CHAT_MSG_RAID_LEADER:
+		case CHAT_MSG_RAID_WARNING:
+		case CHAT_MSG_BATTLEGROUND:
+		case CHAT_MSG_BATTLEGROUND_LEADER:
+		case CHAT_MSG_AFK:
+		case CHAT_MSG_DND:
+			// message only
+			break;
+		case CHAT_MSG_WHISPER:
+			// also "to"
+			M(Guid, targetGuid);
+			break;
+		case CHAT_MSG_CHANNEL:
+			// also string channel name
+			M(string, channelName);
+			break;
+		default:
+			lua_pushfstring(L, "gen error: unknown chat type: %i", type);
+			lua_error(L);
+		}
+		M(string, msg);
+	}
+	GL_END;
+}
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -234,6 +273,7 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_SET_SELECTION);
 		GEN_CASE(CMSG_ATTACKSWING);
 		GEN_CASE(CMSG_QUESTGIVER_ACCEPT_QUEST);
+		GEN_CASE(CMSG_MESSAGECHAT);
 		default: return NULL;
 	}
 }

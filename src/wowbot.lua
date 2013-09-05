@@ -1,9 +1,15 @@
 
-dofile("src/lua/dump.lua")
-dofile("src/lua/timers.lua")
-dofile("src/lua/struct.lua")
-dofile("src/lua/movement.lua")
-dofile("src/lua/decision.lua")
+SUBFILES = {
+	'dump.lua',
+	'timers.lua',
+	'struct.lua',
+	'movement.lua',
+	'decision.lua',
+	'chat.lua',
+}
+for i,f in ipairs(SUBFILES) do
+	dofile('src/lua/'..f)
+end
 
 -- Position: x, y, z
 -- Location: {mapId, position{x,y,z}, orientation}.
@@ -13,6 +19,8 @@ Position = Struct.new{x='number', y='number', z='number'}
 Location = Struct.new{mapId='number', position=Position, orientation='number'}
 Movement = Struct.new{dx='number', dy='number', startTime='number'}
 MovingObject = Struct.new{guid='string', location=Location, movement=Movement}
+
+-- values is an int-key table. See UpdateFields.h for a list of keys.
 KnownObject = Struct.new{guid='string', values='table', monsterMovement='table',
 	location=Location, movement=Movement}
 
@@ -34,6 +42,7 @@ if(STATE == nil) then
 		myGuid = '',	-- set by C function enterWorld.
 		myLevel = 0,	-- set by C function enterWorld.
 		myLocation = Location.new(),	-- set by hSMSG_LOGIN_VERIFY_WORLD.
+		my = false,	-- KnownObject.
 		moving = false,
 		moveStartTime = 0,	-- floating point, in seconds. valid if moving == true.
 
@@ -299,6 +308,10 @@ function hSMSG_UPDATE_OBJECT(p)
 			updateMovement(o, b);
 			STATE.knownObjects[b.guid] = o;
 
+			if(b.guid == STATE.myGuid) then
+				STATE.my = o;
+			end
+
 			-- player objects don't get the OBJECT_FIELD_TYPE update for some reason,
 			-- so we'll roll our own.
 			if(not o.values[OBJECT_FIELD_TYPE]) then
@@ -434,4 +447,5 @@ end
 
 function hSMSG_MESSAGECHAT(p)
 	print("SMSG_MESSAGECHAT", dump(p));
+	handleChatMessage(p);
 end

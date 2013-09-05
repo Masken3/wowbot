@@ -16,6 +16,8 @@ typedef struct WorldSession {
 	struct Crypto* crypto;
 	struct lua_State* L;
 	time_t luaTime;
+	time_t* luaTimes;
+	int luaTimeCount;
 } WorldSession;
 
 void runWorld(WorldSession*);

@@ -145,15 +145,53 @@ BOOL readLua(WorldSession* session) {
 
 	// Read file's date.
 	{
+		time_t oldTime = session->luaTime;
 		struct stat s;
 		res = stat("src/wowbot.lua", &s);
 		if(res != 0) {
 			LOG("stat(src/wowbot.lua) failed: %s\n", strerror(errno));
 			return FALSE;
 		}
-		if(s.st_mtime == session->luaTime)
-			return FALSE;
 		session->luaTime = s.st_mtime;
+		if(s.st_mtime == oldTime) {
+			char buf[128] = "src/lua/";
+			size_t baseLen = strlen(buf);
+			int fileCount;
+			BOOL foundDifference = FALSE;
+
+			// file is already loaded. check the other ones.
+			lua_getglobal(L, "SUBFILES");
+			lua_len(L, -1);
+			fileCount = lua_tointeger(L, -1);
+			lua_pop(L, 1);
+			assert(fileCount > 1 && fileCount < 100);	// sanity check
+			if(fileCount != session->luaTimeCount) {
+				if(session->luaTimes)
+					free(session->luaTimes);
+				session->luaTimes = (time_t*)malloc(sizeof(time_t)*fileCount);
+				session->luaTimeCount = fileCount;
+				LOG("New SUBFILES count: %i\n", fileCount);
+			}
+			for(int i=0; i<fileCount; i++) {
+				lua_rawgeti(L, -1, i+1);
+				strcpy(buf + baseLen, lua_tostring(L, -1));
+				lua_pop(L, 1);
+				res = stat(buf, &s);
+				if(res != 0) {
+					LOG("stat(%s) failed: %s\n", buf, strerror(errno));
+					return FALSE;
+				}
+				if(session->luaTimes[i] != s.st_mtime) {
+					session->luaTimes[i] = s.st_mtime;
+					foundDifference = TRUE;
+					LOG("SUBFILE diff: %s\n", buf);
+				}
+			}
+			lua_pop(L, 1);
+
+			if(!foundDifference)
+				return FALSE;
+		}
 	}
 
 	// Load file.
