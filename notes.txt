@@ -49,14 +49,27 @@ Advanced combat choices:
 * Resurrection.
 * Pickpocket.
 ** Possible to do in-combat, if you're stealthed, according to 1.12.
-** Resist chance is supposed to be 5% at equal level, so go ahead and do it to all targets.
+** Resist chance is supposed to be 5% at equal level, so go ahead and do it to all targets, even elites.
+*** On resist, party can bail you out. :)
 * and other effects.
 
 If not in combat:
 * Quests
 ** If a quest can be turned in within X yards without aggroing any enemies, do so.
+*** X = 40?
 ** If leader has picked up a quest, and you don't have it, pick up that quest.
 ** todo: deal with class and profession quests.
+* AutoQuestGet:
+** Go to each quest giver (closest first) and get hir quests.
+** This behaviour can be turned off "aqg off" or on. Reply "Ack: AutoQuestGet <off|on>".
+** Store this var to disk, load on startup.
+* Command "gq" GetQuests:
+** Get quests from commander's target. Reply Ack.
+** Error if no target or if target has nothing to give.
+* If bot has finished class or profession quests, remind leader on completion and every X minutes.
+** X = 5?
+
+* No need for an "attack" command; Skull raid target is enough.
 
 * Gathering
 ** If a gathering node is nearby and it can be accessed without aggroing, do so.
@@ -64,6 +77,7 @@ If not in combat:
 ** Skinning: unless party is in combat with an elite, skin any downed mobs as soon as they are cleared of loot.
 ** Fishing: normal gathering; get all nodes, or ask for clearing.
 *** If fishing water is nearby and party is not moving, go fish.
+** Keep Looting at FFA. That way, each bot with a gathering profession can gather any mats that drop.
 
 * Crafting
 ** When new mats are aquired: check if any new recipes can be crafted. If so, notify party.

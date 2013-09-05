@@ -6,14 +6,19 @@ TOONS = {
 		password = "password",
 		toonName = "Warrior",
 		class = WARRIOR,
+		spec = PROT,
 		race = GNOME,
 		gender = MALE,
 		professions = { MINING, ENGINEERING },
+		-- gnome warrior engineer is best miner,
+		-- due to Mining Mail Helmet +5 that only engineers can wear,
+		-- and Gnome's Engineering +15.
 	},
 	{
 		accountName = "wowbot2",
 		password = "password",
 		class = PRIEST,
+		spec = DISC or HOLY,
 		race = DWARF,
 		gender = FEMALE,
 		professions = { TAILORING, ENCHANTING, FISHING },
@@ -29,6 +34,7 @@ TOONS = {
 		accountName = "wowbot4",
 		password = "password",
 		class = ROGUE,
+		spec = SUBTLETY,
 		race = GNOME,
 		gender = FEMALE,
 		professions = { SKINNING, LEATHERWORKING, COOKING },
@@ -44,4 +50,5 @@ TOONS = {
 
 -- skipping first aid because we've got two healers.
 -- was gonna skip fishing, but it's needed for some alchemy recipes.
+-- now each bot has one gathering profession (skinning counts).
 }
