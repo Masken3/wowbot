@@ -29,6 +29,7 @@
 #include "ObjectGuidLua.h"
 #include "DBCEnumsLua.h"
 #include "movementLua.h"
+#include "QuestDefLua.h"
 
 #define DEFAULT_WORLDSERVER_PORT 8085
 
@@ -360,6 +361,7 @@ void initLua(WorldSession* session) {
 	ObjectGuidLua(L);
 	DBCEnumsLua(L);
 	movementLua(L);
+	QuestDefLua(L);
 }
 
 static BOOL luaPcall(lua_State* L, int nargs) {

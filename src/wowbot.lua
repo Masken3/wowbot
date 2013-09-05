@@ -6,6 +6,7 @@ SUBFILES = {
 	'movement.lua',
 	'decision.lua',
 	'chat.lua',
+	'quests.lua',
 }
 for i,f in ipairs(SUBFILES) do
 	dofile('src/lua/'..f)
@@ -21,8 +22,9 @@ Movement = Struct.new{dx='number', dy='number', startTime='number'}
 MovingObject = Struct.new{guid='string', location=Location, movement=Movement}
 
 -- values is an int-key table. See UpdateFields.h for a list of keys.
+-- bot is for storing our own data concerning this object.
 KnownObject = Struct.new{guid='string', values='table', monsterMovement='table',
-	location=Location, movement=Movement}
+	location=Location, movement=Movement, bot='table'}
 
 if(STATE == nil) then
 	STATE = {
@@ -309,7 +311,7 @@ function hSMSG_UPDATE_OBJECT(p)
 				STATE.knownObjects[guid] = nil;
 			end
 		elseif(b.type == UPDATETYPE_CREATE_OBJECT or b.type == UPDATETYPE_CREATE_OBJECT2) then
-			local o = KnownObject.new{guid=b.guid, values={}}
+			local o = KnownObject.new{guid=b.guid, values={}, bot={}}
 			updateValues(o, b);
 			updateMovement(o, b);
 			STATE.knownObjects[b.guid] = o;
@@ -449,33 +451,7 @@ function hSMSG_CANCEL_AUTO_REPEAT(p)
 	handleAttackCanceled();
 end
 
-function hSMSG_QUESTGIVER_QUEST_DETAILS(p)
-	print("SMSG_QUESTGIVER_QUEST_DETAILS", dump(p));
-	send(CMSG_QUESTGIVER_ACCEPT_QUEST, p);
-	print("accepted quest "..p.questId);
-end
-
 function hSMSG_MESSAGECHAT(p)
 	print("SMSG_MESSAGECHAT", dump(p));
 	handleChatMessage(p);
-end
-
-function hSMSG_QUESTGIVER_STATUS_MULTIPLE(p)
-	print("SMSG_QUESTGIVER_STATUS_MULTIPLE", dump(p));
-	for i, giver in ipairs(p.givers) do
-		hSMSG_QUESTGIVER_STATUS(giver);
-	end
-	STATE.checkNewObjectsForQuests = true;
-end
-
-function hSMSG_QUESTGIVER_STATUS(p)
-	print("SMSG_QUESTGIVER_STATUS", dump(p));
-	if(p.status == DIALOG_STATUS_AVAILABLE or
-		p.status == DIALOG_STATUS_CHAT) then
-		STATE.questGivers[p.guid] = STATE.knownObjects[p.guid];
-	end
-	if(p.status == DIALOG_STATUS_REWARD_REP or
-		p.status == DIALOG_STATUS_REWARD2) then
-		STATE.questFinishers[p.guid] = STATE.knownObjects[p.guid];
-	end
 end

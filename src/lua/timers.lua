@@ -34,12 +34,6 @@ function setArgTimer(callback, targetTime, ...)
 	error("not implemented");
 end
 
-function countTable(tab)
-	local c = 0;
-	for _ in pairs(tab) do c = c + 1; end
-	return c;
-end
-
 function removeTimer(callback)
 	--print("removeTimer", debug.getinfo(callback).name)
 	local timers = STATE.timers

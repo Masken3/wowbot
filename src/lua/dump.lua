@@ -2,6 +2,12 @@ function string.endWith(s, o)
 	return s:sub(-#o) == o;
 end
 
+function countTable(tab)
+	local c = 0;
+	for _ in pairs(tab) do c = c + 1; end
+	return c;
+end
+
 function dump(o)
 	if type(o) == 'table' then
 		local s = '{'

@@ -636,3 +636,25 @@ void pSMSG_QUESTGIVER_STATUS_MULTIPLE(pLUA_ARGS) {
 		lua_settable(L, -3);
 	}
 }
+
+void pSMSG_QUESTGIVER_QUEST_LIST(pLUA_ARGS) {
+	PL_START;
+	M(Guid, guid);
+	MV(string, title);
+	M(uint32, playerEmote);
+	M(uint32, npcEmote);
+	{
+		MM(byte, menuItemCount);
+		lua_pushstring(L, "quests");
+		lua_createtable(L, menuItemCount, 0);
+		for(uint32 i=1; i<=menuItemCount; i++) {
+			lua_createtable(L, 0, 4);
+			M(uint32, id);
+			M(uint32, icon);
+			M(uint32, level);
+			MV(string, title);
+			lua_rawseti(L, -2, i);
+		}
+		lua_settable(L, -3);
+	}
+}

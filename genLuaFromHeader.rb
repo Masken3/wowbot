@@ -16,11 +16,11 @@ class GenLuaFromHeaderTask < MultiFileTask
 	end
 	def fileExecute
 		enums = parse(@src)
-		open(@cName, 'w') do |file|
-			writeC(@src, file, enums)
-		end
 		open(@hName, 'w') do |file|
 			writeH(file, enums)
+		end
+		open(@cName, 'w') do |file|
+			writeC(@src, file, enums)
 		end
 	end
 	def writeC(src, file, enums)

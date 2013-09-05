@@ -38,6 +38,8 @@ work = ExeWork.new do
 			{:includedEnums=>['SpellCastTargetFlags']}),
 		GenLuaFromHeaderTask.new('movement', 'src/movement.h',
 			{:includedEnums=>['MonsterMoveType']}),
+		GenLuaFromHeaderTask.new('QuestDef', 'server-code/QuestDef.h',
+			{:includedEnums=>['__QuestGiverStatus']}),
 	]
 	@SPECIFIC_CFLAGS = {
 		'worldPacketParsersLua.c' => ' -Wno-vla',

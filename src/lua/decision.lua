@@ -21,7 +21,21 @@ function decision(realTime)
 		return;
 	end
 	STATE.meleeing = false;
-	local myValues = STATE.knownObjects[STATE.myGuid].values;
+
+	local myValues = STATE.my.values;
+
+	-- if we have guest finishers or giver, go to them.
+	local i, finisher = next(STATE.questFinishers);
+	if(finisher) then
+		finishQuests(finisher);
+		return;
+	end
+	local i, giver = next(STATE.questGivers);
+	if(giver) then
+		getQuests(giver);
+		return;
+	end
+
 	-- don't try following the leader if we don't know where he is.
 	if(STATE.inGroup and STATE.leader.location.position.x) then
 		follow(STATE.leader);
