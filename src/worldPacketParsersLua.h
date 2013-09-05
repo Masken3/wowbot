@@ -18,6 +18,7 @@ typedef struct WorldSession WorldSession;
 	m(SMSG_ATTACKSTART)\
 	m(SMSG_ATTACKSTOP)\
 	m(SMSG_CAST_FAILED)\
+	m(SMSG_QUESTGIVER_QUEST_DETAILS)\
 
 #if 0
 	m(SMSG_ACCOUNT_DATA_TIMES)

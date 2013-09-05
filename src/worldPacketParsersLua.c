@@ -15,6 +15,7 @@
 #include "log.h"
 #include "dumpPacket.h"
 #include "SharedDefines.h"
+#include "QuestDef.h"
 
 #ifdef WIN32
 static size_t strnlen(const char* str, size_t maxlen) {
@@ -432,6 +433,7 @@ void pSMSG_INITIAL_SPELLS(pLUA_ARGS) {
 			// if cooldown is 1 and categoryCooldown is 0x80000000, the cooldown is infinite.
 			M(uint32, cooldown);
 			M(uint32, categoryCooldown);
+			lua_rawseti(L, -2, _i);
 		}
 		lua_settable(L, -3);
 	}
@@ -475,4 +477,66 @@ void pSMSG_CAST_FAILED(pLUA_ARGS) {
 void pEmpty(pLUA_ARGS) {
 	PL_START;
 	assert(bufSize == 0);
+}
+
+void pSMSG_QUESTGIVER_QUEST_DETAILS(pLUA_ARGS) {
+	PL_START;
+	M(Guid, guid);	// sharer's guid.
+	M(uint32, questId);
+	MV(string, title);
+	MV(string, details);
+	MV(string, objectives);
+	M(uint32, activateAccept);	// always 1
+	{
+		MM(uint32, rewItemChoiceCount);
+		lua_pushstring(L, "rewItemChoice");
+		lua_createtable(L, rewItemChoiceCount, 0);
+		for(uint32 i=1; i<=rewItemChoiceCount; i++) {
+			lua_createtable(L, 0, 3);
+			M(uint32, itemId);
+			M(uint32, count);
+			M(uint32, displayId);
+			lua_rawseti(L, -2, i);
+		}
+		lua_settable(L, -3);
+	}
+	{
+		MM(uint32, rewItemCount);
+		lua_pushstring(L, "rewItem");
+		lua_createtable(L, rewItemCount, 0);
+		for(uint32 i=1; i<=rewItemCount; i++) {
+			lua_createtable(L, 0, 3);
+			M(uint32, itemId);
+			M(uint32, count);
+			M(uint32, displayId);
+			lua_rawseti(L, -2, i);
+		}
+		lua_settable(L, -3);
+	}
+	M(uint32, rewMoney);	// may be negative.
+
+	M(uint32, reqItemsCount);
+	lua_pushstring(L, "reqItem");
+	lua_createtable(L, QUEST_OBJECTIVES_COUNT, 0);
+	for(uint32 i=1; i<=QUEST_OBJECTIVES_COUNT; i++) {
+		lua_createtable(L, 0, 2);
+		// if zero, slot is ignored.
+		M(uint32, itemId);
+		M(uint32, count);
+		lua_rawseti(L, -2, i);
+	}
+	lua_settable(L, -3);
+
+	M(uint32, reqCreatureOrGoCount);
+	lua_pushstring(L, "reqCreatureOrGo");
+	lua_createtable(L, QUEST_OBJECTIVES_COUNT, 0);
+	for(uint32 i=1; i<=QUEST_OBJECTIVES_COUNT; i++) {
+		lua_createtable(L, 0, 2);
+		// if positive, is creature id. if negative, is negated GO id.
+		// if zero, slot is ignored.
+		M(uint32, id);
+		M(uint32, count);
+		lua_rawseti(L, -2, i);
+	}
+	lua_settable(L, -3);
 }

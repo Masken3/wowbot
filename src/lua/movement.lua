@@ -280,7 +280,7 @@ function doMoveToTarget(realTime, mo, maxDist)
 		local t = minGEZ(t1, t2);
 		--print("inside t: "..t, "t1t2", t1, t2, "temp", (b^2 - 4*a*c), (b^2 - 4*a*c)^0.5,
 			--"xyabc", x, y, a, b, c, "mov:"..dump(mov));
-		if(not t > 0) then return; end
+		if(t <= 0) then return; end
 		setTimer(movementTimerCallback, realTime + t);
 	end
 end

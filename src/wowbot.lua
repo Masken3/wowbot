@@ -425,3 +425,9 @@ function hSMSG_CANCEL_AUTO_REPEAT(p)
 	print("SMSG_CANCEL_AUTO_REPEAT");
 	handleAttackCanceled();
 end
+
+function hSMSG_QUESTGIVER_QUEST_DETAILS(p)
+	print("SMSG_QUESTGIVER_QUEST_DETAILS", dump(p));
+	send(CMSG_QUESTGIVER_ACCEPT_QUEST, p);
+	print("accepted quest "..p.questId);
+end

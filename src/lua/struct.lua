@@ -16,6 +16,24 @@ function makeReadOnly(t)
 	setmetatable(t, mt)
 end
 
+function table.Compare( tbl1, tbl2 )
+	for k, v in pairs( tbl1 ) do
+		if ( type(v) == "table" and type(tbl2[k]) == "table" ) then
+			if ( not table.Compare( v, tbl2[k] ) ) then return false end
+		else
+			if ( v ~= tbl2[k] ) then return false end
+		end
+	end
+	for k, v in pairs( tbl2 ) do
+		if ( type(v) == "table" and type(tbl1[k]) == "table" ) then
+			if ( not table.Compare( v, tbl1[k] ) ) then return false end
+		else
+			if ( v ~= tbl1[k] ) then return false end
+		end
+	end
+	return true
+end
+
 Struct = {
 new = function(members)
 	local m = members
@@ -57,7 +75,7 @@ new = function(members)
 					end
 					if(type(v) == 'table' and memberType ~= 'table') then
 						local metaV = getmetatable(v)
-						if(memberType ~= metaV) then
+						if(not table.Compare(memberType, metaV)) then
 							error(k.." has wrong type: "..dump(metaV)..". "..dump(memberType).." needed.", 2)
 						end
 					elseif(memberType ~= type(v)) then
