@@ -16,6 +16,7 @@
 #include "dumpPacket.h"
 #include "SharedDefines.h"
 #include "QuestDef.h"
+#include "ItemPrototype.h"
 
 #ifdef WIN32
 static size_t strnlen(const char* str, size_t maxlen) {
@@ -650,11 +651,179 @@ void pSMSG_QUESTGIVER_QUEST_LIST(pLUA_ARGS) {
 		for(uint32 i=1; i<=menuItemCount; i++) {
 			lua_createtable(L, 0, 4);
 			M(uint32, id);
-			M(uint32, icon);
+			M(uint32, icon);	// DIALOG_STATUS_*
 			M(uint32, level);
 			MV(string, title);
 			lua_rawseti(L, -2, i);
 		}
 		lua_settable(L, -3);
 	}
+}
+
+void pSMSG_QUESTGIVER_OFFER_REWARD(pLUA_ARGS) {
+	PL_START;
+	M(Guid, guid);
+	M(uint32, questId);
+	MV(string, title);
+	MV(string, offerRewardText);
+	M(uint32, enableNext);
+	{
+		MM(uint32, emoteCount);
+		lua_pushstring(L, "emotes");
+		lua_createtable(L, emoteCount, 0);
+		for(uint32 i=1; i<=emoteCount; i++) {
+			lua_createtable(L, 0, 2);
+			M(uint32, delay);
+			M(uint32, id);
+			lua_rawseti(L, -2, i);
+		}
+		lua_settable(L, -3);
+	}
+	{
+		MM(uint32, rewChoiceItemsCount);
+		lua_pushstring(L, "rewChoiceItems");
+		lua_createtable(L, rewChoiceItemsCount, 0);
+		for(uint32 i=1; i<=rewChoiceItemsCount; i++) {
+			lua_createtable(L, 0, 3);
+			M(uint32, itemId);
+			M(uint32, count);
+			M(uint32, displayId);
+			lua_rawseti(L, -2, i);
+		}
+		lua_settable(L, -3);
+	}
+	{
+		MM(uint32, rewItemsCount);
+		lua_pushstring(L, "rewItems");
+		lua_createtable(L, rewItemsCount, 0);
+		for(uint32 i=1; i<=rewItemsCount; i++) {
+			lua_createtable(L, 0, 3);
+			M(uint32, itemId);
+			M(uint32, count);
+			M(uint32, displayId);
+			lua_rawseti(L, -2, i);
+		}
+		lua_settable(L, -3);
+	}
+	M(uint32, rewMoney);
+	M(uint32, rewSpellCast);
+	M(uint32, rewSpell);
+}
+
+void pSMSG_QUESTGIVER_REQUEST_ITEMS(pLUA_ARGS) {
+	PL_START;
+	M(Guid, guid);
+	M(uint32, questId);
+	// lots of crap we don't need.
+}
+
+void pSMSG_QUESTGIVER_QUEST_COMPLETE(pLUA_ARGS) {
+	PL_START;
+	M(uint32, questId);
+	// lots of crap we don't need.
+}
+
+void pSMSG_ITEM_QUERY_SINGLE_RESPONSE(pLUA_ARGS) {
+	PL_START;
+	{
+		MM(uint32, itemId);
+		if(itemId & 0x80000000) {
+			LOG("Fatal error: SMSG_ITEM_QUERY_SINGLE_RESPONSE: Unknown item %i\n", itemId & ~0x80000000);
+			exit(1);
+		}
+	}
+	// lots of crap we do need. :/
+	M(uint32, itemClass);
+	M(uint32, subClass);
+	MV(string, name);
+
+	// these are always empty.
+	MV(string, name2);
+	MV(string, name3);
+	MV(string, name4);
+
+	M(uint32, DisplayInfoID);
+	M(uint32, Quality);
+	M(uint32, Flags);
+	M(uint32, BuyPrice);
+	M(uint32, SellPrice);
+	M(uint32, InventoryType);
+	M(uint32, AllowableClass);
+	M(uint32, AllowableRace);
+	M(uint32, ItemLevel);
+	M(uint32, RequiredLevel);
+	M(uint32, RequiredSkill);
+	M(uint32, RequiredSkillRank);
+	M(uint32, RequiredSpell);
+	M(uint32, RequiredHonorRank);
+	M(uint32, RequiredCityRank);
+	M(uint32, RequiredReputationFaction);
+	M(uint32, RequiredReputationRank);
+	M(uint32, MaxCount);
+	M(uint32, Stackable);
+	M(uint32, ContainerSlots);
+
+	lua_pushstring(L, "stats");
+	lua_createtable(L, MAX_ITEM_PROTO_STATS, 0);
+	for(uint32 i=1; i<=MAX_ITEM_PROTO_STATS; i++) {
+		lua_createtable(L, 0, 2);
+		M(uint32, type);
+		M(uint32, value);
+		lua_rawseti(L, -2, i);
+	}
+	lua_settable(L, -3);
+
+	lua_pushstring(L, "damages");
+	lua_createtable(L, MAX_ITEM_PROTO_DAMAGES, 0);
+	for(uint32 i=1; i<=MAX_ITEM_PROTO_DAMAGES; i++) {
+		lua_createtable(L, 0, 3);
+		M(uint32, min);
+		M(uint32, max);
+		M(uint32, type);
+		lua_rawseti(L, -2, i);
+	}
+	lua_settable(L, -3);
+
+	M(uint32, Armor);
+	M(uint32, HolyRes);
+	M(uint32, FireRes);
+	M(uint32, NatureRes);
+	M(uint32, FrostRes);
+	M(uint32, ShadowRes);
+	M(uint32, ArcaneRes);
+
+	M(uint32, Delay);
+	M(uint32, AmmoType);
+	M(float, RangedModRange);
+
+	lua_pushstring(L, "spells");
+	lua_createtable(L, MAX_ITEM_PROTO_SPELLS, 0);
+	for(uint32 i=1; i<=MAX_ITEM_PROTO_SPELLS; i++) {
+		lua_createtable(L, 0, 6);
+		M(uint32, id);
+		M(uint32, trigger);
+		M(uint32, charges);
+		M(uint32, cooldown);
+		M(uint32, category);
+		M(uint32, categoryCooldown);
+		lua_rawseti(L, -2, i);
+	}
+	lua_settable(L, -3);
+
+	M(uint32, Bonding);
+	MV(string, description);
+	M(uint32, PageText);
+	M(uint32, LanguageID);
+	M(uint32, PageMaterial);
+	M(uint32, StartQuest);
+	M(uint32, LockID);
+	M(uint32, Material);
+	M(uint32, Sheath);
+	M(uint32, RandomProperty);
+	M(uint32, Block);
+	M(uint32, ItemSet);
+	M(uint32, MaxDurability);
+	M(uint32, Area);
+	M(uint32, Map);
+	M(uint32, BagFamily);
 }

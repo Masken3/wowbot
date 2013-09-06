@@ -279,6 +279,35 @@ static uint16 genCMSG_QUESTGIVER_HELLO(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+static uint16 genCMSG_QUESTGIVER_REQUEST_REWARD(lua_State* L, byte* buf) {
+	GL_START;
+	M(Guid, guid);
+	M(uint32, questId);
+	GL_END;
+}
+
+static uint16 genCMSG_QUESTGIVER_CHOOSE_REWARD(lua_State* L, byte* buf) {
+	GL_START;
+	M(Guid, guid);
+	M(uint32, questId);
+	M(uint32, reward);
+	GL_END;
+}
+
+static uint16 genCMSG_QUESTGIVER_COMPLETE_QUEST(lua_State* L, byte* buf) {
+	GL_START;
+	M(Guid, guid);
+	M(uint32, questId);
+	GL_END;
+}
+
+static uint16 genCMSG_ITEM_QUERY_SINGLE(lua_State* L, byte* buf) {
+	GL_START;
+	M(uint32, itemId);
+	M(Guid, guid);
+	GL_END;
+}
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -293,11 +322,10 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_QUESTLOG_REMOVE_QUEST);
 		GEN_CASE(CMSG_QUESTGIVER_STATUS_QUERY);
 		GEN_CASE(CMSG_QUESTGIVER_HELLO);
-#if 0
-		GEN_CASE(CMSG_QUESTGIVER_COMPLETE_QUEST);
 		GEN_CASE(CMSG_QUESTGIVER_REQUEST_REWARD);
 		GEN_CASE(CMSG_QUESTGIVER_CHOOSE_REWARD);
-#endif
+		GEN_CASE(CMSG_QUESTGIVER_COMPLETE_QUEST);
+		GEN_CASE(CMSG_ITEM_QUERY_SINGLE);
 		default: return NULL;
 	}
 }

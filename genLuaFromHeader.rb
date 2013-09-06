@@ -4,6 +4,7 @@
 # options:
 # :includedEnums, array of strings. if set, all enums not in this set will be discarded.
 class GenLuaFromHeaderTask < MultiFileTask
+	include FlagsChanged
 	def initialize(name, srcName, options = {})
 		@name = name
 		@src = srcName
@@ -14,13 +15,17 @@ class GenLuaFromHeaderTask < MultiFileTask
 		# todo: cause rebuild if options change.
 		super(@cName, [@hName])
 	end
+	def cFlags
+		return @options.inspect
+	end
 	def fileExecute
+		execFlags
 		enums = parse(@src)
-		open(@hName, 'w') do |file|
-			writeH(file, enums)
-		end
 		open(@cName, 'w') do |file|
 			writeC(@src, file, enums)
+		end
+		open(@hName, 'w') do |file|
+			writeH(file, enums)
 		end
 	end
 	def writeC(src, file, enums)

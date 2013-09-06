@@ -40,6 +40,11 @@ work = ExeWork.new do
 			{:includedEnums=>['MonsterMoveType']}),
 		GenLuaFromHeaderTask.new('QuestDef', 'server-code/QuestDef.h',
 			{:includedEnums=>['__QuestGiverStatus']}),
+		GenLuaFromHeaderTask.new('ItemPrototype', 'server-code/ItemPrototype.h',
+			{:includedEnums=>['InventoryType', 'ItemClass', 'ItemSubclassWeapon',
+				'ItemSubclassArmor']}),
+		GenLuaFromHeaderTask.new('Player', 'server-code/Player.h',
+			{:includedEnums=>['EquipmentSlots']}),
 	]
 	@SPECIFIC_CFLAGS = {
 		'worldPacketParsersLua.c' => ' -Wno-vla',

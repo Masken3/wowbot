@@ -30,6 +30,8 @@
 #include "DBCEnumsLua.h"
 #include "movementLua.h"
 #include "QuestDefLua.h"
+#include "ItemPrototypeLua.h"
+#include "PlayerLua.h"
 
 #define DEFAULT_WORLDSERVER_PORT 8085
 
@@ -316,6 +318,7 @@ static int l_spellEffectName(lua_State* L) {
 }
 
 static int l_traceback(lua_State* L) {
+	LOG("l_traceback\n");
 	luaL_traceback(L, L, lua_tostring(L, -1), 1);
 	LOG("%s\n", lua_tostring(L, -1));
 	return 1;
@@ -362,6 +365,8 @@ void initLua(WorldSession* session) {
 	DBCEnumsLua(L);
 	movementLua(L);
 	QuestDefLua(L);
+	ItemPrototypeLua(L);
+	PlayerLua(L);
 }
 
 static BOOL luaPcall(lua_State* L, int nargs) {

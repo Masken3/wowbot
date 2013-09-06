@@ -7,6 +7,7 @@ SUBFILES = {
 	'decision.lua',
 	'chat.lua',
 	'quests.lua',
+	'item.lua',
 }
 for i,f in ipairs(SUBFILES) do
 	dofile('src/lua/'..f)
@@ -59,6 +60,19 @@ if(STATE == nil) then
 		meleeSpell = false,
 		attacking = false,
 		meleeing = false,
+
+		-- key: id. value: table. All the spells we know.
+		knownSpells = {},
+
+		-- set of itemIds that we need data for.
+		itemProtosWaiting = {},
+
+		-- key: id. value: table.
+		itemProtos = {},
+
+		-- key: parameter. value: function.
+		-- they will be called when itemDataWaiting is empty.
+		itemDataCallbacks = {},
 
 		-- timer-related stuff
 		timers = {},
@@ -189,25 +203,33 @@ function hSMSG_LOGIN_VERIFY_WORLD(p)
 	send(CMSG_QUESTGIVER_STATUS_MULTIPLE_QUERY);
 end
 
+function loginComplete()
+	itemLoginComplete();
+end
+
 -- may need reversing.
 function bit32.bytes(x)
 	return bit32.extract(x,0,8),bit32.extract(x,8,8),bit32.extract(x,16,8),bit32.extract(x,24,8)
 end
 
-local function guidFromValues(o, idx)
+function guidFromValues(o, idx)
 	local a = o.values[idx];
 	local b = o.values[idx+1];
-	print("guidFromValues", idx, a, b);
+	if((not a) or (not b)) then return nil; end
+	--print("guidFromValues", idx, a, b);
 	local s = string.char(bit32.bytes(a)) .. string.char(bit32.bytes(b));
 	--local s = string.format("%08X%08X", a, b);
 	--print("guidFromValues", s);
 	assert(#s == 8);
-	print("guidFromValues", s:hex());
+	--print("guidFromValues", s:hex());
 	return s;
 end
 
-local function isValidGuid(g)
-	return g ~= string.rep(string.char(0), 8);
+ZeroGuid = string.rep(string.char(0), 8);
+
+function isValidGuid(g)
+	if(not g) then return false; end
+	return g ~= ZeroGuid;
 end
 
 -- returns true iff o is me or a member of my group.
@@ -338,6 +360,9 @@ function hSMSG_UPDATE_OBJECT(p)
 			end
 		elseif(b.type == UPDATETYPE_VALUES) then
 			updateValues(STATE.knownObjects[b.guid], b);
+			if(STATE.checkNewObjectsForQuests) then
+				send(CMSG_QUESTGIVER_STATUS_QUERY, {guid=b.guid});
+			end
 		elseif(b.type == UPDATETYPE_MOVEMENT) then
 			updateMovement(STATE.knownObjects[b.guid], b);
 		else
@@ -383,6 +408,7 @@ function hSMSG_INITIAL_SPELLS(p)
 				STATE.meleeSpell = id;
 			end
 		end
+		STATE.knownSpells[id] = s;
 	end
 	print("Found "..dumpKeys(STATE.attackSpells).." attack spells.");
 end
@@ -455,3 +481,14 @@ function hSMSG_MESSAGECHAT(p)
 	print("SMSG_MESSAGECHAT", dump(p));
 	handleChatMessage(p);
 end
+
+-- lock down the Global table, to catch undefined variable access.
+-- this code must appear last.
+local mt = getmetatable(_G) or {}
+mt.__index = function(t,k)
+	error("attempt to access an undefined variable: "..k, 2)
+end
+mt.__newindex = function(t,k,v)
+	error("attempt to add a global at runtime: "..k, 2)
+end
+setmetatable(_G, mt)
