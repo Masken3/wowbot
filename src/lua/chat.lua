@@ -51,11 +51,26 @@ local function dropAllItems(p)
 	reply(p, msg)
 end
 
+local function listItems(p)
+	local msg = 'Backpack items:'
+	-- backpack only for now.
+	for i = PLAYER_FIELD_PACK_SLOT_1, PLAYER_FIELD_PACK_SLOT_LAST, 2 do
+		local guid = guidFromValues(STATE.me, i)
+		if(isValidGuid(guid)) then
+			local o = STATE.knownObjects[guid]
+			msg = msg..o.values[OBJECT_FIELD_ENTRY]..' '..guid:hex().."\n"
+		end
+	end
+	reply(p, msg)
+end
+
 function handleChatMessage(p)
 	if(p.text == 'lq') then
 		listQuests(p)
 	elseif(p.text == 'daq') then
 		dropAllQuests(p)
+	elseif(p.text == 'li') then
+		listItems(p)
 	elseif(p.text == 'dai') then
 		dropAllItems(p)
 	end
