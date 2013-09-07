@@ -240,8 +240,6 @@ enum PlayerSlots
 	PLAYER_SLOTS_COUNT          = (PLAYER_SLOT_END - PLAYER_SLOT_START)
 };
 
-#define INVENTORY_SLOT_BAG_0    255
-
 enum EquipmentSlots                                         // 19 slots
 {
 	EQUIPMENT_SLOT_START        = 0,
@@ -271,6 +269,7 @@ enum InventorySlots                                         // 4 slots
 {
 	INVENTORY_SLOT_BAG_START    = 19,
 	INVENTORY_SLOT_BAG_END      = 23,
+	INVENTORY_SLOT_BAG_0 = 255,
 };
 
 enum InventoryPackSlots                                     // 16 slots

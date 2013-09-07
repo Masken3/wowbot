@@ -31,10 +31,32 @@ local function dropAllQuests(p)
 	reply(p, msg)
 end
 
+-- destroys all items in bags, but not equipped items.
+-- does destroy unequipped bags.
+local function dropAllItems(p)
+	local msg = 'Dropped items:'
+	-- backpack only for now.
+	for i = PLAYER_FIELD_PACK_SLOT_1, PLAYER_FIELD_PACK_SLOT_LAST, 2 do
+		local guid = guidFromValues(STATE.me, i)
+		if(isValidGuid(guid)) then
+			local o = STATE.knownObjects[guid]
+			msg = msg..o.values[OBJECT_FIELD_ENTRY]..' '..guid:hex().."\n"
+			send(CMSG_DESTROYITEM, {
+				slot = INVENTORY_SLOT_ITEM_START + ((i - PLAYER_FIELD_PACK_SLOT_1) / 2),
+				bag = INVENTORY_SLOT_BAG_0,
+				count = o.values[ITEM_FIELD_STACK_COUNT],
+			})
+		end
+	end
+	reply(p, msg)
+end
+
 function handleChatMessage(p)
 	if(p.text == 'lq') then
 		listQuests(p)
 	elseif(p.text == 'daq') then
 		dropAllQuests(p)
+	elseif(p.text == 'dai') then
+		dropAllItems(p)
 	end
 end

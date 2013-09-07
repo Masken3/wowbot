@@ -198,7 +198,9 @@ enum EUnitFields
 	PLAYER_VISIBLE_ITEM_LAST_0                 = 0x120 + UNIT_END,
 	PLAYER_VISIBLE_ITEM_LAST_PROPERTIES        = 0x128 + UNIT_END,
 	PLAYER_VISIBLE_ITEM_LAST_PAD               = 0x129 + UNIT_END,
-	PLAYER_FIELD_INV_SLOT_HEAD                 = 0x12a + UNIT_END, // Size:46
+	PLAYER_FIELD_INV_SLOT_HEAD                 = 0x12a + UNIT_END, // Size:38
+	PLAYER_FIELD_BAG_SLOT_1                    = 0x150 + UNIT_END, // Size:8
+	PLAYER_FIELD_BAG_SLOT_LAST                 = 0x156 + UNIT_END,
 	PLAYER_FIELD_PACK_SLOT_1                   = 0x158 + UNIT_END, // Size:32
 	PLAYER_FIELD_PACK_SLOT_LAST                = 0x176 + UNIT_END,
 	PLAYER_FIELD_BANK_SLOT_1                   = 0x178 + UNIT_END, // Size:48

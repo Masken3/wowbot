@@ -130,7 +130,7 @@ function hMovement(opcode, p)
 		local speed = RUN_SPEED;	-- speed, in yards per second.
 		local x = 0;
 		local y = 0;
-		if(f == MOVEFLAG_STOP) then
+		if(f == MOVEFLAG_NONE) then
 			speed = 0;
 		end
 		if(bit32.btest(f, MOVEFLAG_WALK_MODE)) then
@@ -281,6 +281,7 @@ function doMoveToTarget(realTime, mo, maxDist)
 		--print("inside t: "..t, "t1t2", t1, t2, "temp", (b^2 - 4*a*c), (b^2 - 4*a*c)^0.5,
 			--"xyabc", x, y, a, b, c, "mov:"..dump(mov));
 		if(t <= 0) then return; end
+		assert(t > 0);
 		setTimer(movementTimerCallback, realTime + t);
 	end
 end

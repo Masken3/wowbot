@@ -1,3 +1,12 @@
+do
+	-- lock down the Global table, to catch undefined variable reading.
+	-- this code must appear last.
+	local mt = getmetatable(_G) or {}
+	mt.__index = function(t,k)
+		error("attempt to access an undefined variable: "..k, 2)
+	end
+	setmetatable(_G, mt)
+end
 
 SUBFILES = {
 	'dump.lua',
@@ -24,10 +33,11 @@ MovingObject = Struct.new{guid='string', location=Location, movement=Movement}
 
 -- values is an int-key table. See UpdateFields.h for a list of keys.
 -- bot is for storing our own data concerning this object.
+-- updateValuesCallbacks are called after receiving SMSG_UPDATE_OBJECT regarding this object.
 KnownObject = Struct.new{guid='string', values='table', monsterMovement='table',
-	location=Location, movement=Movement, bot='table'}
+	location=Location, movement=Movement, bot='table', updateValuesCallbacks='table'}
 
-if(STATE == nil) then
+if(rawget(_G, 'STATE') == nil) then
 	STATE = {
 		inGroup = false,
 		leader = MovingObject.new{
@@ -51,6 +61,7 @@ if(STATE == nil) then
 		myLevel = 0,	-- set by C function enterWorld.
 		myLocation = Location.new(),	-- set by hSMSG_LOGIN_VERIFY_WORLD.
 		my = false,	-- KnownObject.
+		me = false,	-- == my.
 		moving = false,
 		moveStartTime = 0,	-- floating point, in seconds. valid if moving == true.
 
@@ -189,7 +200,7 @@ function hSMSG_GROUP_LIST(p)
 		print("Group disbanded.");
 	else
 		STATE.inGroup = true;
-		print("Group rejoined.");
+		print("Group joined.");
 		STATE.groupMembers = p.members;
 		for i,m in ipairs(STATE.groupMembers) do
 			print(m.guid:hex());
@@ -333,13 +344,15 @@ function hSMSG_UPDATE_OBJECT(p)
 				STATE.knownObjects[guid] = nil;
 			end
 		elseif(b.type == UPDATETYPE_CREATE_OBJECT or b.type == UPDATETYPE_CREATE_OBJECT2) then
-			local o = KnownObject.new{guid=b.guid, values={}, bot={}}
+			local o = KnownObject.new{guid=b.guid, values={}, bot={}, updateValuesCallbacks={}}
 			updateValues(o, b);
 			updateMovement(o, b);
 			STATE.knownObjects[b.guid] = o;
 
 			if(b.guid == STATE.myGuid) then
 				STATE.my = o;
+				STATE.me = o;
+				print("CreateObject me!");
 			end
 
 			-- player objects don't get the OBJECT_FIELD_TYPE update for some reason,
@@ -363,8 +376,11 @@ function hSMSG_UPDATE_OBJECT(p)
 			if(STATE.checkNewObjectsForQuests) then
 				send(CMSG_QUESTGIVER_STATUS_QUERY, {guid=b.guid});
 			end
+			print("UpdateObject me!");
+			doCallbacks(STATE.knownObjects[b.guid].updateValuesCallbacks);
 		elseif(b.type == UPDATETYPE_MOVEMENT) then
 			updateMovement(STATE.knownObjects[b.guid], b);
+			print("UpdateOMovement me!");
 		else
 			error("Unknown update type "..b.type);
 		end
@@ -482,13 +498,12 @@ function hSMSG_MESSAGECHAT(p)
 	handleChatMessage(p);
 end
 
--- lock down the Global table, to catch undefined variable access.
--- this code must appear last.
-local mt = getmetatable(_G) or {}
-mt.__index = function(t,k)
-	error("attempt to access an undefined variable: "..k, 2)
+do
+	-- lock down the Global table, to catch undefined variable creation.
+	-- this code must appear last.
+	local mt = getmetatable(_G) or {}
+	mt.__newindex = function(t,k,v)
+		error("attempt to add a global at runtime: "..k, 2)
+	end
+	setmetatable(_G, mt)
 end
-mt.__newindex = function(t,k,v)
-	error("attempt to add a global at runtime: "..k, 2)
-end
-setmetatable(_G, mt)

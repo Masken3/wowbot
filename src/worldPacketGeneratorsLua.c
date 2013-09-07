@@ -308,6 +308,23 @@ static uint16 genCMSG_ITEM_QUERY_SINGLE(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+static uint16 genCMSG_AUTOEQUIP_ITEM_SLOT(lua_State* L, byte* buf) {
+	GL_START;
+	M(Guid, itemGuid);
+	M(byte, dstSlot);
+	GL_END;
+}
+
+static uint16 genCMSG_DESTROYITEM(lua_State* L, byte* buf) {
+	GL_START;
+	M(byte, bag);
+	M(byte, slot);
+	M(byte, count);
+	// 3 bytes padding.
+	ptr += 3;
+	GL_END;
+}
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -326,6 +343,8 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_QUESTGIVER_CHOOSE_REWARD);
 		GEN_CASE(CMSG_QUESTGIVER_COMPLETE_QUEST);
 		GEN_CASE(CMSG_ITEM_QUERY_SINGLE);
+		GEN_CASE(CMSG_AUTOEQUIP_ITEM_SLOT);
+		GEN_CASE(CMSG_DESTROYITEM);
 		default: return NULL;
 	}
 }

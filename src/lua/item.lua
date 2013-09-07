@@ -38,38 +38,42 @@ function itemProtoFromId(id)
 	send(CMSG_ITEM_QUERY_SINGLE, {itemId=id, guid=ZeroGuid});
 end
 
+function doCallbacks(callbacks)
+	-- keep a separate set; new callbacks may be added by old callbacks.
+	local set = {}
+	local count = 0;
+	for p, f in pairs(callbacks) do
+		set[p] = true;
+		count = count + 1;
+		f(p);
+	end
+	print(count.." callbacks called.");
+	-- remove only those callbacks that we called.
+	-- do it after the iteration, so the iterator doesn't get confused.
+	for p, t in pairs(set) do
+		callbacks[p] = nil;
+	end
+end
+
 function hSMSG_ITEM_QUERY_SINGLE_RESPONSE(p)
 	print("SMSG_ITEM_QUERY_SINGLE_RESPONSE "..p.itemId);
 	STATE.itemProtosWaiting[p.itemId] = nil;
 	STATE.itemProtos[p.itemId] = p;
 	if(not next(STATE.itemProtosWaiting)) then
 		print("All item protos received.");
-		-- keep a separate set; new callbacks may be added by old callbacks.
-		local set = {}
-		local count = 0;
-		for p, f in pairs(STATE.itemDataCallbacks) do
-			set[p] = true;
-			count = count + 1;
-			f(p);
-		end
-		print(count.." callbacks called.");
-		-- remove only those callbacks that we called.
-		-- do it after the iteration, so the iterator doesn't get confused.
-		for p, t in pairs(set) do
-			STATE.itemDataCallbacks[p] = nil;
-		end
+		doCallbacks(STATE.itemDataCallbacks);
 	end
 end
 
--- returns index to KnownObject.values.
-function itemSlot(proto)
+-- returns one of enum EquipmentSlots.
+function itemEquipSlot(proto)
 	--print("itemSlotIndex("..proto.InventoryType..")", dump(itemInventoryToEquipmentSlot));
 	return itemInventoryToEquipmentSlot[proto.InventoryType];
 end
 
 -- returns guid
 function equipmentInSlot(eSlot)
-	local guid = guidFromValues(STATE.my, PLAYER_FIELD_INV_SLOT_HEAD + (eSlot * 2));
+	local guid = guidFromValues(STATE.me, PLAYER_FIELD_INV_SLOT_HEAD + (eSlot * 2));
 	if(not isValidGuid(guid)) then return nil; end
 	return guid;
 end
@@ -116,7 +120,7 @@ function wantToWear(id)
 	print("Testing weariness of item "..proto.name.." ("..id..")...");
 
 	-- if it's not equipment, we can't wear it.
-	local slot = itemSlot(proto);
+	local slot = itemEquipSlot(proto);
 	if(not slot) then
 		print("no slot found.");
 		return false;
@@ -164,9 +168,6 @@ function itemLoginComplete()
 			itemProtoFromId(id);
 		end
 	end
-
-	-- temp test
-	itemTest();
 end
 
 function itemTest()
@@ -179,4 +180,112 @@ function itemTest()
 		return;
 	end
 	wantToWear(id);
+end
+
+function hSMSG_ITEM_PUSH_RESULT(p)
+	print("SMSG_ITEM_PUSH_RESULT", dump(p));
+	-- we've got a new item. if we want to wear it, then wear it.
+
+	-- if it wasn't us who got the item, we don't care.
+	if(p.playerGuid ~= STATE.myGuid) then
+		print("WEIRD: got SMSG_ITEM_PUSH_RESULT for another player.");
+		return;
+	end
+
+	-- if items stacks, it's not equipment.
+	if(p.itemSlot == 0xFFFFFFFF) then
+		print("itemSlot -1.");
+		return;
+	end
+
+	-- SMSG_ITEM_PUSH_RESULT is always followed by SMSG_UPDATE_OBJECT,
+	-- which sets the item's guid. We'll have to wait for it.
+	STATE.me.updateValuesCallbacks[p] = handleItemPush;
+end
+
+function handleItemPush(p)
+	-- find item's guid.
+	local guid;
+
+	-- item is in backpack, or directly equipped.
+	if(p.bagSlot == INVENTORY_SLOT_BAG_0) then
+		print("INVENTORY_SLOT_BAG_0.");
+
+		if((p.itemSlot >= INVENTORY_SLOT_ITEM_START) and (p.itemSlot <= INVENTORY_SLOT_ITEM_END)) then
+			print("In backpack.");
+			local index = PLAYER_FIELD_PACK_SLOT_1 + ((p.itemSlot - INVENTORY_SLOT_ITEM_START) * 2);
+			guid = guidFromValues(STATE.me, index);
+		else
+			print("Not in backpack?");
+			return;
+		end
+	end
+
+	if((p.bagSlot >= INVENTORY_SLOT_BAG_START) and (p.bagSlot <= INVENTORY_SLOT_BAG_END)) then
+		print("In bag!");
+		local bagIndex = PLAYER_FIELD_BAG_SLOT_1 + ((p.bagSlot - INVENTORY_SLOT_BAG_START) * 2);
+		local bagGuid = guidFromValues(STATE.me, bagIndex);
+		local bag = STATE.knownObjects[bagGuid];
+		assert(p.itemSlot < 32);	-- sanity check, max bag size.
+		assert(p.itemSlot < bag.values[CONTAINER_FIELD_NUM_SLOTS]);
+		local index = CONTAINER_FIELD_SLOT_1 + (p.itemSlot * 2);
+		guid = guidFromValues(bag, index);
+	end
+
+	if(not guid) then
+		print("Guid not found, out of ideas.");
+		return;
+	end
+
+	local proto = itemProtoFromId(p.itemId);
+	if(not proto) then
+		-- we can't pass item's slots here, even though equip() needs them,
+		-- because the item may have moved before the callback is called.
+		STATE.itemDataCallbacks[guid] = maybeEquip;
+		return;
+	end
+	maybeEquip(guid);
+end
+
+function maybeEquip(itemGuid)
+	local itemId = STATE.knownObjects[itemGuid].values[OBJECT_FIELD_ENTRY];
+	if(wantToWear(itemId)) then
+		equip(itemGuid);
+	end
+end
+
+function equip(itemGuid)
+	local itemId = STATE.knownObjects[itemGuid].values[OBJECT_FIELD_ENTRY];
+	local proto = itemProtoFromId(itemId);
+	print("Equipping "..itemId.." "..itemGuid:hex().." "..proto.name);
+	--[[
+	-- search all bag slots for item.
+	-- if not found, error.
+	local slot, bagSlot;
+	for i = PLAYER_FIELD_PACK_SLOT_1, PLAYER_FIELD_PACK_SLOT_LAST, 2 do
+		if(guidFromValues(STATE.me, i) == itemGuid) then
+			slot = i;
+			bagSlot = INVENTORY_SLOT_BAG_0;
+			break;
+		end
+	end
+	if(not slot) then for i = PLAYER_FIELD_BAG_SLOT_1, PLAYER_FIELD_BAG_SLOT_LAST, 2 do
+		local bag = STATE.knownObjects[guidFromValues(STATE.me, i)];
+		if(isValidGuid(bag)) then for j = 0, bag.values[CONTAINER_FIELD_NUM_SLOTS], 1 do
+			if(guidFromValues(bag, CONTAINER_FIELD_SLOT_1 + (j*2)) == itemGuid) then
+				bagSlot = i;
+				slot = j;
+				goto haveSlot;
+			end
+		end end
+	end end
+	if(not slot) then
+		error("Item not found in any slot. What happened?");
+	end
+	::haveSlot::
+	--]]
+	-- todo: for items that can go in more than one slot, pick a good one.
+	local dstSlot = itemEquipSlot(proto);
+	print(dump(dstSlot), type(dstSlot));
+	send(CMSG_AUTOEQUIP_ITEM_SLOT, {itemGuid=itemGuid, dstSlot=dstSlot});
 end

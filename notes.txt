@@ -109,4 +109,9 @@ If not in combat:
 *** This should cause a decent emergent formation.
 
 23:28 2013-08-29
-Send CMSG_QUESTGIVER_STATUS_MULTIPLE_QUERY to get SMSG_QUESTGIVER_STATUS_MULTIPLE for every giver in range?
+Send CMSG_QUESTGIVER_STATUS_MULTIPLE_QUERY to get SMSG_QUESTGIVER_STATUS_MULTIPLE for every giver in range.
+
+18:05 2013-09-07
+There should be a command to place an equipped item on lockdown,
+so that it doesn't get automatically replaced by "better" items.
+Bot should then ask commander whenever it gets a new item that would be better.

@@ -827,3 +827,18 @@ void pSMSG_ITEM_QUERY_SINGLE_RESPONSE(pLUA_ARGS) {
 	M(uint32, Map);
 	M(uint32, BagFamily);
 }
+
+void pSMSG_ITEM_PUSH_RESULT(pLUA_ARGS) {
+	PL_START;
+	M(Guid, playerGuid);
+	M(uint32, received);	// 0=looted, 1=from npc
+	M(uint32, created);	// 0=received, 1=created
+	M(uint32, showChatMessage);
+	M(byte, bagSlot);	// slot of bag in which the item is stored.
+	M(uint32, itemSlot);	// item's slot in bag. 0xFFFFFFFF if part of a stack.
+	M(uint32, itemId);
+	M(uint32, itemSuffixFactor);
+	M(uint32, itemRandomPropertyId);
+	M(uint32, newCount);
+	M(uint32, inventoryCount);
+}
