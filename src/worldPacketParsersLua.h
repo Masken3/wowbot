@@ -28,6 +28,7 @@ typedef struct WorldSession WorldSession;
 	m(SMSG_QUESTGIVER_QUEST_COMPLETE)\
 	m(SMSG_ITEM_QUERY_SINGLE_RESPONSE)\
 	m(SMSG_ITEM_PUSH_RESULT)\
+	m(SMSG_TRADE_STATUS)\
 
 
 #define pLUA_ARGS WorldSession* session, const char* buf, uint16 bufSize

@@ -60,6 +60,8 @@ class GenLuaFromHeaderTask < MultiFileTask
 					eName = line.split[1]
 					raise if(enums[eName])
 					enums[eName] = {}
+				elsif(line.strip.start_with?('//'))
+					# comment
 				elsif(inEnum)
 					if(line.strip == '};')
 						inEnum = false

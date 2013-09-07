@@ -64,6 +64,47 @@ local function listItems(p)
 	reply(p, msg)
 end
 
+local function listMoney(p)
+	local msg = STATE.my.values[PLAYER_FIELD_COINAGE]..'c'
+	reply(p, msg)
+end
+
+local function giveAll(p)
+	reply(p, 'giving all...')
+	send(CMSG_INITIATE_TRADE, {guid=p.senderGuid})
+end
+
+function hSMSG_TRADE_STATUS(p)
+	if(p.status == TRADE_STATUS_OPEN_WINDOW) then
+		print("TRADE_STATUS_OPEN_WINDOW")
+		local tradeSlot = 0
+		for i = PLAYER_FIELD_PACK_SLOT_1, PLAYER_FIELD_PACK_SLOT_LAST, 2 do
+			local guid = guidFromValues(STATE.me, i)
+			if(isValidGuid(guid)) then
+				local o = STATE.knownObjects[guid]
+				send(CMSG_SET_TRADE_ITEM, {
+					tradeSlot = tradeSlot,
+					bag = INVENTORY_SLOT_BAG_0,
+					slot = INVENTORY_SLOT_ITEM_START + ((i - PLAYER_FIELD_PACK_SLOT_1) / 2),
+				})
+				print(tradeSlot..": "..o.values[OBJECT_FIELD_ENTRY]..' '..guid:hex())
+				tradeSlot = tradeSlot + 1
+				if(tradeSlot >= TRADE_SLOT_TRADED_COUNT) then
+					break
+				end
+			end
+		end
+		print("giving "..tradeSlot.." items...")
+		send(CMSG_ACCEPT_TRADE, {padding=0})
+	elseif(p.status == TRADE_STATUS_TRADE_CANCELED) then
+		print("Trade cancelled!")
+	elseif(p.status == TRADE_STATUS_TRADE_COMPLETE) then
+		print("Trade complete!")
+	else
+		print("Trade status "..p.status)
+	end
+end
+
 function handleChatMessage(p)
 	if(p.text == 'lq') then
 		listQuests(p)
@@ -73,5 +114,13 @@ function handleChatMessage(p)
 		listItems(p)
 	elseif(p.text == 'dai') then
 		dropAllItems(p)
+	elseif(p.text == 'lm') then
+		listMoney(p)
+	elseif(p.text == 'give all') then
+		giveAll(p)
 	end
+end
+
+function partyChat(msg)
+	send(CMSG_MESSAGECHAT, {type=CHAT_MSG_PARTY, language=LANG_UNIVERSAL, msg=msg})
 end

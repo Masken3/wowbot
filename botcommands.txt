@@ -5,7 +5,9 @@ These are chat commands that bots will respond to:
 * gq	Get Quests, from commander's target. Only useful when agq off.
 * li	List Items
 * dai	Drop All Items. (except equipped items). Use only for debugging.
+* lm	List Money
 
-* give <money|item>
+* give <money|item|all>	Gives money or items to commander.
 ** money: <int><g|s|c>	Gold, Silver or Copper.
-** item: <name> [count]	Error if bot has different items with the same name.
+** item: <name> [count]
+** all: items that are not soulbound.

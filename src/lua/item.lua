@@ -257,7 +257,9 @@ end
 function equip(itemGuid)
 	local itemId = STATE.knownObjects[itemGuid].values[OBJECT_FIELD_ENTRY];
 	local proto = itemProtoFromId(itemId);
-	print("Equipping "..itemId.." "..itemGuid:hex().." "..proto.name);
+	local msg = "Equipping "..itemId.." "..itemGuid:hex().." "..proto.name;
+	print(msg);
+	partyChat(msg);
 	--[[
 	-- search all bag slots for item.
 	-- if not found, error.

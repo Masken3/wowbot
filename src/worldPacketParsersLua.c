@@ -842,3 +842,8 @@ void pSMSG_ITEM_PUSH_RESULT(pLUA_ARGS) {
 	M(uint32, newCount);
 	M(uint32, inventoryCount);
 }
+
+void pSMSG_TRADE_STATUS(pLUA_ARGS) {
+	PL_START;
+	M(uint32, status);
+}

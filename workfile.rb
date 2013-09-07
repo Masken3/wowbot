@@ -29,7 +29,8 @@ work = ExeWork.new do
 		GenLuaFromHeaderTask.new('UpdateFields', 'server-code/UpdateFields.h'),
 		GenLuaFromHeaderTask.new('updateBlockFlags', 'src/updateBlockFlags.h'),
 		GenLuaFromHeaderTask.new('SharedDefines', 'server-code/SharedDefines.h',
-			{:includedEnums=>['SpellEffects', 'SpellRangeIndex', 'Powers']}),
+			{:includedEnums=>['SpellEffects', 'SpellRangeIndex', 'Powers',
+				'TradeStatus', 'Language', 'ChatMsg']}),
 		GenLuaFromHeaderTask.new('Unit', 'server-code/Unit.h',
 			{:includedEnums=>['UnitFlags', 'NPCFlags']}),
 		GenLuaFromHeaderTask.new('ObjectGuid', 'server-code/ObjectGuid.h',
@@ -44,7 +45,8 @@ work = ExeWork.new do
 			{:includedEnums=>['InventoryType', 'ItemClass', 'ItemSubclassWeapon',
 				'ItemSubclassArmor']}),
 		GenLuaFromHeaderTask.new('Player', 'server-code/Player.h',
-			{:includedEnums=>['EquipmentSlots', 'InventorySlots', 'InventoryPackSlots']}),
+			{:includedEnums=>['EquipmentSlots', 'InventorySlots', 'InventoryPackSlots',
+				'TradeSlots']}),
 	]
 	@SPECIFIC_CFLAGS = {
 		'worldPacketParsersLua.c' => ' -Wno-vla',

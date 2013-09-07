@@ -325,6 +325,26 @@ static uint16 genCMSG_DESTROYITEM(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+static uint16 genCMSG_INITIATE_TRADE(lua_State* L, byte* buf) {
+	GL_START;
+	M(Guid, guid);
+	GL_END;
+}
+
+static uint16 genCMSG_SET_TRADE_ITEM(lua_State* L, byte* buf) {
+	GL_START;
+	M(byte, tradeSlot);
+	M(byte, bag);
+	M(byte, slot);
+	GL_END;
+}
+
+static uint16 genCMSG_ACCEPT_TRADE(lua_State* L, byte* buf) {
+	GL_START;
+	M(uint32, padding);
+	GL_END;
+}
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -345,6 +365,9 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_ITEM_QUERY_SINGLE);
 		GEN_CASE(CMSG_AUTOEQUIP_ITEM_SLOT);
 		GEN_CASE(CMSG_DESTROYITEM);
+		GEN_CASE(CMSG_INITIATE_TRADE);
+		GEN_CASE(CMSG_SET_TRADE_ITEM);
+		GEN_CASE(CMSG_ACCEPT_TRADE);
 		default: return NULL;
 	}
 }
