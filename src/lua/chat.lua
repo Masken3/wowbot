@@ -35,32 +35,19 @@ end
 -- does destroy unequipped bags.
 local function dropAllItems(p)
 	local msg = 'Dropped items:'
-	-- backpack only for now.
-	for i = PLAYER_FIELD_PACK_SLOT_1, PLAYER_FIELD_PACK_SLOT_LAST, 2 do
-		local guid = guidFromValues(STATE.me, i)
-		if(isValidGuid(guid)) then
-			local o = STATE.knownObjects[guid]
-			msg = msg..o.values[OBJECT_FIELD_ENTRY]..' '..guid:hex().."\n"
-			send(CMSG_DESTROYITEM, {
-				slot = INVENTORY_SLOT_ITEM_START + ((i - PLAYER_FIELD_PACK_SLOT_1) / 2),
-				bag = INVENTORY_SLOT_BAG_0,
-				count = o.values[ITEM_FIELD_STACK_COUNT],
-			})
-		end
-	end
+	investigateInventory(function(o, bagSlot, slot)
+		msg = msg..o.values[OBJECT_FIELD_ENTRY]..' '..o.guid:hex().."\n"
+		send(CMSG_DESTROYITEM, {slot = slot, bagSlot = bagSlot,
+			count = o.values[ITEM_FIELD_STACK_COUNT]})
+	end)
 	reply(p, msg)
 end
 
 local function listItems(p)
-	local msg = 'Backpack items:'
-	-- backpack only for now.
-	for i = PLAYER_FIELD_PACK_SLOT_1, PLAYER_FIELD_PACK_SLOT_LAST, 2 do
-		local guid = guidFromValues(STATE.me, i)
-		if(isValidGuid(guid)) then
-			local o = STATE.knownObjects[guid]
-			msg = msg..o.values[OBJECT_FIELD_ENTRY]..' '..guid:hex().."\n"
-		end
-	end
+	local msg = 'Inventory items:'
+	investigateInventory(function(o)
+		msg = msg..o.values[OBJECT_FIELD_ENTRY]..' '..o.guid:hex().."\n"
+	end)
 	reply(p, msg)
 end
 
@@ -71,37 +58,57 @@ end
 
 local function giveAll(p)
 	reply(p, 'giving all...')
+	STATE.tradeGiveAll = true
 	send(CMSG_INITIATE_TRADE, {guid=p.senderGuid})
 end
 
 function hSMSG_TRADE_STATUS(p)
-	if(p.status == TRADE_STATUS_OPEN_WINDOW) then
+	if((p.status == TRADE_STATUS_OPEN_WINDOW) and STATE.tradeGiveAll) then
+		STATE.tradeGiveAll = false
 		print("TRADE_STATUS_OPEN_WINDOW")
 		local tradeSlot = 0
-		for i = PLAYER_FIELD_PACK_SLOT_1, PLAYER_FIELD_PACK_SLOT_LAST, 2 do
-			local guid = guidFromValues(STATE.me, i)
-			if(isValidGuid(guid)) then
-				local o = STATE.knownObjects[guid]
-				send(CMSG_SET_TRADE_ITEM, {
-					tradeSlot = tradeSlot,
-					bag = INVENTORY_SLOT_BAG_0,
-					slot = INVENTORY_SLOT_ITEM_START + ((i - PLAYER_FIELD_PACK_SLOT_1) / 2),
-				})
-				print(tradeSlot..": "..o.values[OBJECT_FIELD_ENTRY]..' '..guid:hex())
-				tradeSlot = tradeSlot + 1
-				if(tradeSlot >= TRADE_SLOT_TRADED_COUNT) then
-					break
-				end
+		investigateInventory(function(o, bagSlot, slot)
+			send(CMSG_SET_TRADE_ITEM, {tradeSlot = tradeSlot, bag = bagSlot, slot = slot})
+			print(tradeSlot..": "..o.values[OBJECT_FIELD_ENTRY]..' '..o.guid:hex())
+			tradeSlot = tradeSlot + 1
+			if(tradeSlot >= TRADE_SLOT_TRADED_COUNT) then
+				return false
 			end
-		end
+		end)
 		print("giving "..tradeSlot.." items...")
 		send(CMSG_ACCEPT_TRADE, {padding=0})
 	elseif(p.status == TRADE_STATUS_TRADE_CANCELED) then
 		print("Trade cancelled!")
 	elseif(p.status == TRADE_STATUS_TRADE_COMPLETE) then
 		print("Trade complete!")
+		STATE.me.updateValuesCallbacks[p] = function(p)
+			investigateInventory(function(o)
+				maybeEquip(o.guid)
+			end)
+		end
+	elseif(p.status == TRADE_STATUS_BEGIN_TRADE) then
+		-- player has requested to trade with us. just accept.
+		print("Remote trade initiated!")
+		send(CMSG_BEGIN_TRADE)
 	else
 		print("Trade status "..p.status)
+	end
+end
+
+function hSMSG_TRADE_STATUS_EXTENDED(p)
+	send(CMSG_ACCEPT_TRADE, {padding=0})
+end
+
+local function recreate(p)
+	STATE.recreate = true
+	send(CMSG_LOGOUT_REQUEST)
+end
+
+function hSMSG_LOGOUT_COMPLETE(p)
+	if(STATE.recreate) then
+		STATE.recreate = false
+		send(CMSG_CHAR_DELETE, {guid=STATE.myGuid})
+		send(CMSG_CHAR_ENUM)	-- should trigger character recreation.
 	end
 end
 
@@ -118,6 +125,8 @@ function handleChatMessage(p)
 		listMoney(p)
 	elseif(p.text == 'give all') then
 		giveAll(p)
+	elseif(p.text == 'recreate') then
+		recreate(p)
 	end
 end
 

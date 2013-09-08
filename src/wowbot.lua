@@ -85,6 +85,9 @@ if(rawget(_G, 'STATE') == nil) then
 		-- they will be called when itemDataWaiting is empty.
 		itemDataCallbacks = {},
 
+		tradeGiveAll = false,
+		recreate = false,
+
 		-- timer-related stuff
 		timers = {},
 		inTimerCallback = false,
@@ -376,11 +379,15 @@ function hSMSG_UPDATE_OBJECT(p)
 			if(STATE.checkNewObjectsForQuests) then
 				send(CMSG_QUESTGIVER_STATUS_QUERY, {guid=b.guid});
 			end
-			print("UpdateObject me!");
+			if(b.guid == STATE.myGuid) then
+				print("UpdateObject me!");
+			end
 			doCallbacks(STATE.knownObjects[b.guid].updateValuesCallbacks);
 		elseif(b.type == UPDATETYPE_MOVEMENT) then
 			updateMovement(STATE.knownObjects[b.guid], b);
-			print("UpdateOMovement me!");
+			if(b.guid == STATE.myGuid) then
+				print("UpdateMovement me!");
+			end
 		else
 			error("Unknown update type "..b.type);
 		end

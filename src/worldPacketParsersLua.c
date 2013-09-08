@@ -847,3 +847,8 @@ void pSMSG_TRADE_STATUS(pLUA_ARGS) {
 	PL_START;
 	M(uint32, status);
 }
+
+void pSMSG_TRADE_STATUS_EXTENDED(pLUA_ARGS) {
+	PL_START;
+	// we don't need any of the info, because bots accept any trade.
+}

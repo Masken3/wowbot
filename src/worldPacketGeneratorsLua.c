@@ -345,6 +345,12 @@ static uint16 genCMSG_ACCEPT_TRADE(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+static uint16 genCMSG_CHAR_DELETE(lua_State* L, byte* buf) {
+	GL_START;
+	M(Guid, guid);
+	GL_END;
+}
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -368,6 +374,7 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_INITIATE_TRADE);
 		GEN_CASE(CMSG_SET_TRADE_ITEM);
 		GEN_CASE(CMSG_ACCEPT_TRADE);
+		GEN_CASE(CMSG_CHAR_DELETE);
 		default: return NULL;
 	}
 }

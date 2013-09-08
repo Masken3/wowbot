@@ -53,10 +53,6 @@ static int runWorld2(WorldSession* session) {
 		if(sph.size > 2)
 			if(receiveExact(sock, buf, sph.size - 2) <= 0)
 				return 0;
-		if(sph.cmd == SMSG_LOGOUT_COMPLETE) {
-			LOG("SMSG_LOGOUT_COMPLETE\n");
-			return 1;
-		}
 		handleServerPacket(session, sph, buf);
 	} while(1);
 }
@@ -129,6 +125,7 @@ void enterWorld(WorldSession* session, uint64 guid, uint8 level) {
 	m(SMSG_ATTACKSWING_CANT_ATTACK)\
 	m(SMSG_CANCEL_COMBAT)\
 	m(SMSG_CANCEL_AUTO_REPEAT)\
+	m(SMSG_LOGOUT_COMPLETE)\
 
 
 static BOOL checkLuaFunction(lua_State* L, const char* name) {
@@ -252,8 +249,7 @@ static int l_send(lua_State* L) {
 		PacketGenerator pg = getPacketGenerator(opcode);
 		luaL_checktype(L, 2, LUA_TTABLE);
 		if(!pg) {
-			lua_pushstring(L, "send error: no PacketGenerator for opcode!");
-			lua_error(L);
+			luaL_error(L, "send error: no PacketGenerator for opcode %s", s);
 		}
 		size = pg(L, buf);
 		data = buf;

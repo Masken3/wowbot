@@ -164,10 +164,16 @@ function itemLoginComplete()
 		local equippedGuid = equipmentInSlot(i);
 		if(equippedGuid) then
 			local id = itemIdOfGuid(equippedGuid);
-			print(id);
+			print(id, equippedGuid:hex());
 			itemProtoFromId(id);
 		end
 	end
+	print("Inventory items:");
+	investigateInventory(function(o)
+		local id = itemIdOfGuid(o.guid);
+		print(id, o.guid:hex());
+		maybeEquip(o.guid);
+	end)
 end
 
 function itemTest()
@@ -237,57 +243,55 @@ function handleItemPush(p)
 		return;
 	end
 
-	local proto = itemProtoFromId(p.itemId);
-	if(not proto) then
-		-- we can't pass item's slots here, even though equip() needs them,
-		-- because the item may have moved before the callback is called.
-		STATE.itemDataCallbacks[guid] = maybeEquip;
-		return;
-	end
 	maybeEquip(guid);
 end
 
 function maybeEquip(itemGuid)
-	local itemId = STATE.knownObjects[itemGuid].values[OBJECT_FIELD_ENTRY];
-	if(wantToWear(itemId)) then
-		equip(itemGuid);
+	local id = itemIdOfGuid(itemGuid);
+	if(not itemProtoFromId(id)) then
+		STATE.itemDataCallbacks[itemGuid] = maybeEquip;
+		return;
+	end
+	if(wantToWear(id)) then
+		equip(itemGuid, id);
 	end
 end
 
-function equip(itemGuid)
-	local itemId = STATE.knownObjects[itemGuid].values[OBJECT_FIELD_ENTRY];
+function equip(itemGuid, itemId)
 	local proto = itemProtoFromId(itemId);
 	local msg = "Equipping "..itemId.." "..itemGuid:hex().." "..proto.name;
 	print(msg);
 	partyChat(msg);
-	--[[
-	-- search all bag slots for item.
-	-- if not found, error.
-	local slot, bagSlot;
-	for i = PLAYER_FIELD_PACK_SLOT_1, PLAYER_FIELD_PACK_SLOT_LAST, 2 do
-		if(guidFromValues(STATE.me, i) == itemGuid) then
-			slot = i;
-			bagSlot = INVENTORY_SLOT_BAG_0;
-			break;
-		end
-	end
-	if(not slot) then for i = PLAYER_FIELD_BAG_SLOT_1, PLAYER_FIELD_BAG_SLOT_LAST, 2 do
-		local bag = STATE.knownObjects[guidFromValues(STATE.me, i)];
-		if(isValidGuid(bag)) then for j = 0, bag.values[CONTAINER_FIELD_NUM_SLOTS], 1 do
-			if(guidFromValues(bag, CONTAINER_FIELD_SLOT_1 + (j*2)) == itemGuid) then
-				bagSlot = i;
-				slot = j;
-				goto haveSlot;
-			end
-		end end
-	end end
-	if(not slot) then
-		error("Item not found in any slot. What happened?");
-	end
-	::haveSlot::
-	--]]
+
 	-- todo: for items that can go in more than one slot, pick a good one.
 	local dstSlot = itemEquipSlot(proto);
 	print(dump(dstSlot), type(dstSlot));
 	send(CMSG_AUTOEQUIP_ITEM_SLOT, {itemGuid=itemGuid, dstSlot=dstSlot});
+end
+
+function investigateInventory(f)
+	-- backpack
+	for i = PLAYER_FIELD_PACK_SLOT_1, PLAYER_FIELD_PACK_SLOT_LAST, 2 do
+		local guid = guidFromValues(STATE.me, i);
+		if(isValidGuid(guid)) then
+			local o = STATE.knownObjects[guid];
+			local bagSlot = INVENTORY_SLOT_BAG_0;
+			local slot = INVENTORY_SLOT_ITEM_START + ((i - PLAYER_FIELD_PACK_SLOT_1) / 2);
+			local res = f(o, bagSlot, slot);
+			if(res == false) then return; end
+		end
+	end
+	-- bags
+	for i = PLAYER_FIELD_BAG_SLOT_1, PLAYER_FIELD_BAG_SLOT_LAST, 2 do
+		local bag = STATE.knownObjects[guidFromValues(STATE.me, i)];
+		if(isValidGuid(bag)) then for j = 0, bag.values[CONTAINER_FIELD_NUM_SLOTS], 1 do
+			if(guidFromValues(bag, CONTAINER_FIELD_SLOT_1 + (j*2)) == itemGuid) then
+				local o = STATE.knownObjects[guid];
+				local bagSlot = INVENTORY_SLOT_BAG_START + ((i - PLAYER_FIELD_BAG_SLOT_1) / 2);
+				local slot = j;
+				local res = f(o, bagSlot, slot);
+				if(res == false) then return; end
+			end
+		end end
+	end
 end
