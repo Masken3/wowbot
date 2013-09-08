@@ -37,7 +37,7 @@ class GenLuaFromHeaderTask < MultiFileTask
 		enums.each do |eName, values|
 			values.each do |name, value|
 				file.puts "\tlua_pushnumber(L, #{name});"
-				file.puts "\tlua_setglobal(L, \"#{name}\");"
+				file.puts "\tlua_setglobal(L, \"#{value}\");"
 			end
 		end
 		file.puts "}"
@@ -69,6 +69,11 @@ class GenLuaFromHeaderTask < MultiFileTask
 						arr = line.scan(/\s*(.+)\s*=([^,]+),/)
 						if(arr[0])
 							name, value = arr[0].collect do |t| t.strip; end
+							if(@options[:cutPrefix])
+								value = name[name.index('_')+1 .. -1]
+							else
+								value = name
+							end
 							enums[eName][name] = value
 						end
 					end

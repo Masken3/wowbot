@@ -47,7 +47,7 @@ function doCallbacks(callbacks)
 		count = count + 1;
 		f(p);
 	end
-	print(count.." callbacks called.");
+	--print(count.." callbacks called.");
 	-- remove only those callbacks that we called.
 	-- do it after the iteration, so the iterator doesn't get confused.
 	for p, t in pairs(set) do

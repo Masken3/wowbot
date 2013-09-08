@@ -55,13 +55,17 @@ typedef struct AUTH_LOGON_PROOF_C
 	uint8   securityFlags;                                  // 0x00-0x04
 } sAuthLogonProof_C;
 
-typedef struct AUTH_LOGON_PROOF_S
+typedef struct AUTH_LOGON_PROOF_S1
 {
 	uint8   cmd;
 	uint8   error;
-	uint8   M2[20];
+} sAuthLogonProof_S1;
+
+typedef struct AUTH_LOGON_PROOF_S2
+{
+	uint8   M2[20];                                         // this part sent only if s1.error = 0.
 	uint32  accountFlags;                                   // see enum AccountFlags
-} sAuthLogonProof_S;
+} sAuthLogonProof_S2;
 
 typedef struct AUTH_REALM_HEADER_S
 {

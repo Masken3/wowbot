@@ -48,7 +48,7 @@ void hSMSG_AUTH_CHALLENGE(WorldSession* session, char* buf, uint16 size) {
 	sCMSG_AUTH_SESSION c = {
 		5875,
 		0,
-		CONFIG_ACCOUNT_NAME,
+		session->accountName,
 		rand(),
 		"",
 	};
@@ -57,7 +57,7 @@ void hSMSG_AUTH_CHALLENGE(WorldSession* session, char* buf, uint16 size) {
 	assert(size == sizeof(sSMSG_AUTH_CHALLENGE));
 
 	SHA1_Init(&mC);
-	SHA1_Update(&mC, CONFIG_ACCOUNT_NAME, strlen(CONFIG_ACCOUNT_NAME));
+	SHA1_Update(&mC, session->accountName, strlen(session->accountName));
 	SHA1_Update(&mC, &t, 4);
 	SHA1_Update(&mC, &c.seed, 4);
 	SHA1_Update(&mC, &s->seed, 4);
@@ -65,10 +65,10 @@ void hSMSG_AUTH_CHALLENGE(WorldSession* session, char* buf, uint16 size) {
 	SHA1_Final(c.digest, &mC);
 
 	memcpy(cbuf, &c, 8);
-	strcpy(cbuf + 8, CONFIG_ACCOUNT_NAME);
-	memcpy(cbuf + 8 + sizeof(CONFIG_ACCOUNT_NAME), &c.seed, 24);
+	strcpy(cbuf + 8, session->accountName);
+	memcpy(cbuf + 8 + strlen(session->accountName)+1, &c.seed, 24);
 
-	sendWorld(session, CMSG_AUTH_SESSION, cbuf, 8 + sizeof(CONFIG_ACCOUNT_NAME) + 24);
+	sendWorld(session, CMSG_AUTH_SESSION, cbuf, 8 + strlen(session->accountName)+1 + 24);
 
 	// once we've sent the session key to the server, packet headers will be encrypted.
 	initCrypto(session);

@@ -112,6 +112,15 @@ function hSMSG_LOGOUT_COMPLETE(p)
 	end
 end
 
+local function invite(p)
+	STATE.newLeader = p.senderGuid;
+	send(CMSG_NAME_QUERY, {guid=p.senderGuid})
+end
+
+function hSMSG_NAME_QUERY_RESPONSE(p)
+	send(CMSG_GROUP_INVITE, p)
+end
+
 function handleChatMessage(p)
 	if(p.text == 'lq') then
 		listQuests(p)
@@ -127,6 +136,8 @@ function handleChatMessage(p)
 		giveAll(p)
 	elseif(p.text == 'recreate') then
 		recreate(p)
+	elseif(p.text == 'invite') then
+		invite(p)
 	end
 end
 

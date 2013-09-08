@@ -1,3 +1,6 @@
+#ifndef SOCKET_H
+#define SOCKET_H
+
 #include <stdint.h>
 #include "types.h"
 
@@ -37,11 +40,27 @@ void sendExact(Socket, const char* src, size_t srcSize);
 
 Socket connectNewSocket(const char* address, ushort port) __attribute__ ((warn_unused_result));
 
-typedef void (*SocketTimerCallback)(double t, void* user);
 
-// Causes callback to be called asap after min(t, oldT).
-void socketSetTimer(double t, SocketTimerCallback callback, void* user);
+// structures and function for handling multiple simultaneous sockets.
 
-// Cancels the timer with the specified callback and user data.
-// If no such timer exists, it's a fatal error.
-void socketRemoveTimer(SocketTimerCallback callback, void* user);
+struct SocketControl;
+
+typedef void (*SocketTimerCallback)(double t, struct SocketControl*);
+typedef void (*SocketDataCallback)(struct SocketControl*, int result);
+
+typedef struct SocketControl {
+	Socket sock;
+	void* dst;
+	uint dstSize;
+	SocketDataCallback dataCallback;
+	SocketTimerCallback timerCallback;
+	void* user;
+	double timerTime;
+
+	// set and controlled by runSocketControl(). do not modify.
+	uint dstPos;
+} SocketControl;
+
+void runSocketControl(SocketControl*, int count) __attribute__ ((noreturn));
+
+#endif	//SOCKET_H

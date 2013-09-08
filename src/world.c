@@ -36,34 +36,79 @@
 #define DEFAULT_WORLDSERVER_PORT 8085
 
 static void handleServerPacket(WorldSession*, ServerPktHeader, char* buf);
-static void luaTimerCallback(double t, void* user);
-static BOOL luaPcall(lua_State* L, int nargs);
+static void luaTimerCallback(double t, SocketControl*);
+static void connectToWorld(WorldSession* session);
+static void reconnect(SocketControl* sc, WorldSession* session);
+static WorldSession* lua_getSession(lua_State* L);
 
-static int runWorld2(WorldSession* session) {
-	Socket sock = session->sock;
-	do {
-		char buf[1024 * 64];	// large enough for theoretical max packet size.
-		ServerPktHeader sph;
-		if(receiveExact(sock, &sph, sizeof(sph)) <= 0)
-			return 0;
-		decryptHeader(session, &sph);
+static const int BUFSIZE = 1024 * 64;
+
+static void worldDataCallback(SocketControl* sc, int result) {
+	WorldSession* session = (WorldSession*)sc->user;
+	if(result < 0) {
+		exit(1);
+	}
+	if(result == 0) {
+		LOG("Disconnected. Reconnecting...\n");
+		reconnect(sc, session);
+		return;
+	}
+	// if we got a header...
+	if(sc->dst == &session->sph) {
+		decryptHeader(session, &session->sph);
 		//sph.cmd = ntohs(sph.cmd); // cmd is not swapped
-		sph.size = ntohs(sph.size);
+		session->sph.size = ntohs(session->sph.size);
 		//LOG("Packet: cmd 0x%x, size %i\n", sph.cmd, sph.size);
-		if(sph.size > 2)
-			if(receiveExact(sock, buf, sph.size - 2) <= 0)
-				return 0;
-		handleServerPacket(session, sph, buf);
-	} while(1);
+		if(session->sph.size > 2) {
+			sc->dst = session->buf;
+			sc->dstSize = session->sph.size - 2;
+		} else {
+			handleServerPacket(session, session->sph, session->buf);
+		}
+		return;
+	}
+	// if we got the meat of a packet...
+	if(sc->dst == &session->buf) {
+		sc->dst = &session->sph;
+		sc->dstSize = sizeof(session->sph);
+		handleServerPacket(session, session->sph, session->buf);
+		return;
+	}
+	// no other dst:s are acceptable.
+	assert(0);
 }
 
-static void connectToWorld(WorldSession* session, const char* realmName) {
+static void reconnect(SocketControl* sc, WorldSession* session) {
+	connectToWorld(session);
+
+	sc->sock = session->sock;
+	sc->dst = &session->sph;
+	sc->dstSize = sizeof(session->sph);
+	sc->dataCallback = worldDataCallback;
+	sc->timerCallback = NULL;
+}
+
+void runWorlds(WorldSession* sessions, int toonCount) {
+	// initialize SocketControl.
+	SocketControl* scs = (SocketControl*)malloc(sizeof(SocketControl) * toonCount);
+	for(int i=0; i<toonCount; i++) {
+		SocketControl* sc = &scs[i];
+		WorldSession* session = &sessions[i];
+		session->sc = sc;
+		sc->user = session;
+		reconnect(sc, session);
+	}
+	// run the worlds. this function does not return.
+	runSocketControl(scs, toonCount);
+}
+
+static void connectToWorld(WorldSession* session) {
 	char* colon;
 	int port;
 	const char* host;
 	const char* address;
 	if(!session->worldServerAddress)
-		session->worldServerAddress = dumpRealmList(session->authSock, realmName);
+		session->worldServerAddress = dumpRealmList(session->authSock, session->realmName);
 	address = session->worldServerAddress;
 	if(!address) {
 		LOG("realm not found!\n");
@@ -79,14 +124,6 @@ static void connectToWorld(WorldSession* session, const char* realmName) {
 	}
 	host = address;
 	session->sock = connectNewSocket(host, port);
-}
-
-void runWorld(WorldSession* session) {
-	do {
-		connectToWorld(session, "Plain");
-		if(runWorld2(session))
-			return;
-	} while(1);
 }
 
 void enterWorld(WorldSession* session, uint64 guid, uint8 level) {
@@ -194,8 +231,20 @@ BOOL readLua(WorldSession* session) {
 		}
 	}
 
+	if(!luaDoFile(L, "src/wowbot.lua"))
+		return FALSE;
+
+	// Make sure all required functions are present.
+#define CHECK_LUA_HANDLER(name) if(!checkLuaFunction(L, "h" #name)) return FALSE;
+	LUA_HANDLERS(CHECK_LUA_HANDLER);
+	CHECK_LUA_HANDLER(Movement);
+
+	return TRUE;
+}
+
+BOOL luaDoFile(struct lua_State* L, const char* filename) {
 	// Load file.
-	res = luaL_loadfile(L, "src/wowbot.lua");
+	int res = luaL_loadfile(L, filename);
 	if(res != LUA_OK) {
 		LOG("LUA load error!\n");
 		LOG("%s\n", lua_tostring(L, -1));
@@ -206,17 +255,23 @@ BOOL readLua(WorldSession* session) {
 		LOG("LUA run error!\n");
 		return FALSE;
 	}
-
-	// Make sure all required functions are present.
-#define CHECK_LUA_HANDLER(name) if(!checkLuaFunction(L, "h" #name)) return FALSE;
-	LUA_HANDLERS(CHECK_LUA_HANDLER);
-	CHECK_LUA_HANDLER(Movement);
-
 	return TRUE;
 }
 
-static int l_send(lua_State* L) {
+static WorldSession* lua_getSession(lua_State* L) {
 	WorldSession* session;
+	lua_getfield(L, LUA_REGISTRYINDEX, "SESSION");
+	if(!lua_isuserdata(L, -1)) {
+		LOG("SESSION corrupted! Emergency exit!\n");
+		exit(1);
+	}
+	session = (WorldSession*)lua_topointer(L, -1);
+	lua_pop(L, 1);
+	return session;
+}
+
+static int l_send(lua_State* L) {
+	WorldSession* session = lua_getSession(L);
 	uint32 opcode;
 	const char* s;
 	const void* data = NULL;
@@ -232,15 +287,6 @@ static int l_send(lua_State* L) {
 	}
 	//LOG("l_send(%s)\n", s);
 
-	{
-		lua_getfield(L, LUA_REGISTRYINDEX, "SESSION");
-		if(!lua_isuserdata(L, -1)) {
-			LOG("SESSION corrupted! Emergency exit!\n");
-			exit(1);
-		}
-		session = (WorldSession*)lua_topointer(L, -1);
-		lua_pop(L, 1);	// required for proper PacketGenerator operation.
-	}
 	if(narg > 2) {
 		lua_pushstring(L, "send error: too many args!");
 		lua_error(L);
@@ -273,6 +319,7 @@ static int l_getRealTime(lua_State* L) {
 // args: t.
 // Causes "luaTimerCallback" to be called as soon as possible after getRealTime() would return >= t.
 static int l_setTimer(lua_State* L) {
+	WorldSession* session = lua_getSession(L);
 	int narg = lua_gettop(L);
 	double t;
 	if(narg != 1) {
@@ -282,22 +329,25 @@ static int l_setTimer(lua_State* L) {
 	t = luaL_checknumber(L, 1);
 
 	//printf("socketSetTimer(%f)\n", t);
-	socketSetTimer(t, luaTimerCallback, L);
+	session->sc->timerTime = t;
+	session->sc->timerCallback = luaTimerCallback;
 	return 0;
 }
 
 static int l_removeTimer(lua_State* L) {
+	WorldSession* session = lua_getSession(L);
 	int narg = lua_gettop(L);
 	if(narg != 0) {
 		lua_pushstring(L, "removeTimer error: args!");
 		lua_error(L);
 	}
-	socketRemoveTimer(luaTimerCallback, L);
+	session->sc->timerCallback = NULL;
 	return 0;
 }
 
-static void luaTimerCallback(double t, void* user) {
-	lua_State* L = (lua_State*)user;
+static void luaTimerCallback(double t, SocketControl* sc) {
+	WorldSession* session = (WorldSession*)sc->user;
+	lua_State* L = session->L;
 	lua_getglobal(L, "luaTimerCallback");
 	lua_pushnumber(L, t);
 	luaPcall(L, 1);
@@ -365,7 +415,7 @@ void initLua(WorldSession* session) {
 	PlayerLua(L);
 }
 
-static BOOL luaPcall(lua_State* L, int nargs) {
+BOOL luaPcall(lua_State* L, int nargs) {
 	int res;
 	lua_pushcfunction(L, l_traceback);
 	lua_insert(L, 1);

@@ -1,14 +1,5 @@
-do
-	-- lock down the Global table, to catch undefined variable reading.
-	-- this code must appear last.
-	local mt = getmetatable(_G) or {}
-	mt.__index = function(t,k)
-		error("attempt to access an undefined variable: "..k, 2)
-	end
-	setmetatable(_G, mt)
-end
-
 SUBFILES = {
+	'globalLockdown.lua',
 	'dump.lua',
 	'timers.lua',
 	'struct.lua',
@@ -44,6 +35,7 @@ if(rawget(_G, 'STATE') == nil) then
 			location=Location.new{position=Position.new()},
 			movement=Movement.new(),
 		},
+		newLeader = false,
 
 		groupMembers = {},	-- set by hSMSG_GROUP_LIST.
 
@@ -207,6 +199,10 @@ function hSMSG_GROUP_LIST(p)
 		STATE.groupMembers = p.members;
 		for i,m in ipairs(STATE.groupMembers) do
 			print(m.guid:hex());
+			if(STATE.newLeader == m.guid) then
+				send(CMSG_GROUP_SET_LEADER, {guid=m.guid});
+				STATE.newLeader = false;
+			end
 		end
 	end
 end
@@ -339,7 +335,7 @@ function hSMSG_COMPRESSED_UPDATE_OBJECT(p)
 end
 function hSMSG_UPDATE_OBJECT(p)
 	--print("SMSG_UPDATE_OBJECT", dump(p));
-	print("SMSG_UPDATE_OBJECT", #p.blocks);
+	--print("SMSG_UPDATE_OBJECT", #p.blocks);
 	-- todo: get notified when someone is in combat with a party member.
 	for i,b in ipairs(p.blocks) do
 		if(b.type == UPDATETYPE_OUT_OF_RANGE_OBJECTS) then

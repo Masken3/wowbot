@@ -1,6 +1,7 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+typedef unsigned int uint;
 typedef uint16_t ushort;
 typedef uint8_t byte;
 

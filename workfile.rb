@@ -47,6 +47,9 @@ work = ExeWork.new do
 		GenLuaFromHeaderTask.new('Player', 'server-code/Player.h',
 			{:includedEnums=>['EquipmentSlots', 'InventorySlots', 'InventoryPackSlots',
 				'TradeSlots']}),
+		GenLuaFromHeaderTask.new('Config', 'server-code/SharedDefines.h',
+			{:includedEnums=>['Gender', 'Races', 'Classes'],
+				:cutPrefix=>true}),
 	]
 	@SPECIFIC_CFLAGS = {
 		'worldPacketParsersLua.c' => ' -Wno-vla',

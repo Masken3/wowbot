@@ -6,48 +6,52 @@ TOONS = {
 		password = "password",
 		toonName = "Warrior",
 		class = WARRIOR,
-		spec = PROT,
+		--spec = PROT,
 		race = GNOME,
 		gender = MALE,
-		professions = { MINING, ENGINEERING },
+		--professions = { MINING, ENGINEERING },
 		-- gnome warrior engineer is best miner,
-		-- due to Mining Mail Helmet +5 that only engineers can wear,
+		-- due to Mining Helmet +5 (Mail armor) that only engineers can wear,
 		-- and Gnome's Engineering +15.
 	},
 	{
 		accountName = "wowbot2",
 		password = "password",
+		toonName = "Priest",
 		class = PRIEST,
-		spec = DISC or HOLY,
+		--spec = HOLY/DISC,
 		race = DWARF,
 		gender = FEMALE,
-		professions = { TAILORING, ENCHANTING, FISHING },
+		--professions = { TAILORING, ENCHANTING, FISHING },
 	},
 	{
 		accountName = "wowbot3",
 		password = "password",
-		class = PALADIN,
-		race = DWARF,
-		professions = { BLACKSMITHING, HERBALISM },
+		toonName = "Mage",
+		class = MAGE,
+		--spec = ARCANE,
+		race = GNOME,
+		gender = FEMALE,
+		--professions = { ALCHEMY, HERBALISM },
 	},
 	{
 		accountName = "wowbot4",
 		password = "password",
+		toonName = "Rogue",
 		class = ROGUE,
-		spec = SUBTLETY,
+		--spec = SUBTLETY/ASSASSINATION,
 		race = GNOME,
 		gender = FEMALE,
-		professions = { SKINNING, LEATHERWORKING, COOKING },
+		--professions = { SKINNING, LEATHERWORKING, COOKING },
 	},
---	player
---	leaving herbalism to a bot because I don't want or need to do gathering myself.
---	{
---		class = MAGE,
---		race = GNOME,
---		gender = FEMALE,
---		professions = { ALCHEMY },
---	},
-
+--[[	player
+	{
+		class = PALADIN,
+		--spec = RETRIBUTION,
+		race = DWARF,
+		--professions = { BLACKSMITHING },
+	},
+--]]
 -- skipping first aid because we've got two healers.
 -- was gonna skip fishing, but it's needed for some alchemy recipes.
 -- now each bot has one gathering profession (skinning counts).

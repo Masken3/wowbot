@@ -852,3 +852,13 @@ void pSMSG_TRADE_STATUS_EXTENDED(pLUA_ARGS) {
 	PL_START;
 	// we don't need any of the info, because bots accept any trade.
 }
+
+void pSMSG_NAME_QUERY_RESPONSE(pLUA_ARGS) {
+	PL_START;
+	M(Guid, guid);
+	MV(string, name);
+	MV(string, realmName);
+	M(uint32, race);
+	M(uint32, gender);
+	M(uint32, _class);
+}

@@ -13,28 +13,36 @@ void authenticate(WorldSession* session) {
 	Socket sock = session->authSock;
 	sAuthLogonChallenge_S lcs;
 	sAuthLogonProof_C lpc;
-	sAuthLogonProof_S lps;
-	byte M2[20];
+	sAuthLogonProof_S1 lps1;
+	byte M2[20], serverM2[20];
+	uint32 accountFlags;
 	// send & receive challenge
 	{
 		char buf[1024];
 		sAuthLogonChallenge_C* lcc = (sAuthLogonChallenge_C*)buf;
 		memset(lcc, 0, sizeof(*lcc));
 		lcc->cmd = CMD_AUTH_LOGON_CHALLENGE;
-		lcc->I_len = sizeof(CONFIG_ACCOUNT_NAME);
+		lcc->I_len = strlen(session->accountName)+1;
 		lcc->size = sizeof(*lcc) + (lcc->I_len - 1) - 4;
 		lcc->build = 5875;	// client version 1.12.1
-		strcpy((char*)lcc->I, CONFIG_ACCOUNT_NAME);
+		strcpy((char*)lcc->I, session->accountName);
 		sendAndReceiveExact(sock, buf, lcc->size + 4, &lcs, sizeof(lcs));
 	}
 	// calculate proof
-	CalculateLogonProof(&lcs, &lpc, CONFIG_ACCOUNT_NAME, CONFIG_ACCOUNT_PASSWORD, M2, session->key);
+	CalculateLogonProof(&lcs, &lpc, session->accountName, session->password, M2, session->key);
 	// send proof
 	{
 		lpc.cmd = CMD_AUTH_LOGON_PROOF;
-		sendAndReceiveExact(sock, (char*)&lpc, sizeof(lpc), &lps, sizeof(lps));
-		LOG("proof received. cmd %02x, code %02x\n", lps.cmd, lps.error);
-		LOG("M2 %smatch.\n", memcmp(M2, lps.M2, 20) ? "mis" : "");
+		sendAndReceiveExact(sock, (char*)&lpc, sizeof(lpc), &lps1, sizeof(lps1));
+		LOG("proof received. cmd %02x, code %02x\n", lps1.cmd, lps1.error);
+		if(lps1.error == 0) {
+			if(receiveExact(sock, serverM2, sizeof(serverM2)) <= 0)
+				exit(1);
+			LOG("M2 %smatch.\n", memcmp(M2, serverM2, 20) ? "mis" : "");
+		}
+		if(receiveExact(sock, &accountFlags, sizeof(accountFlags)) <= 0)
+			exit(1);
+		LOG("accountFlags: %08X\n", accountFlags);
 	}
 }
 

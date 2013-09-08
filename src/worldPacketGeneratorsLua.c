@@ -351,6 +351,24 @@ static uint16 genCMSG_CHAR_DELETE(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+static uint16 genCMSG_NAME_QUERY(lua_State* L, byte* buf) {
+	GL_START;
+	M(Guid, guid);
+	GL_END;
+}
+
+static uint16 genCMSG_GROUP_INVITE(lua_State* L, byte* buf) {
+	GL_START;
+	M(string, name);
+	GL_END;
+}
+
+static uint16 genCMSG_GROUP_SET_LEADER(lua_State* L, byte* buf) {
+	GL_START;
+	M(Guid, guid);
+	GL_END;
+}
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -375,6 +393,9 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_SET_TRADE_ITEM);
 		GEN_CASE(CMSG_ACCEPT_TRADE);
 		GEN_CASE(CMSG_CHAR_DELETE);
+		GEN_CASE(CMSG_NAME_QUERY);
+		GEN_CASE(CMSG_GROUP_INVITE);
+		GEN_CASE(CMSG_GROUP_SET_LEADER);
 		default: return NULL;
 	}
 }

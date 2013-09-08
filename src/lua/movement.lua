@@ -155,7 +155,7 @@ function hMovement(opcode, p)
 		if(bit32.btest(f, MOVEFLAG_TURN_LEFT)) then
 			assert(not bit32.btest(f, MOVEFLAG_TURN_RIGHT));
 			-- todo: handle non-linear movement.
-			print("Warning: MOVEFLAG_TURN_LEFT unhandled!");
+			--print("Warning: MOVEFLAG_TURN_LEFT unhandled!");
 		end
 		if(bit32.btest(f, MOVEFLAG_PITCH_UP)) then
 			assert(not bit32.btest(f, MOVEFLAG_PITCH_DOWN));
@@ -237,7 +237,7 @@ function doMoveToTarget(realTime, mo, maxDist)
 
 			--print("a, b, c:", a, b, c);
 			--print("dx, dy:", dx, dy);
-			print("moving T:", t);
+			--print("moving T:", t);
 			assert(t > 0);
 			--assert(tMin < 0);
 			setTimer(movementTimerCallback, realTime + t);
@@ -249,7 +249,7 @@ function doMoveToTarget(realTime, mo, maxDist)
 		local moveEndTime = STATE.moveStartTime + (dist - maxDist) / RUN_SPEED;
 		--local timerTime = math.min(moveEndTime, STATE.moveStartTime + 1);
 		local timerTime = moveEndTime;
-		print("still T:", timerTime - realTime);
+		--print("still T:", timerTime - realTime);
 		setTimer(movementTimerCallback, timerTime);
 		return;
 	elseif(STATE.moving) then

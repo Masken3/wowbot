@@ -74,21 +74,19 @@ typedef struct sCMSG_CHAR_CREATE {
 #pragma pack(pop)
 #endif
 
-#define TOON_NAME "Mage"
-
 static void createToon(WorldSession* session) {
 	char buf[1024];
 	sCMSG_CHAR_CREATE c;
 
 	memset(&c, 0, sizeof(c));
-	c.race = RACE_GNOME;
-	c._class = CLASS_MAGE;
-	c.gender = 1;
+	c.race = session->race;
+	c._class = session->_class;
+	c.gender = session->gender;
 
-	strcpy(buf, TOON_NAME);
-	memcpy(buf + sizeof(TOON_NAME), &c, sizeof(c));
+	strcpy(buf, session->toonName);
+	memcpy(buf + strlen(session->toonName)+1, &c, sizeof(c));
 
-	sendWorld(session, CMSG_CHAR_CREATE, buf, sizeof(TOON_NAME) + sizeof(c));
+	sendWorld(session, CMSG_CHAR_CREATE, buf, strlen(session->toonName)+1 + sizeof(c));
 }
 
 void hSMSG_CHAR_ENUM(WorldSession* session, char* buf, uint16 size) {
@@ -106,7 +104,7 @@ void hSMSG_CHAR_ENUM(WorldSession* session, char* buf, uint16 size) {
 		e = (sSMSG_CHAR_ENUM_ENTRY*)ptr;
 		LOG("%i: 0x%" PRIx64 " %s r%i c%i g%i\n",
 			i, guid, name, e->race, e->_class, e->gender);
-		if(strcmp(name, TOON_NAME) == 0) {
+		if(strcmp(name, session->toonName) == 0) {
 			enterWorld(session, guid, e->level);
 			return;
 		}

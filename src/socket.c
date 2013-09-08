@@ -5,24 +5,6 @@
 #include <errno.h>
 #include <stdlib.h>
 
-typedef struct Timer {
-	double t;
-	SocketTimerCallback callback;
-	void* user;
-} Timer;
-
-static Timer sTimer;
-
-void socketSetTimer(double t, SocketTimerCallback callback, void* user) {
-	sTimer.t = t;
-	sTimer.callback = callback;
-	sTimer.user = user;
-}
-
-void socketRemoveTimer(SocketTimerCallback callback, void* user) {
-	sTimer.callback = NULL;
-}
-
 #ifndef TEMP_FAILURE_RETRY
 #define TEMP_FAILURE_RETRY(expression) \
 	({ \
@@ -40,41 +22,6 @@ int receiveExact(Socket sock, void* dst, size_t dstSize) {
 	assert(dstSize > 0);
 	//LOG("recv...\n");
 	do {
-		// handle timer.
-		if(sTimer.callback) {
-			fd_set set;
-			struct timeval timeout;
-			double realTime = getRealTime();
-			double diff = sTimer.t - realTime;
-
-			// if timer has been hit, remove & call it, then restart loop.
-			if(realTime >= sTimer.t) {
-				SocketTimerCallback cb = sTimer.callback;
-				sTimer.callback = NULL;
-				cb(realTime, sTimer.user);
-				continue;
-			}
-
-			// otherwise wait for timer or data.
-			FD_ZERO(&set);
-			FD_SET(sock, &set);
-
-			assert(diff > 0);
-			timeout.tv_sec = (int)diff;
-			timeout.tv_usec = (int)((diff - timeout.tv_sec) * 1000000);
-			//printf("timeout.tv_usec: %li\n", timeout.tv_usec);
-
-			res = TEMP_FAILURE_RETRY(select(FD_SETSIZE, &set, NULL, NULL, &timeout));
-			if(res < 0) {
-				printf("select failed: %d.\n", SOCKET_ERRNO);
-				return res;
-			}
-			if(res == 0) {	// timeout expired.
-				// check the timer.
-				continue;
-			}
-		}
-
 		res = recv(sock, dstP, remain, 0);
 		if (res > 0) {
 			//printf("Bytes received: %d\n", res);
@@ -163,4 +110,86 @@ Socket connectNewSocket(const char* address, ushort port) {
 	}
 
 	return sock;
+}
+
+void runSocketControl(SocketControl* scs, int count) {
+	for(int i=0; i<count; i++) {
+		SocketControl* sc = scs+i;
+		sc->dstPos = 0;
+	}
+	do {
+		SocketControl* timerControl = NULL;
+		fd_set set;
+		int res;
+		struct timeval timeout;
+		struct timeval* timeoutP = NULL;
+
+		// set up the fd_set.
+		FD_ZERO(&set);
+		for(int i=0; i<count; i++) {
+			SocketControl* sc = scs+i;
+			FD_SET(sc->sock, &set);
+			// find the closest timer, if any.
+			if(sc->timerCallback) {
+				if(!timerControl) {
+					timerControl = sc;
+				} else if(sc->timerTime < timerControl->timerTime) {
+					timerControl = sc;
+				}
+			}
+		}
+
+		// handle the timer
+		if(timerControl) {
+			double realTime = getRealTime();
+			double diff = timerControl->timerTime - realTime;
+
+			// if timer has been hit, remove & call it, then restart loop.
+			if(diff <= 0) {
+				SocketTimerCallback cb = timerControl->timerCallback;
+				timerControl->timerCallback = NULL;
+				cb(realTime, timerControl);
+				continue;
+			}
+
+			assert(diff > 0);
+			timeout.tv_sec = (int)diff;
+			timeout.tv_usec = (int)((diff - timeout.tv_sec) * 1000000);
+			//printf("timeout.tv_usec: %li\n", timeout.tv_usec);
+			timeoutP = &timeout;
+		}
+		res = TEMP_FAILURE_RETRY(select(FD_SETSIZE, &set, NULL, NULL, timeoutP));
+		if(res < 0) {
+			printf("select failed: %d.\n", SOCKET_ERRNO);
+			exit(res);
+		}
+		if(res == 0) {	// timeout expired.
+			// check the timer.
+			continue;
+		}
+
+		for(int i=0; i<count; i++) {
+			SocketControl* sc = scs+i;
+			if(FD_ISSET(sc->sock, &set)) {
+				char* dstP = (char*)sc->dst + sc->dstPos;
+				int remain = sc->dstSize - sc->dstPos;
+				res = recv(sc->sock, dstP, remain, 0);
+				if (res > 0) {
+					//printf("Bytes received: %d\n", res);
+					sc->dstPos += res;
+					if(sc->dstPos == sc->dstSize) {
+						sc->dstPos = 0;
+						sc->dataCallback(sc, res);
+					}
+				} else {
+					if (res == 0) {
+						printf("Connection closed\n");
+					} else {
+						printf("recv failed: %d.\n", SOCKET_ERRNO);
+					}
+					sc->dataCallback(sc, res);
+				}
+			}
+		}
+	} while(1);
 }

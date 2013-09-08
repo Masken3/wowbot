@@ -39,8 +39,8 @@ function decision(realTime)
 	-- don't try following the leader if we don't know where he is.
 	if(STATE.inGroup and STATE.leader.location.position.x) then
 		follow(STATE.leader);
-		print("Following. XP: "..tostring(myValues[PLAYER_XP])..
-			" / "..tostring(myValues[PLAYER_NEXT_LEVEL_XP]));
+		--print("Following. XP: "..tostring(myValues[PLAYER_XP])..
+			--" / "..tostring(myValues[PLAYER_NEXT_LEVEL_XP]));
 		return;
 	end
 	print("Nothing to do.");
