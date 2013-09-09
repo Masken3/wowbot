@@ -131,7 +131,7 @@ function attack(enemy)
 		end
 		local availablePower = myValues[powerIndex];
 
-		print("cost("..s.powerType.."): "..cost.." availablePower("..powerIndex.."): "..tostring(availablePower));
+		--print("cost("..s.powerType.."): "..cost.." availablePower("..powerIndex.."): "..tostring(availablePower));
 		if(not availablePower) then availablePower = 0; end
 		--sanity check.
 		assert(availablePower < 100000);
@@ -141,14 +141,26 @@ function attack(enemy)
 		for i, e in ipairs(s.effect) do
 			if(e.id == SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL or
 				e.id == SPELL_EFFECT_SCHOOL_DAMAGE or
+				e.id == SPELL_EFFECT_NORMALIZED_WEAPON_DMG or
 				e.id == SPELL_EFFECT_WEAPON_DAMAGE) then
 				damage = damage + calcAvgDamage(level, e);
+				-- todo: handle combo-point spells
+				-- todo: add normalized weapon damage to such effects
+				if(e.pointsPerComboPoint ~= 0) then
+					print("ppc: "..e.pointsPerComboPoint);
+				end
 			end
+		end
+
+		if(bit32.btest(s.AttributesEx, SPELL_ATTR_EX_NOT_IN_COMBAT_TARGET) or
+			bit32.btest(s.AttributesEx, SPELL_ATTR_EX_REQ_TARGET_COMBO_POINTS)) then
+			goto continue;
 		end
 
 		print("availablePower("..powerIndex.."): "..tostring(availablePower)..
 			" cost("..s.powerType.."): "..cost..
-			" damage: "..
+			" damage: "..damage..
+			" id: "..id..
 			" name: "..s.name.." "..s.rank);
 		if(not availablePower) then availablePower = 0; end
 		--sanity check.

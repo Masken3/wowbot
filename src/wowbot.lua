@@ -407,6 +407,7 @@ local SPELL_ATTACK_EFFECTS = {
 	[SPELL_EFFECT_SCHOOL_DAMAGE]=true,
 	[SPELL_EFFECT_ADD_EXTRA_ATTACKS]=true,
 	[SPELL_EFFECT_ENVIRONMENTAL_DAMAGE]=true,	--?
+	[SPELL_EFFECT_NORMALIZED_WEAPON_DMG]=true,
 }
 
 function hSMSG_INITIAL_SPELLS(p)
@@ -460,6 +461,7 @@ end
 -- misleading name; also sent when cast succeeds.
 function hSMSG_CAST_FAILED(p)
 	print("SMSG_CAST_FAILED", dump(p));
+	decision(getRealTime());
 end
 
 local function handleAttackCanceled()

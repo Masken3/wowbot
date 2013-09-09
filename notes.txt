@@ -115,3 +115,7 @@ Send CMSG_QUESTGIVER_STATUS_MULTIPLE_QUERY to get SMSG_QUESTGIVER_STATUS_MULTIPL
 There should be a command to place an equipped item on lockdown,
 so that it doesn't get automatically replaced by "better" items.
 Bot should then ask commander whenever it gets a new item that would be better.
+
+00:39 2013-09-09
+looting: see UNIT_DYNFLAG_LOOTABLE.
+CORPSE_DYNFLAG_LOOTABLE only applies to player corpses in Battlegrounds.
