@@ -49,7 +49,7 @@ function decision(realTime)
 			--" / "..tostring(myValues[PLAYER_NEXT_LEVEL_XP]));
 		return;
 	end
-	print("Nothing to do.");
+	--print("Nothing to do.");
 end
 
 function goLoot(o)

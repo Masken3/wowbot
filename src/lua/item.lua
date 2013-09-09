@@ -144,7 +144,7 @@ function wantToWear(id)
 		return true;
 	end
 	local eid = itemIdOfGuid(equippedGuid);
-	print("equipped id: "..eid);
+	print("equipped: "..eid);
 	--return id > eid;
 	print("price: "..vendorSalePrice(id).." vs "..vendorSalePrice(itemIdOfGuid(equippedGuid)));
 	return vendorSalePrice(id) > vendorSalePrice(itemIdOfGuid(equippedGuid));
@@ -164,14 +164,14 @@ function itemLoginComplete()
 		local equippedGuid = equipmentInSlot(i);
 		if(equippedGuid) then
 			local id = itemIdOfGuid(equippedGuid);
-			print(id, equippedGuid:hex());
+			print(id, equippedGuid:hex(), STATE.knownObjects[equippedGuid].values[ITEM_FIELD_STACK_COUNT]);
 			itemProtoFromId(id);
 		end
 	end
 	print("Inventory items:");
 	investigateInventory(function(o)
 		local id = itemIdOfGuid(o.guid);
-		print(id, o.guid:hex());
+		print(id, o.guid:hex(), o.values[ITEM_FIELD_STACK_COUNT]);
 		maybeEquip(o.guid);
 	end)
 end

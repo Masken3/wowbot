@@ -656,7 +656,7 @@ void pSMSG_QUESTGIVER_QUEST_LIST(pLUA_ARGS) {
 		lua_createtable(L, menuItemCount, 0);
 		for(uint32 i=1; i<=menuItemCount; i++) {
 			lua_createtable(L, 0, 4);
-			M(uint32, id);
+			M(uint32, questId);
 			M(uint32, icon);	// DIALOG_STATUS_*
 			M(uint32, level);
 			MV(string, title);
@@ -969,4 +969,40 @@ void pMSG_MOVE_TELEPORT_ACK(pLUA_ARGS) {
 	MV(PackedGuid, guid);
 	M(uint32, counter);
 	spMovementInfo(L, &ptr, buf, bufSize);
+}
+
+void pSMSG_GOSSIP_MESSAGE(pLUA_ARGS) {
+	PL_START;
+	M(Guid, guid);
+	M(uint32, titleTextId);
+	{
+		MM(uint32, gossipCount);
+		assert(gossipCount <= 0x20);
+		lua_pushstring(L, "gossips");
+		lua_createtable(L, gossipCount, 0);
+		for(uint32 i=1; i<=gossipCount; i++) {
+			lua_createtable(L, 0, 4);
+			M(uint32, index);	// value: i-1
+			M(byte, icon);	// enum GossipOptionIcon
+			M(byte, coded);
+			MV(string, message);
+			lua_rawseti(L, -2, i);
+		}
+		lua_settable(L, -3);
+	}
+	{
+		MM(uint32, questCount);
+		assert(questCount <= 0x20);
+		lua_pushstring(L, "quests");
+		lua_createtable(L, questCount, 0);
+		for(uint32 i=1; i<=questCount; i++) {
+			lua_createtable(L, 0, 4);
+			M(uint32, questId);
+			M(uint32, icon);	// enum __QuestGiverStatus
+			M(uint32, level);
+			MV(string, title);
+			lua_rawseti(L, -2, i);
+		}
+		lua_settable(L, -3);
+	}
 }

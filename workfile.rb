@@ -54,6 +54,8 @@ work = ExeWork.new do
 			{:includedEnums=>['Gender', 'Races', 'Classes'],
 				:cutPrefix=>true}),
 		GenLuaFromHeaderTask.new('LootMgr', 'server-code/LootMgr.h'),
+		GenLuaFromHeaderTask.new('GossipDef', 'server-code/GossipDef.h',
+			{:includedEnums=>['GossipOptionIcon']}),
 	]
 	@SPECIFIC_CFLAGS = {
 		'worldPacketParsersLua.c' => ' -Wno-vla',

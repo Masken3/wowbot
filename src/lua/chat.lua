@@ -13,7 +13,7 @@ local function listQuests(p)
 		-- in seconds. if 0, there is no timeout.
 		local timeLeft = STATE.my.values[PLAYER_QUEST_LOG_1_3 + i*3]
 		if(id ~= 0 and id ~= nil) then
-			msg = msg..id.."\n"
+			msg = msg..id.." "..STATE.knownQuests[id].title.."\n"
 		end
 	end
 	reply(p, msg)

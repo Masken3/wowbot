@@ -33,6 +33,7 @@
 #include "ItemPrototypeLua.h"
 #include "PlayerLua.h"
 #include "LootMgrLua.h"
+#include "GossipDefLua.h"
 
 #define DEFAULT_WORLDSERVER_PORT 8085
 
@@ -416,6 +417,7 @@ void initLua(WorldSession* session) {
 	ItemPrototypeLua(L);
 	PlayerLua(L);
 	LootMgrLua(L);
+	GossipDefLua(L);
 }
 
 BOOL luaPcall(lua_State* L, int nargs) {

@@ -35,6 +35,7 @@ typedef struct WorldSession WorldSession;
 	m(SMSG_QUEST_QUERY_RESPONSE)\
 	m(SMSG_LOOT_RELEASE_RESPONSE)\
 	m(MSG_MOVE_TELEPORT_ACK)\
+	m(SMSG_GOSSIP_MESSAGE)\
 
 #define pLUA_ARGS WorldSession* session, const char* buf, uint16 bufSize
 

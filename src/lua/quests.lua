@@ -15,18 +15,30 @@ function hSMSG_QUESTGIVER_QUEST_LIST(p)
 	for i,q in ipairs(p.quests) do
 		if((q.icon == DIALOG_STATUS_AVAILABLE) or
 			(q.icon == DIALOG_STATUS_CHAT)) then
-			print("Accpeting quest "..q.title.." ("..q.id..")...");
-			send(CMSG_QUESTGIVER_ACCEPT_QUEST, {guid=p.guid, questId=q.id});
+			print("Accpeting quest "..q.title.." ("..q.questId..")...");
+			send(CMSG_QUESTGIVER_ACCEPT_QUEST, {guid=p.guid, questId=q.questId});
 		end
 		if((q.icon == DIALOG_STATUS_REWARD_REP) or
 			(q.icon == DIALOG_STATUS_REWARD2)) then
-			print("Finishing quest "..q.title.." ("..q.id..")...");
-			send(CMSG_QUESTGIVER_REQUEST_REWARD, {guid=p.guid, questId=q.id});
+			print("Finishing quest "..q.title.." ("..q.questId..")...");
+			send(CMSG_QUESTGIVER_REQUEST_REWARD, {guid=p.guid, questId=q.questId});
 		end
 	end
-	STATE.questGivers[p.guid].bot.chatting = false;
-	STATE.questGivers[p.guid] = nil;
-	print(countTable(STATE.questGivers).. " quest givers remaining.");
+	if(STATE.questGivers[p.guid]) then
+		STATE.questGivers[p.guid].bot.chatting = false;
+		STATE.questGivers[p.guid] = nil;
+		print(countTable(STATE.questGivers).. " quest givers remaining.");
+	end
+	if(STATE.questFinishers[p.guid]) then
+		print("Removing quest finisher "..p.guid:hex());
+		STATE.questFinishers[p.guid].bot.chatting = false;
+		STATE.questFinishers[p.guid] = nil;
+	end
+end
+
+function hSMSG_GOSSIP_MESSAGE(p)
+	print("SMSG_GOSSIP_MESSAGE", dump(p));
+	hSMSG_QUESTGIVER_QUEST_LIST(p);
 end
 
 function hSMSG_QUESTGIVER_OFFER_REWARD(p)
@@ -81,7 +93,8 @@ function hSMSG_QUESTGIVER_OFFER_REWARD(p)
 		p.reward = rewardIndex - 1;
 		send(CMSG_QUESTGIVER_CHOOSE_REWARD, p);
 	else
-		error("p.rewChoiceItemsCount == 0. What to do?");
+		p.reward = 0;
+		send(CMSG_QUESTGIVER_CHOOSE_REWARD, p);
 	end
 	-- could be problematic for multiple quests, but probably not.
 	if(STATE.questFinishers[p.guid]) then
