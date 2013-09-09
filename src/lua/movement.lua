@@ -106,6 +106,13 @@ local function movementTimerCallback(t)
 	--print("movementTimerCallback ends", t)
 end
 
+function hMSG_MOVE_TELEPORT_ACK(p)
+	print("MSG_MOVE_TELEPORT_ACK", dump(p));
+	STATE.myLocation.position = Position.new(p.pos);
+	STATE.myLocation.orientation = p.o;
+	send(MSG_MOVE_TELEPORT_ACK, p);
+end
+
 function hMovement(opcode, p)
 	--print("hMovement", fg(p.guid), opcode, p.flags)
 
@@ -198,6 +205,7 @@ function doMoveToTarget(realTime, mo, maxDist)
 	local newOrientation = orient2(diff);
 	local oChanged = (STATE.myLocation.orientation ~= newOrientation);
 	STATE.myLocation.orientation = newOrientation;
+	myPos.z = tarPos.z;	--hack
 	--  or dist < (FOLLOW_DIST - FOLLOW_TOLERANCE)
 	if(dist > maxDist) then
 		--print("dist:", dist);

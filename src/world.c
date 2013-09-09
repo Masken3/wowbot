@@ -154,6 +154,7 @@ void enterWorld(WorldSession* session, uint64 guid, uint8 level) {
 #define IGNORED_PACKET_TYPES(m)\
 	m(MSG_MOVE_HEARTBEAT)\
 	m(SMSG_SET_PROFICIENCY)\
+	m(SMSG_PARTY_MEMBER_STATS)\
 
 #define EMPTY_PACKET_LUA_HANDLERS(m)\
 	m(SMSG_ATTACKSWING_NOTINRANGE)\

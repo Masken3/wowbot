@@ -18,6 +18,8 @@
 #include "QuestDef.h"
 #include "ItemPrototype.h"
 
+static void spMovementInfo(lua_State* L, const char** src, const char* buf, int bufSize);
+
 #ifdef WIN32
 static size_t strnlen(const char* str, size_t maxlen) {
 	const char* p = (char*)memchr(str, 0, maxlen);
@@ -243,30 +245,34 @@ static void spMovementUpdate(lua_State* L, const char** src, const char* buf, in
 void pMovementInfo(pLUA_ARGS) {
 	PL_START;
 	MV(PackedGuid, guid);
-	{
-		MM(uint32, flags);
-		M(uint32, time);
-		M(Vector3, pos);
-		M(float, o);
-		if(flags & MOVEFLAG_ONTRANSPORT) {
-			M(Guid, tGuid);
-			M(Vector3, tPos);
-			M(float, tO);
-		}
-		if(flags & MOVEFLAG_SWIMMING) {
-			M(float, sPitch);
-		}
-		M(uint32, fallTime);
-		if(flags & MOVEFLAG_FALLING) {
-			M(float, jumpVelocity);
-			M(float, jumpSin);
-			M(float, jumpCos);
-			M(float, jumpXYSpeed);
-		}
-		if(flags & MOVEFLAG_SPLINE_ELEVATION) {
-			M(uint32, unk1);
-		}
+	spMovementInfo(L, &ptr, buf, bufSize);
+}
+
+static void spMovementInfo(lua_State* L, const char** src, const char* buf, int bufSize) {
+	const char* ptr = *src;
+	MM(uint32, flags);
+	M(uint32, time);
+	M(Vector3, pos);
+	M(float, o);
+	if(flags & MOVEFLAG_ONTRANSPORT) {
+		M(Guid, tGuid);
+		M(Vector3, tPos);
+		M(float, tO);
 	}
+	if(flags & MOVEFLAG_SWIMMING) {
+		M(float, sPitch);
+	}
+	M(uint32, fallTime);
+	if(flags & MOVEFLAG_FALLING) {
+		M(float, jumpVelocity);
+		M(float, jumpSin);
+		M(float, jumpCos);
+		M(float, jumpXYSpeed);
+	}
+	if(flags & MOVEFLAG_SPLINE_ELEVATION) {
+		M(uint32, unk1);
+	}
+	*src = ptr;
 }
 
 static void spValuesUpdate(lua_State* L, const char** src, const char* buf, int bufSize) {
@@ -956,4 +962,11 @@ void pSMSG_LOOT_RELEASE_RESPONSE(pLUA_ARGS) {
 	PL_START;
 	M(Guid, guid);
 	M(byte, unk);	// always 1
+}
+
+void pMSG_MOVE_TELEPORT_ACK(pLUA_ARGS) {
+	PL_START;
+	MV(PackedGuid, guid);
+	M(uint32, counter);
+	spMovementInfo(L, &ptr, buf, bufSize);
 }

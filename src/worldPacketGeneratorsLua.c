@@ -393,6 +393,15 @@ static uint16 genCMSG_QUEST_QUERY(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+// client's format is different from server's.
+static uint16 genMSG_MOVE_TELEPORT_ACK(lua_State* L, byte* buf) {
+	GL_START;
+	M(Guid, guid);
+	M(uint32, counter);
+	M(uint32, time);
+	GL_END;
+}
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -424,6 +433,7 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_AUTOSTORE_LOOT_ITEM);
 		GEN_CASE(CMSG_LOOT_RELEASE);
 		GEN_CASE(CMSG_QUEST_QUERY);
+		GEN_CASE(MSG_MOVE_TELEPORT_ACK);
 		default: return NULL;
 	}
 }
