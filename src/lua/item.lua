@@ -194,7 +194,7 @@ function hSMSG_ITEM_PUSH_RESULT(p)
 
 	-- if it wasn't us who got the item, we don't care.
 	if(p.playerGuid ~= STATE.myGuid) then
-		print("WEIRD: got SMSG_ITEM_PUSH_RESULT for another player.");
+		print("got SMSG_ITEM_PUSH_RESULT for another player.");
 		return;
 	end
 
@@ -294,4 +294,14 @@ function investigateInventory(f)
 			end
 		end end
 	end
+end
+
+function itemInventoryCountById(itemId)
+	local count = 0;
+	investigateInventory(function(o)
+		if(o.values[OBJECT_FIELD_ENTRY] == itemId) then
+			count = count + o.values[ITEM_FIELD_STACK_COUNT];
+		end
+	end)
+	return count;
 end

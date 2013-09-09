@@ -22,7 +22,12 @@ function decision(realTime)
 	end
 	STATE.meleeing = false;
 
-	local myValues = STATE.my.values;
+	-- if there are units that can be looted, go get them.
+	local i, lootable = next(STATE.lootables);
+	if(lootable) then
+		goLoot(lootable);
+		return;
+	end
 
 	-- if we have guest finishers or giver, go to them.
 	local i, finisher = next(STATE.questFinishers);
@@ -39,11 +44,50 @@ function decision(realTime)
 	-- don't try following the leader if we don't know where he is.
 	if(STATE.inGroup and STATE.leader.location.position.x) then
 		follow(STATE.leader);
+		--local myValues = STATE.my.values;
 		--print("Following. XP: "..tostring(myValues[PLAYER_XP])..
 			--" / "..tostring(myValues[PLAYER_NEXT_LEVEL_XP]));
 		return;
 	end
 	print("Nothing to do.");
+end
+
+function goLoot(o)
+	local dist = distanceToObject(o);
+	doMoveToTarget(getRealTime(), o, MELEE_DIST);
+	if(dist <= MELEE_DIST) then
+		if(not STATE.looting) then
+			print("Looting "..o.guid:hex());
+			send(CMSG_LOOT, {guid=o.guid});
+			STATE.looting = true;
+			STATE.lootables[o.guid] = nil;
+		end
+	end
+end
+
+local function wantToLoot(itemId)
+	return hasQuestForItem(itemId);
+end
+
+function hSMSG_LOOT_RESPONSE(p)
+	print("SMSG_LOOT_RESPONSE");
+	for i, item in ipairs(p.items) do
+		print("item "..item.itemId.." x"..item.count);
+		if((item.lootSlotType == LOOT_SLOT_NORMAL) and wantToLoot(item.itemId)) or
+			-- every loot type except corpses are single-user.
+			-- in such cases, if we don't loot every item, the unlooted ones would be lost.
+			(p.lootType ~= LOOT_CORPSE)
+		then
+			print("Looting item "..item.itemId.." x"..item.count);
+			send(CMSG_AUTOSTORE_LOOT_ITEM, item);
+		end
+	end
+	send(CMSG_LOOT_RELEASE, p);
+	STATE.looting = false;
+end
+
+function hSMSG_LOOT_RELEASE_RESPONSE(p)
+	print("Loot release "..p.guid:hex());
 end
 
 function keepAttacking()

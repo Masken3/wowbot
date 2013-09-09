@@ -862,3 +862,98 @@ void pSMSG_NAME_QUERY_RESPONSE(pLUA_ARGS) {
 	M(uint32, gender);
 	M(uint32, _class);
 }
+
+void pSMSG_LOOT_RESPONSE(pLUA_ARGS) {
+	PL_START;
+	M(Guid, guid);
+	M(byte, lootType);
+	M(uint32, gold);
+	{
+		MM(byte, itemCount);
+		lua_pushstring(L, "items");
+		lua_createtable(L, itemCount, 0);
+		for(uint32 i=1; i<=itemCount; i++) {
+			lua_createtable(L, 0, 7);
+			M(byte, lootSlot);
+			M(uint32, itemId);
+			M(uint32, count);
+			M(uint32, displayId);
+			M(uint32, unk);
+			M(uint32, randomPropertyId);
+			M(byte, lootSlotType);
+			lua_rawseti(L, -2, i);
+		}
+		lua_settable(L, -3);
+	}
+}
+
+void pSMSG_QUEST_QUERY_RESPONSE(pLUA_ARGS) {
+	PL_START;
+	M(uint32, questId);
+	M(uint32, method);
+	M(uint32, level);
+	M(uint32, zoneOrSort);
+	M(uint32, type);
+	M(uint32, repObjectiveFaction);
+	M(uint32, repObjectiveValue);
+	M(uint32, requiredOppositeRepFaction);	// always zero
+	M(uint32, requiredOppositeRepValue);	// always zero
+	M(uint32, nextQuestInChain);
+	M(uint32, money);
+	M(uint32, moneyAtMaxLevel);
+	M(uint32, rewSpell);
+	M(uint32, srcItemId);
+	M(uint32, flags);
+
+	lua_pushstring(L, "rewItems");
+	lua_createtable(L, QUEST_REWARDS_COUNT, 0);
+	for(uint32 i=1; i<=QUEST_REWARDS_COUNT; i++) {
+		lua_createtable(L, 0, 2);
+		M(uint32, itemId);
+		M(uint32, count);
+		lua_rawseti(L, -2, i);
+	}
+	lua_settable(L, -3);
+
+	lua_pushstring(L, "rewChoiceItems");
+	lua_createtable(L, QUEST_REWARD_CHOICES_COUNT, 0);
+	for(uint32 i=1; i<=QUEST_REWARD_CHOICES_COUNT; i++) {
+		lua_createtable(L, 0, 2);
+		M(uint32, itemId);
+		M(uint32, count);
+		lua_rawseti(L, -2, i);
+	}
+	lua_settable(L, -3);
+
+	M(uint32, mapId);
+	M(float, x);
+	M(float, y);
+	M(float, opt);
+	MV(string, title);
+	MV(string, objectives);
+	MV(string, details);
+	MV(string, endtext);
+
+	lua_pushstring(L, "objectives");
+	lua_createtable(L, QUEST_OBJECTIVES_COUNT, 0);
+	for(uint32 i=1; i<=QUEST_OBJECTIVES_COUNT; i++) {
+		lua_createtable(L, 0, 5);
+		M(uint32, creatureOrGoId);	// GO (& 0x80000000).
+		M(uint32, creatureOrGoCount);
+		M(uint32, itemId);
+		M(uint32, itemCount);
+		lua_rawseti(L, -2, i);
+	}
+	for(uint32 i=1; i<=QUEST_OBJECTIVES_COUNT; i++) {
+		lua_rawgeti(L, -1, i);
+		MV(string, text);
+		lua_pop(L, 1);
+	}
+	lua_settable(L, -3);
+}
+
+void pSMSG_LOOT_RELEASE_RESPONSE(pLUA_ARGS) {
+	PL_START;
+	M(Guid, guid);
+	M(byte, unk);	// always 1
+}

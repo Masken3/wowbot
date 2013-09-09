@@ -122,6 +122,22 @@ function hSMSG_QUESTGIVER_QUEST_DETAILS(p)
 		STATE.questGivers[p.guid] = nil;
 		print(countTable(STATE.questGivers).. " quest givers remaining.");
 	end
+	send(CMSG_QUEST_QUERY, p);
+end
+
+function questLogin()
+	for i=PLAYER_QUEST_LOG_1_1,PLAYER_QUEST_LOG_LAST_1,3 do
+		local id = STATE.my.values[i];
+		if(id and (id > 0)) then
+			send(CMSG_QUEST_QUERY, {questId=id});
+		end
+	end
+	send(CMSG_QUESTGIVER_STATUS_MULTIPLE_QUERY);
+end
+
+function hSMSG_QUEST_QUERY_RESPONSE(p)
+	print("SMSG_QUEST_QUERY_RESPONSE", dump(p));
+	STATE.knownQuests[p.questId] = p;
 end
 
 function hSMSG_QUESTGIVER_STATUS_MULTIPLE(p)
@@ -146,4 +162,24 @@ function hSMSG_QUESTGIVER_STATUS(p)
 		print("Added quest finisher "..p.guid:hex());
 		STATE.questFinishers[p.guid] = STATE.knownObjects[p.guid];
 	end
+end
+
+function hasQuestForItem(itemId)
+	-- check every quest
+	print("finding quests for item "..itemId.."...");
+	for i=PLAYER_QUEST_LOG_1_1,PLAYER_QUEST_LOG_LAST_1,3 do
+		local questId = STATE.my.values[i];
+		local state = STATE.my.values[i+1];
+		if(questId and (questId > 0) and ((not state) or (bit32.band(state, 0xFF) == QUEST_STATE_NONE))) then
+			print("checking active quest "..questId..": ", dump(STATE.knownQuests[questId].objectives));
+			for j, o in ipairs(STATE.knownQuests[questId].objectives) do
+				if((o.itemId == itemId) and itemInventoryCountById(itemId)) then
+					print("found quest "..questId);
+					return true;
+				end
+			end
+		end
+	end
+	print("none found.");
+	return false;
 end

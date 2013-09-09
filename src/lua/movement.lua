@@ -238,9 +238,9 @@ function doMoveToTarget(realTime, mo, maxDist)
 			--print("a, b, c:", a, b, c);
 			--print("dx, dy:", dx, dy);
 			--print("moving T:", t);
-			assert(t > 0);
-			--assert(tMin < 0);
-			setTimer(movementTimerCallback, realTime + t);
+			if(t > 0) then
+				setTimer(movementTimerCallback, realTime + t);
+			end
 			return;
 		end
 
@@ -280,8 +280,8 @@ function doMoveToTarget(realTime, mo, maxDist)
 		local t = minGEZ(t1, t2);
 		--print("inside t: "..t, "t1t2", t1, t2, "temp", (b^2 - 4*a*c), (b^2 - 4*a*c)^0.5,
 			--"xyabc", x, y, a, b, c, "mov:"..dump(mov));
-		if(t <= 0) then return; end
-		assert(t > 0);
-		setTimer(movementTimerCallback, realTime + t);
+		if(t > 0) then
+			setTimer(movementTimerCallback, realTime + t);
+		end
 	end
 end

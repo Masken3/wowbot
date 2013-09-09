@@ -45,6 +45,11 @@ if(rawget(_G, 'STATE') == nil) then
 		enemies = {},
 		questGivers = {},
 		questFinishers = {},
+		lootables = {},
+
+		looting = false,
+
+		knownQuests = {},
 
 		checkNewObjectsForQuests = false,	-- set to true after login.
 
@@ -210,7 +215,6 @@ end
 function hSMSG_LOGIN_VERIFY_WORLD(p)
 	print("SMSG_LOGIN_VERIFY_WORLD", dump(p));
 	STATE.myLocation = p;
-	send(CMSG_QUESTGIVER_STATUS_MULTIPLE_QUERY);
 end
 
 function loginComplete()
@@ -290,6 +294,13 @@ local function valueUpdated(o, idx)
 	if(idx == UNIT_NPC_FLAGS) then
 		local flags = o.values[idx];
 	end
+	if(idx == UNIT_DYNAMIC_FLAGS) then
+		if(bit32.btest(o.values[idx], UNIT_DYNFLAG_LOOTABLE)) then
+			STATE.lootables[o.guid] = o;
+		else
+			STATE.lootables[o.guid] = nil;
+		end
+	end
 end
 -- first write the values
 local function updateValues(o, b)
@@ -352,6 +363,7 @@ function hSMSG_UPDATE_OBJECT(p)
 				STATE.my = o;
 				STATE.me = o;
 				print("CreateObject me!");
+				questLogin();
 			end
 
 			-- player objects don't get the OBJECT_FIELD_TYPE update for some reason,

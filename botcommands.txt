@@ -7,6 +7,11 @@ These are chat commands that bots will respond to:
 * dai	Drop All Items. (except equipped items). Use only for debugging.
 * lm	List Money
 
+* aggro type	Become aggressive against all creatures of the type of the one selected by commander.
+	If not doing anything else, attack the nearest one.
+	Error if commander is not targeting a neutral or hostile creature.
+* aggro off	Stop aggression against all creature types.
+
 * give <money|item|all>	Gives money or items to commander.
 ** money: <int><g|s|c>	Gold, Silver or Copper.
 ** item: <name> [count]

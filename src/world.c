@@ -32,6 +32,7 @@
 #include "QuestDefLua.h"
 #include "ItemPrototypeLua.h"
 #include "PlayerLua.h"
+#include "LootMgrLua.h"
 
 #define DEFAULT_WORLDSERVER_PORT 8085
 
@@ -413,6 +414,7 @@ void initLua(WorldSession* session) {
 	QuestDefLua(L);
 	ItemPrototypeLua(L);
 	PlayerLua(L);
+	LootMgrLua(L);
 }
 
 BOOL luaPcall(lua_State* L, int nargs) {

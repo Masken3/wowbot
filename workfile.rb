@@ -32,6 +32,7 @@ work = ExeWork.new do
 			{:includedEnums=>['SpellEffects', 'SpellRangeIndex', 'Powers',
 				'SpellAttributes', 'SpellAttributesEx', 'SpellAttributesEx2',
 				'SpellAttributesEx3', 'SpellAttributesEx4',
+				'UnitDynFlags',
 				'TradeStatus', 'Language', 'ChatMsg']}),
 		GenLuaFromHeaderTask.new('Unit', 'server-code/Unit.h',
 			{:includedEnums=>['UnitFlags', 'NPCFlags']}),
@@ -52,6 +53,7 @@ work = ExeWork.new do
 		GenLuaFromHeaderTask.new('Config', 'server-code/SharedDefines.h',
 			{:includedEnums=>['Gender', 'Races', 'Classes'],
 				:cutPrefix=>true}),
+		GenLuaFromHeaderTask.new('LootMgr', 'server-code/LootMgr.h'),
 	]
 	@SPECIFIC_CFLAGS = {
 		'worldPacketParsersLua.c' => ' -Wno-vla',

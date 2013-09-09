@@ -369,6 +369,30 @@ static uint16 genCMSG_GROUP_SET_LEADER(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+static uint16 genCMSG_LOOT(lua_State* L, byte* buf) {
+	GL_START;
+	M(Guid, guid);
+	GL_END;
+}
+
+static uint16 genCMSG_AUTOSTORE_LOOT_ITEM(lua_State* L, byte* buf) {
+	GL_START;
+	M(byte, lootSlot);
+	GL_END;
+}
+
+static uint16 genCMSG_LOOT_RELEASE(lua_State* L, byte* buf) {
+	GL_START;
+	M(Guid, guid);
+	GL_END;
+}
+
+static uint16 genCMSG_QUEST_QUERY(lua_State* L, byte* buf) {
+	GL_START;
+	M(uint32, questId);
+	GL_END;
+}
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -396,6 +420,10 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_NAME_QUERY);
 		GEN_CASE(CMSG_GROUP_INVITE);
 		GEN_CASE(CMSG_GROUP_SET_LEADER);
+		GEN_CASE(CMSG_LOOT);
+		GEN_CASE(CMSG_AUTOSTORE_LOOT_ITEM);
+		GEN_CASE(CMSG_LOOT_RELEASE);
+		GEN_CASE(CMSG_QUEST_QUERY);
 		default: return NULL;
 	}
 }
