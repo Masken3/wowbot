@@ -402,6 +402,26 @@ static uint16 genMSG_MOVE_TELEPORT_ACK(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+static uint16 genCMSG_CREATURE_QUERY(lua_State* L, byte* buf) {
+	GL_START;
+	M(uint32, entry);
+	M(Guid, guid);
+	GL_END;
+}
+
+static uint16 genCMSG_TRAINER_LIST(lua_State* L, byte* buf) {
+	GL_START;
+	M(Guid, guid);
+	GL_END;
+}
+
+static uint16 genCMSG_TRAINER_BUY_SPELL(lua_State* L, byte* buf) {
+	GL_START;
+	M(Guid, guid);
+	M(uint32, spellId);
+	GL_END;
+}
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -434,6 +454,9 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_LOOT_RELEASE);
 		GEN_CASE(CMSG_QUEST_QUERY);
 		GEN_CASE(MSG_MOVE_TELEPORT_ACK);
+		GEN_CASE(CMSG_CREATURE_QUERY);
+		GEN_CASE(CMSG_TRAINER_LIST);
+		GEN_CASE(CMSG_TRAINER_BUY_SPELL);
 		default: return NULL;
 	}
 }

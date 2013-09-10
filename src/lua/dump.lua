@@ -2,6 +2,10 @@ function string.endWith(s, o)
 	return s:sub(-#o) == o;
 end
 
+function string.startWith(s, o)
+	return s:sub(1, #o) == o;
+end
+
 function countTable(tab)
 	local c = 0;
 	for _ in pairs(tab) do c = c + 1; end

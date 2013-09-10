@@ -46,6 +46,7 @@ if(rawget(_G, 'STATE') == nil) then
 		questGivers = {},
 		questFinishers = {},
 		lootables = {},
+		trainers = {},
 
 		looting = false,
 
@@ -56,6 +57,12 @@ if(rawget(_G, 'STATE') == nil) then
 		reloadCount = 0,
 		myGuid = '',	-- set by C function enterWorld.
 		myLevel = 0,	-- set by C function enterWorld.
+		myClassName = '',	-- set by C function enterWorld.
+
+		-- temporary set of the spells we're learning from a trainer.
+		-- if this doesn't empty, something went wrong.
+		training = {},
+
 		myLocation = Location.new(),	-- set by hSMSG_LOGIN_VERIFY_WORLD.
 		my = false,	-- KnownObject.
 		me = false,	-- == my.
@@ -85,6 +92,8 @@ if(rawget(_G, 'STATE') == nil) then
 		tradeGiveAll = false,
 		recreate = false,
 
+		creatureQueryCallbacks = {},
+
 		-- timer-related stuff
 		timers = {},
 		inTimerCallback = false,
@@ -92,6 +101,20 @@ if(rawget(_G, 'STATE') == nil) then
 		removedTimers = {},
 		callbackTime = 0,
 	}
+
+	-- list of tables on the form guid:object.
+	-- all of them are affected by SMSG_DESTROY_OBJECT.
+	STATE.knownObjectHolders = {
+		STATE.knownObjects, STATE.enemies, STATE.questGivers,
+		STATE.questFinishers, STATE.lootables, STATE.trainers,
+	}
+
+	-- saved to and loaded from disk.
+	PERMASTATE = {
+		-- the last level we saw our trainer. saved to disk, restored on load.
+		classTrainingCompleteForLevel = 0,
+	}
+
 	-- type-securing STATE is too much work, but at least we can prevent unregistered members.
 	local mt = {
 		__index = function(t, k)
@@ -102,9 +125,39 @@ if(rawget(_G, 'STATE') == nil) then
 		end,
 	}
 	setmetatable(STATE, mt);
+	setmetatable(PERMASTATE, mt);
 else
 	STATE.reloadCount = STATE.reloadCount + 1;
 	print("STATE.reloadCount", STATE.reloadCount);
+end
+
+local function stateFileName()
+	return "state/"..STATE.myGuid:hex()..".lua";
+end
+
+function loadState()
+	-- note: this will cause unknown keys to raise an error.
+	-- if you ever remove keys from PERMASTATE,
+	-- you must also remove them from any saved state files before loading them.
+	if(fileExists(stateFileName())) then
+		dofile(stateFileName());
+	else
+		print("WARN: state file "..stateFileName().." does not exist.");
+	end
+end
+
+function saveState()
+	local file = io.open(stateFileName(), "w");
+	file:write("-- "..STATE.myClassName.."\n");
+	for k,v in pairs(PERMASTATE) do
+		file:write("PERMASTATE."..k.." = "..v..";\n");
+	end
+	file:close();
+end
+
+function fileExists(name)
+   local f=io.open(name,"r")
+   if f~=nil then io.close(f) return true else return false end
 end
 
 local updateMonsterPosition;
@@ -293,6 +346,15 @@ local function valueUpdated(o, idx)
 	if(not isUnit(o)) then return; end
 	if(idx == UNIT_NPC_FLAGS) then
 		local flags = o.values[idx];
+		if(bit32.btest(flags, UNIT_NPC_FLAG_TRAINER)) then
+			sendCreatureQuery(o, function(p)
+				print("Found "..p.subName);
+				if(p.subName == STATE.myClassName.." Trainer") then
+					print("MINE!");
+					STATE.trainers[o.guid] = o;
+				end
+			end)
+		end
 	end
 	if(idx == UNIT_DYNAMIC_FLAGS) then
 		if(bit32.btest(o.values[idx], UNIT_DYNFLAG_LOOTABLE)) then
@@ -302,6 +364,22 @@ local function valueUpdated(o, idx)
 		end
 	end
 end
+
+function sendCreatureQuery(o, callback)
+	local entry = o.values[OBJECT_FIELD_ENTRY];
+	STATE.creatureQueryCallbacks[entry] = callback;
+	send(CMSG_CREATURE_QUERY, {guid=o.guid, entry=entry});
+end
+
+function hSMSG_CREATURE_QUERY_RESPONSE(p)
+	print("SMSG_CREATURE_QUERY_RESPONSE", dump(p));
+	local cb = STATE.creatureQueryCallbacks[p.entry];
+	if(cb) then
+		STATE.creatureQueryCallbacks[p.entry] = nil
+		cb(p);
+	end
+end
+
 -- first write the values
 local function updateValues(o, b)
 	local j = 1;
@@ -407,6 +485,13 @@ function hSMSG_UPDATE_OBJECT(p)
 		end
 	end
 	decision(getRealTime());
+end
+
+function hSMSG_DESTROY_OBJECT(p)
+	print("SMSG_DESTROY_OBJECT", dump(p));
+	for i, koh in ipairs(STATE.knownObjectHolders) do
+		koh[p.guid] = nil;
+	end
 end
 
 local SPELL_ATTACK_EFFECTS = {

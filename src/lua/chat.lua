@@ -37,16 +37,18 @@ local function dropAllItems(p)
 	local msg = 'Dropped items:'
 	investigateInventory(function(o, bagSlot, slot)
 		msg = msg..o.values[OBJECT_FIELD_ENTRY]..' '..o.guid:hex().."\n"
-		send(CMSG_DESTROYITEM, {slot = slot, bagSlot = bagSlot,
+		send(CMSG_DESTROYITEM, {slot = slot, bag = bagSlot,
 			count = o.values[ITEM_FIELD_STACK_COUNT]})
 	end)
 	reply(p, msg)
 end
 
 local function listItems(p)
-	local msg = 'Inventory items:'
+	local msg = 'Inventory: '
 	investigateInventory(function(o)
-		msg = msg..o.values[OBJECT_FIELD_ENTRY]..' '..o.guid:hex().."\n"
+		local id = o.values[OBJECT_FIELD_ENTRY]
+		local proto = itemProtoFromId(id)
+		msg = msg..proto.name.." ("..id..') x'..o.values[ITEM_FIELD_STACK_COUNT].."\n"
 	end)
 	reply(p, msg)
 end
@@ -121,6 +123,19 @@ function hSMSG_NAME_QUERY_RESPONSE(p)
 	send(CMSG_GROUP_INVITE, p)
 end
 
+local function dropItem(p)
+	local itemId = tonumber(p.text:sub(6))
+	local msg = 'Dropped items:'
+	investigateInventory(function(o, bagSlot, slot)
+		if(itemId == o.values[OBJECT_FIELD_ENTRY]) then
+			msg = msg..o.values[OBJECT_FIELD_ENTRY]..' '..o.guid:hex().."\n"
+			send(CMSG_DESTROYITEM, {slot = slot, bag = bagSlot,
+				count = o.values[ITEM_FIELD_STACK_COUNT]})
+		end
+	end)
+	reply(p, msg)
+end
+
 function handleChatMessage(p)
 	if(p.text == 'lq') then
 		listQuests(p)
@@ -130,6 +145,8 @@ function handleChatMessage(p)
 		listItems(p)
 	elseif(p.text == 'dai') then
 		dropAllItems(p)
+	elseif(p.text:startWith('drop ')) then
+		dropItem(p)
 	elseif(p.text == 'lm') then
 		listMoney(p)
 	elseif(p.text == 'give all') then

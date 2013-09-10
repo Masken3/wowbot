@@ -41,6 +41,15 @@ function decision(realTime)
 		return;
 	end
 
+	-- visit our class trainer at even levels.
+	local i, trainer = next(STATE.trainers);
+	if(trainer and (bit32.band(STATE.myLevel, bit32.bnot(1)) >
+		PERMASTATE.classTrainingCompleteForLevel))
+	then
+		goTrain(trainer);
+		return;
+	end
+
 	-- don't try following the leader if we don't know where he is.
 	if(STATE.inGroup and STATE.leader.location.position.x) then
 		follow(STATE.leader);
@@ -50,6 +59,48 @@ function decision(realTime)
 		return;
 	end
 	--print("Nothing to do.");
+end
+
+function goTrain(trainer)
+	local dist = distanceToObject(trainer);
+	doMoveToTarget(getRealTime(), trainer, MELEE_DIST);
+	if(dist <= MELEE_DIST) then
+		if(not trainer.bot.chatting) then
+			send(CMSG_TRAINER_LIST, trainer);
+			trainer.bot.chatting = true;
+		end
+	end
+end
+
+local function checkTraining(p)
+	local trainer = STATE.knownObjects[p.guid];
+	local i, spell = next(STATE.training);
+	if(not spell) then
+		-- we're done.
+		print("Training complete.");
+		trainer.bot.chatting = false;
+		PERMASTATE.classTrainingCompleteForLevel = STATE.myLevel;
+		saveState();
+	end
+end
+
+function hSMSG_TRAINER_LIST(p)
+	print("SMSG_TRAINER_LIST", dump(p));
+	for i, s in ipairs(p.spells) do
+		if(s.state == TRAINER_SPELL_GREEN) then
+			local cs = cSpell(s.spellId);
+			print("Training spell "..s.spellId.." ("..cs.name..", "..cs.rank..")...");
+			STATE.training[s.spellId] = p.guid;
+			send(CMSG_TRAINER_BUY_SPELL, {guid=p.guid, spellId=s.spellId});
+		end
+	end
+	checkTraining(p);
+end
+
+function hSMSG_TRAINER_BUY_SUCCEEDED(p)
+	assert(STATE.training[p.spellId] == p.guid);
+	STATE.training[p.spellId] = nil;
+	checkTraining(p);
 end
 
 function goLoot(o)

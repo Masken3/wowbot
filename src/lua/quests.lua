@@ -149,7 +149,7 @@ function questLogin()
 end
 
 function hSMSG_QUEST_QUERY_RESPONSE(p)
-	print("SMSG_QUEST_QUERY_RESPONSE", dump(p));
+	--print("SMSG_QUEST_QUERY_RESPONSE", dump(p));
 	STATE.knownQuests[p.questId] = p;
 end
 

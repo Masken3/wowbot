@@ -557,9 +557,11 @@ void pSMSG_MESSAGECHAT(pLUA_ARGS) {
 	BOOL hasSenderGuid = FALSE;
 	BOOL hasTargetGuid = FALSE;
 	BOOL hasSenderName = FALSE;
+	byte bType;
 	PL_START;
 	{
 		MM(byte, type);
+		bType = type;
 		M(uint32, language);
 		switch(type) {
 		case CHAT_MSG_CHANNEL:
@@ -616,6 +618,10 @@ void pSMSG_MESSAGECHAT(pLUA_ARGS) {
 			M(uint32, targetNameLength);
 			MV(string, targetName);
 		}
+	}
+	if(sizeof(uint32) > (size_t)PL_REMAIN) {
+		LOG("WARNING: SMSG_MESSAGECHAT interrupted. type %i.\n", bType);
+		return;
 	}
 	M(uint32, textLength);
 	MV(string, text);
@@ -1005,4 +1011,67 @@ void pSMSG_GOSSIP_MESSAGE(pLUA_ARGS) {
 		}
 		lua_settable(L, -3);
 	}
+}
+
+void pSMSG_CREATURE_QUERY_RESPONSE(pLUA_ARGS) {
+	PL_START;
+	{
+		MM(uint32, entry);
+		if(entry & 0x80000000) {
+			LOG("WARNING: NO CREATURE INFO for entry %i\n", entry & ~0x80000000);
+			return;
+		}
+	}
+	MV(string, name);
+	MV(string, name2);
+	MV(string, name3);
+	MV(string, name4);
+	MV(string, subName);
+	M(uint32, typeFlags);
+	M(uint32, type);
+	M(uint32, family);
+	M(uint32, rank);
+	M(uint32, unk);
+	M(uint32, petSpellDataId);
+	M(uint32, displayId);
+	M(uint16, civilian);
+}
+
+void pSMSG_DESTROY_OBJECT(pLUA_ARGS) {
+	PL_START;
+	M(Guid, guid);
+}
+
+void pSMSG_TRAINER_LIST(pLUA_ARGS) {
+	PL_START;
+	M(Guid, guid);
+	M(uint32, trainerType);
+	{
+		MM(uint32, count);
+		lua_pushstring(L, "spells");
+		lua_createtable(L, count, 0);
+		for(uint32 i=1; i<=count; i++) {
+			lua_createtable(L, 0, 11);
+			M(uint32, spellId);
+			M(byte, state);
+			M(uint32, cost);
+			M(uint32, primaryProfCanLearn);
+			M(uint32, primaryProfFirstRank);
+			M(byte, reqCLevel);
+			M(uint32, reqSkill);
+			M(uint32, reqSkillValue);
+			M(uint32, chainPrev);
+			M(uint32, chainReq);
+			M(uint32, unk);	// always zero.
+			lua_rawseti(L, -2, i);
+		}
+		lua_settable(L, -3);
+	}
+	MV(string, title);
+}
+
+void pSMSG_TRAINER_BUY_SUCCEEDED(pLUA_ARGS) {
+	PL_START;
+	M(Guid, guid);
+	M(uint32, spellId);
 }

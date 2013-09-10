@@ -14,6 +14,7 @@
 #include "getRealTime.h"
 #include "spellStrings.h"
 #include "cDbc.h"
+#include "SharedDefines.h"
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -128,6 +129,21 @@ static void connectToWorld(WorldSession* session) {
 	session->sock = connectNewSocket(host, port);
 }
 
+static const char* className(int _class) {
+	switch(_class) {
+	case CLASS_WARRIOR: return "Warrior";
+	case CLASS_PALADIN: return "Paladin";
+	case CLASS_HUNTER: return "Hunter";
+	case CLASS_ROGUE: return "Rogue";
+	case CLASS_PRIEST: return "Priest";
+	case CLASS_SHAMAN: return "Shaman";
+	case CLASS_MAGE: return "Mage";
+	case CLASS_WARLOCK: return "Warlock";
+	case CLASS_DRUID: return "Druid";
+	default: abort();
+	}
+}
+
 void enterWorld(WorldSession* session, uint64 guid, uint8 level) {
 	// set Lua STATE.myGuid.
 	lua_State* L = session->L;
@@ -141,7 +157,16 @@ void enterWorld(WorldSession* session, uint64 guid, uint8 level) {
 	lua_pushnumber(L, level);
 	lua_settable(L, -3);
 
+	lua_pushstring(L, "myClassName");
+	lua_pushstring(L, className(session->_class));
+	lua_settable(L, -3);
+
 	lua_pop(L, 1);
+
+	lua_getglobal(L, "loadState");
+	if(!luaPcall(L, 0)) {
+		abort();
+	}
 
 	sendWorld(session, CMSG_PLAYER_LOGIN, &guid, sizeof(guid));
 }

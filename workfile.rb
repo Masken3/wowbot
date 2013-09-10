@@ -49,7 +49,7 @@ work = ExeWork.new do
 				'ItemSubclassArmor']}),
 		GenLuaFromHeaderTask.new('Player', 'server-code/Player.h',
 			{:includedEnums=>['EquipmentSlots', 'InventorySlots', 'InventoryPackSlots',
-				'TradeSlots']}),
+				'TradeSlots', 'TrainerSpellState']}),
 		GenLuaFromHeaderTask.new('Config', 'server-code/SharedDefines.h',
 			{:includedEnums=>['Gender', 'Races', 'Classes'],
 				:cutPrefix=>true}),
@@ -87,6 +87,8 @@ work = ExeWork.new do
 	end
 	@NAME = 'wowbot'
 end
+
+DirTask.new('state')
 
 target :run do
 	sh "#{work}"

@@ -1,6 +1,4 @@
-output
-output-*/
-build
+/build
 config.h
 Debug
 Release
@@ -15,3 +13,4 @@ log.txt
 log.*.txt
 config.lua
 config.rb
+/state
