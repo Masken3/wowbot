@@ -95,7 +95,9 @@ function hSMSG_TRAINER_LIST(p)
 	for i, s in ipairs(p.spells) do
 		if(s.state == TRAINER_SPELL_GREEN) then
 			local cs = cSpell(s.spellId);
-			print("Training spell "..s.spellId.." ("..cs.name..", "..cs.rank..")...");
+			local msg = "Training spell "..s.spellId.." ("..cs.name..", "..cs.rank..")...";
+			print(msg);
+			partyChat(msg);
 			STATE.training[s.spellId] = p.guid;
 			send(CMSG_TRAINER_BUY_SPELL, {guid=p.guid, spellId=s.spellId});
 		end
@@ -302,8 +304,10 @@ function attackSpell(dist, realTime, enemy)
 		local ri = bestSpell.rangeIndex;
 		if(ri == SPELL_RANGE_IDX_SELF_ONLY or
 			ri == SPELL_RANGE_IDX_COMBAT or
-			ri == SPELL_RANGE_IDX_ANYWHERE) then
-			requiredDistance = nil;
+			ri == SPELL_RANGE_IDX_ANYWHERE)
+		then
+			--hack
+			-- requiredDistance = nil;
 		else
 			local range = cSpellRange(ri);
 			if(range) then
