@@ -65,9 +65,16 @@ function hSMSG_ITEM_QUERY_SINGLE_RESPONSE(p)
 	end
 end
 
+local function canDualWield()
+	return STATE.knownSpells[674]
+end
+
 -- returns one of enum EquipmentSlots.
 function itemEquipSlot(proto)
 	--print("itemSlotIndex("..proto.InventoryType..")", dump(itemInventoryToEquipmentSlot));
+	if((proto.InventoryType == INVTYPE_WEAPON) and not canDualWield()) then
+		return EQUIPMENT_SLOT_MAINHAND;
+	end
 	return itemInventoryToEquipmentSlot[proto.InventoryType];
 end
 
@@ -120,8 +127,8 @@ function wantToWear(id)
 	print("Testing weariness of item "..proto.name.." ("..id..")...");
 
 	-- if it's not equipment, we can't wear it.
-	local slot = itemEquipSlot(proto);
-	if(not slot) then
+	local slots = itemEquipSlot(proto);
+	if(not slots) then
 		print("no slot found.");
 		return false;
 	end
@@ -138,16 +145,31 @@ function wantToWear(id)
 		print("No proficiency needed. class: "..proto.itemClass.." subClass: "..proto.subClass);
 	end
 
-	local equippedGuid = equipmentInSlot(slot);
-	if(not equippedGuid) then
-		print("no item equipped in that slot. I'm gonna wear it!");
-		return true;
+	if(type(slots) ~= 'table') then
+		slots = {slots};
 	end
-	local eid = itemIdOfGuid(equippedGuid);
-	print("equipped: "..eid);
-	--return id > eid;
-	print("price: "..vendorSalePrice(id).." vs "..vendorSalePrice(itemIdOfGuid(equippedGuid)));
-	return vendorSalePrice(id) > vendorSalePrice(itemIdOfGuid(equippedGuid));
+	local chosenSlot = nil;
+	local chosenPrice = nil;
+	for i, slot in ipairs(slots) do
+		local equippedGuid = equipmentInSlot(slot);
+		if(not equippedGuid) then
+			print("no item equipped in that slot. I'm gonna wear it!");
+			return slot;
+		end
+		local eid = itemIdOfGuid(equippedGuid);
+		print("equipped: "..eid);
+		--return id > eid;
+		print("price: "..vendorSalePrice(id).." vs "..vendorSalePrice(itemIdOfGuid(equippedGuid)));
+		local ePrice = vendorSalePrice(itemIdOfGuid(equippedGuid));
+		if(vendorSalePrice(id) > ePrice) then
+			-- if we have two items that can be swapped out, pick the cheaper one.
+			if((not chosenPrice) or (ePrice < chosenPrice)) then
+				chosenSlot = slot;
+				chosenPrice = ePrice;
+			end
+		end
+	end
+	return chosenSlot;
 end
 
 -- only call this function if itemProtoFromId(id) returns non-nil.
@@ -252,21 +274,20 @@ function maybeEquip(itemGuid)
 		STATE.itemDataCallbacks[itemGuid] = maybeEquip;
 		return;
 	end
-	if(wantToWear(id)) then
-		equip(itemGuid, id);
+	local slot = wantToWear(id);
+	if(slot) then
+		equip(itemGuid, id, slot);
 	end
 end
 
-function equip(itemGuid, itemId)
+function equip(itemGuid, itemId, slot)
 	local proto = itemProtoFromId(itemId);
 	local msg = "Equipping "..itemId.." "..itemGuid:hex().." "..proto.name;
 	print(msg);
 	partyChat(msg);
 
 	-- todo: for items that can go in more than one slot, pick a good one.
-	local dstSlot = itemEquipSlot(proto);
-	print(dump(dstSlot), type(dstSlot));
-	send(CMSG_AUTOEQUIP_ITEM_SLOT, {itemGuid=itemGuid, dstSlot=dstSlot});
+	send(CMSG_AUTOEQUIP_ITEM_SLOT, {itemGuid=itemGuid, dstSlot=slot});
 end
 
 function investigateInventory(f)
