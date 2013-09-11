@@ -4,9 +4,7 @@
 extern "C" {
 #endif
 void loadDBC(void);
-int l_spell(lua_State* L);
-int l_spellDuration(lua_State* L);
-int l_spellRange(lua_State* L);
+void registerLuaDBC(lua_State*);
 #ifdef __cplusplus
 }
 #endif

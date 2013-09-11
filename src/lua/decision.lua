@@ -17,7 +17,8 @@ function decision(realTime)
 	-- if there are several enemies, pick any one.
 	local i, enemy = next(STATE.enemies);
 	if(enemy) then
-		attack(enemy);
+		setAction("Attacking "..enemy.guid:hex());
+		attack(realTime, enemy);
 		return;
 	end
 	STATE.meleeing = false;
@@ -25,18 +26,21 @@ function decision(realTime)
 	-- if there are units that can be looted, go get them.
 	local i, lootable = next(STATE.lootables);
 	if(lootable) then
+		setAction("Looting "..lootable.guid:hex());
 		goLoot(lootable);
 		return;
 	end
 
-	-- if we have guest finishers or giver, go to them.
+	-- if we have quest finishers or givers, go to them.
 	local i, finisher = next(STATE.questFinishers);
 	if(finisher) then
+		setAction("Finishing quests at "..finisher.guid:hex());
 		finishQuests(finisher);
 		return;
 	end
 	local i, giver = next(STATE.questGivers);
 	if(giver) then
+		setAction("Getting quests at "..giver.guid:hex());
 		getQuests(giver);
 		return;
 	end
@@ -46,12 +50,14 @@ function decision(realTime)
 	if(trainer and (bit32.band(STATE.myLevel, bit32.bnot(1)) >
 		PERMASTATE.classTrainingCompleteForLevel))
 	then
+		setAction("Training at "..trainer.guid:hex());
 		goTrain(trainer);
 		return;
 	end
 
 	-- don't try following the leader if we don't know where he is.
 	if(STATE.inGroup and STATE.leader.location.position.x) then
+		setAction("Following leader");
 		follow(STATE.leader);
 		--local myValues = STATE.my.values;
 		--print("Following. XP: "..tostring(myValues[PLAYER_XP])..
@@ -175,13 +181,27 @@ local function getDuration(index, level)
 	return dur / 1000;
 end
 
-function attack(enemy)
+function attack(realTime, enemy)
 	local dist = distanceToObject(enemy);
 	print("attack, dist", dist);
 
 	-- if we have a good ranged attack, use that.
 	-- otherwise, go to melee.
 
+	if(realTime >= STATE.spellCooldown) then
+		if(attackSpell(dist, realTime, enemy)) then return; end
+	end
+
+	if(dist < MELEE_DIST and not STATE.meleeing) then
+		print("start melee");
+		setTarget(enemy);
+		castSpell(STATE.meleeSpell, enemy);
+		send(CMSG_ATTACKSWING, {target=enemy.guid});
+		STATE.meleeing = true;
+	end
+end
+
+function attackSpell(dist, realTime, enemy)
 	-- look at all our attack spells and find the best one.
 	local maxDpc = 0;
 	local maxDamageForFree = 0;
@@ -305,16 +325,16 @@ function attack(enemy)
 		setTarget(enemy);
 		castSpell(bestSpell.id, enemy);
 		-- todo: handle cooldown.
-		return;
+		local recovery = math.max(bestSpell.RecoveryTime,
+			bestSpell.CategoryRecoveryTime,
+			bestSpell.StartRecoveryTime);
+		local castTime = cSpellCastTime(bestSpell.CastingTimeIndex).base;
+		print("recovery: "..recovery.." castTime: "..castTime);
+		local cooldown = math.max(recovery, castTime);
+		STATE.spellCooldown = realTime + cooldown / 1000;
+		return true;
 	end
-
-	if(dist < requiredDistance and not STATE.meleeing) then
-		print("start melee");
-		setTarget(enemy);
-		castSpell(STATE.meleeSpell, enemy);
-		send(CMSG_ATTACKSWING, {target=enemy.guid});
-		STATE.meleeing = true;
-	end
+	return false;
 end
 
 function setTarget(t)

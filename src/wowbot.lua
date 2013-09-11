@@ -63,6 +63,8 @@ if(rawget(_G, 'STATE') == nil) then
 		-- if this doesn't empty, something went wrong.
 		training = {},
 
+		currentAction = false,
+
 		myLocation = Location.new(),	-- set by hSMSG_LOGIN_VERIFY_WORLD.
 		my = false,	-- KnownObject.
 		me = false,	-- == my.
@@ -75,6 +77,7 @@ if(rawget(_G, 'STATE') == nil) then
 		meleeSpell = false,
 		attacking = false,
 		meleeing = false,
+		spellCooldown = 0,
 
 		-- key: id. value: table. All the spells we know.
 		knownSpells = {},
@@ -156,8 +159,15 @@ function saveState()
 end
 
 function fileExists(name)
-   local f=io.open(name,"r")
-   if f~=nil then io.close(f) return true else return false end
+	local f=io.open(name,"r")
+	if f~=nil then io.close(f) return true else return false end
+end
+
+function setAction(a)
+	if(STATE.currentAction ~= a) then
+		STATE.currentAction = a;
+		partyChat(a);
+	end
 end
 
 local updateMonsterPosition;
@@ -466,7 +476,7 @@ function hSMSG_UPDATE_OBJECT(p)
 				send(CMSG_QUESTGIVER_STATUS_QUERY, {guid=b.guid});
 			end
 			if(b.guid == STATE.myGuid) then
-				print("UpdateObject me!");
+				--print("UpdateObject me!");
 			end
 			doCallbacks(STATE.knownObjects[b.guid].updateValuesCallbacks);
 		elseif(b.type == UPDATETYPE_MOVEMENT) then
@@ -557,7 +567,11 @@ end
 
 -- misleading name; also sent when cast succeeds.
 function hSMSG_CAST_FAILED(p)
-	print("SMSG_CAST_FAILED", dump(p));
+	local hex;
+	if(p.result) then
+		hex = string.format("0x%02X", p.result);
+	end
+	print("SMSG_CAST_FAILED", tostring(hex), dump(p));
 	decision(getRealTime());
 end
 
@@ -596,7 +610,7 @@ function hSMSG_CANCEL_AUTO_REPEAT(p)
 end
 
 function hSMSG_MESSAGECHAT(p)
-	print("SMSG_MESSAGECHAT", dump(p));
+	--print("SMSG_MESSAGECHAT", dump(p));
 	handleChatMessage(p);
 end
 

@@ -68,6 +68,11 @@ class DbcWork < DllWork
 	end
 end
 
-DBC_SPELL = DbcWork.new('dbcSpell')
-DBC_SPELL_DURATION = DbcWork.new('dbcSpellDuration')
-DBC_SPELL_RANGE = DbcWork.new('dbcSpellRange')
+DBCs = [
+	'dbcSpell',
+	'dbcSpellDuration',
+	'dbcSpellRange',
+	'dbcSpellCastTimes',
+]
+
+DBC_WORKS = DBCs.collect do |d| DbcWork.new(d) end

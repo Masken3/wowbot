@@ -424,10 +424,9 @@ void initLua(WorldSession* session) {
 	lua_register(L, "cSetTimer", l_setTimer);
 	lua_register(L, "cRemoveTimer", l_removeTimer);
 	lua_register(L, "cSpellEffectName", l_spellEffectName);
-	lua_register(L, "cSpell", l_spell);
-	lua_register(L, "cSpellDuration", l_spellDuration);
-	lua_register(L, "cSpellRange", l_spellRange);
 	lua_register(L, "cTraceback", l_traceback);
+
+	registerLuaDBC(L);
 
 	opcodeLua(L);
 	movementFlagsLua(L);

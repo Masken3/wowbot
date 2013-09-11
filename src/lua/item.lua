@@ -189,12 +189,12 @@ function itemTest()
 end
 
 function hSMSG_ITEM_PUSH_RESULT(p)
-	print("SMSG_ITEM_PUSH_RESULT", dump(p));
+	--print("SMSG_ITEM_PUSH_RESULT", dump(p));
 	-- we've got a new item. if we want to wear it, then wear it.
 
 	-- if it wasn't us who got the item, we don't care.
 	if(p.playerGuid ~= STATE.myGuid) then
-		print("got SMSG_ITEM_PUSH_RESULT for another player.");
+		--print("got SMSG_ITEM_PUSH_RESULT for another player.");
 		return;
 	end
 

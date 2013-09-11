@@ -5,6 +5,7 @@ CONFIG_CCOMPILE_DEFAULT = 'debug'
 require './config.rb'
 require File.expand_path "#{CONFIG_WOWFOOT_DIR}/rules/cExe.rb"
 require './genLuaFromHeader.rb'
+require './genDbc.rb'
 require './libs.rb'
 
 class GenTask < MultiFileTask
@@ -49,13 +50,14 @@ work = ExeWork.new do
 				'ItemSubclassArmor']}),
 		GenLuaFromHeaderTask.new('Player', 'server-code/Player.h',
 			{:includedEnums=>['EquipmentSlots', 'InventorySlots', 'InventoryPackSlots',
-				'TradeSlots', 'TrainerSpellState']}),
+				'TradeSlots', 'TrainerSpellState', 'QuestSlotStateMask']}),
 		GenLuaFromHeaderTask.new('Config', 'server-code/SharedDefines.h',
 			{:includedEnums=>['Gender', 'Races', 'Classes'],
 				:cutPrefix=>true}),
 		GenLuaFromHeaderTask.new('LootMgr', 'server-code/LootMgr.h'),
 		GenLuaFromHeaderTask.new('GossipDef', 'server-code/GossipDef.h',
 			{:includedEnums=>['GossipOptionIcon']}),
+		GenDbcTask.new(DBCs),
 	]
 	@SPECIFIC_CFLAGS = {
 		'worldPacketParsersLua.c' => ' -Wno-vla',
@@ -68,7 +70,7 @@ work = ExeWork.new do
 	@EXTRA_INCLUDES = ['build', 'src', 'server-code', 'server-code/Auth',
 		"#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers/spell",
 	]
-	@EXTRA_OBJECTS = [DBC_SPELL, DBC_SPELL_DURATION, DBC_SPELL_RANGE]
+	@EXTRA_OBJECTS = DBC_WORKS
 	@LIBRARIES = ['crypto', 'z']
 	if(HOST == :win32)
 		@SOURCES << "#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/util/win32"

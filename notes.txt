@@ -119,3 +119,8 @@ Bot should then ask commander whenever it gets a new item that would be better.
 00:39 2013-09-09
 looting: see UNIT_DYNFLAG_LOOTABLE.
 CORPSE_DYNFLAG_LOOTABLE only applies to player corpses in Battlegrounds.
+
+00:57 2013-09-11
+todo: fix rogue's combat running away
+todo: fix spell effect after combat
+todo: fix loot effect after combat
