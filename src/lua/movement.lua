@@ -396,6 +396,38 @@ function doStealthMoveBehindTarget(realTime, mo, maxDist)
 	end
 end
 
+-- returns true if behind and close enough.
+function doCombatMoveBehindTarget(realTime, mo)
+	local myPos = STATE.myLocation.position;
+	local tarPos = mo.location.position;
+	local tarO = mo.location.orientation;
+	local mov = mo.movement;
+	local diff = diff3(myPos, tarPos);
+	local dist = length2(diff);
+	local newOrientation = orient2(diff);
+	local maxDist = MELEE_DIST;
+
+	if(newOrientation < 0) then newOrientation = newOrientation + math.pi*2; end
+	local oDiff = math.abs(newOrientation - tarO);
+	if(oDiff > math.pi) then
+		oDiff = math.pi*2 - oDiff;
+	end
+	assert(oDiff <= math.pi);
+
+	local isBehind = oDiff < (math.pi / 2);	-- 90 degrees
+	if(isBehind) then
+		doMoveToTarget(realTime, mo, maxDist);
+		return dist < maxDist;
+	end
+
+	-- we're in front of the target. run past it, then turn around.
+	local dx = math.cos(newOrientation) * maxDist/2;
+	local dy = math.sin(newOrientation) * maxDist/2;
+	local attackPos = {x=tarPos.x+dx, y=tarPos.y+dy, z=math.max(tarPos.z, myPos.z)};
+	doMoveToPoint(realTime, attackPos);
+	return false;
+end
+
 function doMoveToPoint(realTime, tarPos)
 	local myPos = STATE.myLocation.position;
 	local diff = diff3(myPos, tarPos);

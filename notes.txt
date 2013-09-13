@@ -125,4 +125,4 @@ todo: fix spell effect after combat
 todo: fix loot effect after combat
 
 08:35 2013-09-12
-todo: do stealth and pickpocketing. train on neutral mobs.
+todo: pickpocketing. Test it once we've trained the spell.

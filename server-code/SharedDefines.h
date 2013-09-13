@@ -305,7 +305,7 @@ enum SpellAttributesEx
 	SPELL_ATTR_EX_CHANNELED_2                   = 0x00000040,            // 6 channeled 2
 	SPELL_ATTR_EX_NEGATIVE                      = 0x00000080,            // 7
 	SPELL_ATTR_EX_NOT_IN_COMBAT_TARGET          = 0x00000100,            // 8 Spell req target not to be in combat state
-	SPELL_ATTR_EX_UNK9                          = 0x00000200,            // 9
+	SPELL_ATTR_EX_BEHIND_TARGET_1               = 0x00000200,            // 9 SPELL_ATTR_EX2_BEHIND_TARGET_2 also required.
 	SPELL_ATTR_EX_NO_THREAT                     = 0x00000400,            // 10 no generates threat on cast 100%
 	SPELL_ATTR_EX_UNK11                         = 0x00000800,            // 11
 	SPELL_ATTR_EX_UNK12                         = 0x00001000,            // 12
@@ -352,7 +352,7 @@ enum SpellAttributesEx2
 	SPELL_ATTR_EX2_UNK17                        = 0x00020000,            // 17 suspend weapon timer instead of resetting it, (?Hunters Shot and Stings only have this flag?)
 	SPELL_ATTR_EX2_UNK18                        = 0x00040000,            // 18 Only Revive pet - possible req dead pet
 	SPELL_ATTR_EX2_NOT_NEED_SHAPESHIFT          = 0x00080000,            // 19 does not necessary need shapeshift (pre-3.x not have passive spells with this attribute)
-	SPELL_ATTR_EX2_UNK20                        = 0x00100000,            // 20
+	SPELL_ATTR_EX2_BEHIND_TARGET_2              = 0x00100000,            // 20 SPELL_ATTR_EX_BEHIND_TARGET_1 also required.
 	SPELL_ATTR_EX2_DAMAGE_REDUCED_SHIELD        = 0x00200000,            // 21 for ice blocks, pala immunity buffs, priest absorb shields, but used also for other spells -> not sure!
 	SPELL_ATTR_EX2_UNK22                        = 0x00400000,            // 22
 	SPELL_ATTR_EX2_UNK23                        = 0x00800000,            // 23 Only mage Arcane Concentration have this flag

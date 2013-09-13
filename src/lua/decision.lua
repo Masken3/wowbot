@@ -332,8 +332,18 @@ function attackSpell(dist, realTime, enemy)
 
 	-- calculate distance.
 	local requiredDistance = MELEE_DIST;
+	local behindTarget = false;
 	if(bestSpell) then
 		print("bestSpell: "..bestSpell.name.." "..bestSpell.rank);
+
+		if(bit32.btest(bestSpell.AttributesEx, SPELL_ATTR_EX_BEHIND_TARGET_1) and
+			bit32.btest(bestSpell.AttributesEx2, SPELL_ATTR_EX2_BEHIND_TARGET_2))
+		then	-- Backstab or equivalent.
+			behindTarget = true;
+			-- todo: if we have aggro from this target, this kind of spell won't work,
+			-- so we must disregard it from our selection of attack spells.
+		end
+
 		local ri = bestSpell.rangeIndex;
 		if(ri == SPELL_RANGE_IDX_SELF_ONLY or
 			ri == SPELL_RANGE_IDX_COMBAT or
@@ -352,7 +362,9 @@ function attackSpell(dist, realTime, enemy)
 
 	-- start moving.
 	local closeEnough = true;
-	if(requiredDistance) then
+	if(behindTarget) then
+		closeEnough = doCombatMoveBehindTarget(getRealTime(), enemy);
+	elseif(requiredDistance) then
 		-- also sets orientation, so is worthwhile to do even if we're already in range.
 		doMoveToTarget(getRealTime(), enemy, requiredDistance);
 		closeEnough = (dist < requiredDistance);

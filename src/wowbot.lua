@@ -464,6 +464,9 @@ function hSMSG_INITIAL_SPELLS(p)
 		for i, e in ipairs(s.effect) do
 			--print(e.id, SPELL_ATTACK_EFFECTS[e.id]);
 			if(SPELL_ATTACK_EFFECTS[e.id]) then
+				if(not STATE.attackSpells[id]) then
+					print(id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+				end
 				STATE.attackSpells[id] = s;
 			end
 			if(e.id == SPELL_EFFECT_ATTACK) then
