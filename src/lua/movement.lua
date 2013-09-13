@@ -8,6 +8,13 @@ local function distance3(a, b)
 	return square^0.5
 end
 
+local function distance2(a, b)
+	local dx = a.x - b.x
+	local dy = a.y - b.y
+	local square = dx^2 + dy^2
+	return square^0.5
+end
+
 -- returns the vector from xyz points a to b.
 -- assertion: a + d = b
 -- conclusion: d = b - a
@@ -26,13 +33,20 @@ local function length3(v)
 	return square^0.5
 end
 
+-- returns the length of xy vector v.
+local function length2(v)
+	local square = v.x^2 + v.y^2
+	return square^0.5
+end
+
 -- returns the orientation, in radians, of the xy vector v.
 local function orient2(v)
 	return math.atan2(v.y, v.x);
 end
 
 function distanceToObject(o)
-	return distance3(STATE.myLocation.position, o.location.position);
+	-- todo: fix 3D movement and change this back to distance3.
+	return distance2(STATE.myLocation.position, o.location.position);
 end
 
 -- In yards, the same unit as world coordinates.
@@ -55,6 +69,15 @@ MELEE_TOLERANCE = FOLLOW_TOLERANCE
 -- In yards per second.
 RUN_SPEED = 7
 WALK_SPEED = 2.5
+
+local function runSpeed(target)
+	local slow = GetMaxNegativeAuraModifier(target, SPELL_AURA_MOD_DECREASE_SPEED);
+	return RUN_SPEED * (100 + slow) / 100;
+end
+
+local function myRunSpeed()
+	return runSpeed(STATE.me);
+end
 
 -- format guid
 function fg(guid)
@@ -85,15 +108,16 @@ function updateMyPosition(realTime)
 	local diffTime = realTime - STATE.moveStartTime;
 	local p = STATE.myLocation.position;
 	local o = STATE.myLocation.orientation;
-	p.x = p.x + math.cos(o) * diffTime * RUN_SPEED;
-	p.y = p.y + math.sin(o) * diffTime * RUN_SPEED;
+	p.x = p.x + math.cos(o) * diffTime * myRunSpeed();
+	p.y = p.y + math.sin(o) * diffTime * myRunSpeed();
 	STATE.moveStartTime = realTime;
 end
 
 function updateLeaderPosition(realTime)
+	if(not STATE.leader) then return; end
 	local p = STATE.leader.location.position;
 	local m = STATE.leader.movement;
-	if(not m.startTime) then return; end
+	if(not m or not m.startTime) then return; end
 	local diffTime = realTime - m.startTime;
 	p.x = p.x + m.dx * diffTime;
 	p.y = p.y + m.dy * diffTime;
@@ -172,11 +196,13 @@ function hMovement(opcode, p)
 		-- normalize vector.
 		local factor = speed;
 		if(x ~= 0 and y ~= 0) then
-			-- multiply vector by square root of 2.
-			factor = factor * 2^0.5;
+			-- multiply vector by half the square root of 2.
+			factor = factor * ((2^0.5) / 2);
 		end
-		STATE.leader.movement.dx = y * factor * math.cos(p.o) + x * factor * math.cos(p.o);
-		STATE.leader.movement.dy = y * factor * math.sin(p.o) + x * factor * math.sin(p.o);
+		if(not STATE.leader.movement) then STATE.leader.movement = Movement.new(); end
+		--print("factor: "..factor.." x: "..x.." y: "..y);
+		STATE.leader.movement.dx = y * factor * math.cos(p.o) + x * factor * math.cos(p.o - math.pi/2);
+		STATE.leader.movement.dy = y * factor * math.sin(p.o) + x * factor * math.sin(p.o - math.pi/2);
 		STATE.leader.movement.startTime = realTime;
 
 		-- todo: handle the case of being on different maps.
@@ -196,12 +222,108 @@ local function minGEZ(a, b)
 	end
 end
 
+function aggroRadius(target)
+	-- maximum effective level diff: 25.
+	local levelDiff = math.max(STATE.myLevel - target.values[UNIT_FIELD_LEVEL], -25);
+	-- base radius: 20 yards.
+	-- varies with 1 yard per level.
+	-- minimum radius: 5 yards (melee distance).
+	local radius = math.max(20 - levelDiff, 5);
+	return radius;
+end
+
+function doMoveBehindTarget(realTime, mo, maxDist)
+	local myPos = STATE.myLocation.position;
+	local tarPos = mo.location.position;
+	return doMoveToPoint(realTime, tarPos);	--hack
+--[[
+	local tarO = mo.location.orientation - math.pi;
+	local mov = mo.movement;
+	local diff = diff3(myPos, tarPos);
+	local dist = length2(diff);
+	local newOrientation = orient2(diff);
+
+	-- max oDiff is pi radians, 180 degrees.
+	local oDiff = math.abs(newOrientation - tarO);
+	print("dist: "..dist);
+	print("newOrientation: "..newOrientation, "tarO: "..tarO);
+	if(oDiff > math.pi) then
+		print("orig oDiff: "..oDiff);
+		oDiff = oDiff - math.pi;
+	end
+	print("oDiff: "..oDiff);
+	assert(oDiff <= math.pi);
+
+	-- determines which side of target we go to.
+	local oMult;
+	if((newOrientation - tarO) > 0) then
+		oMult = 1;
+	else
+		oMult = -1;
+	end
+
+	local isBehind = oDiff < (math.pi / 4);	-- 45 degrees
+	if(isBehind) then
+		return doMoveToTarget(realTime, mo, maxDist);
+	end
+	if(oDiff < (math.pi / 2)) then	-- 90 degrees
+		-- move to a point 45 degrees behind target, at maxDist.
+		local dx = math.cos(tarO + math.pi*0.75) * maxDist;
+		local dy = math.sin(tarO + math.pi*0.75) * maxDist;
+		local rearPos = {x=tarPos.x+dx, y=tarPos.y+dy, z=math.max(tarPos.z, myPos.z)};
+		setAction("Moving to rear...");
+		doMoveToPoint(realTime, rearPos);
+	else
+		if(dist < (maxDist * 2)) then
+			-- we're too close. gotta move away before we can safely walk around.
+			local dx = math.cos(newOrientation) * -maxDist*2;
+			local dy = math.sin(newOrientation) * -maxDist*2;
+			local safePos = {x=tarPos.x+dx, y=tarPos.y+dy, z=math.max(tarPos.z, myPos.z)};
+			setAction("Moving to safe position...");
+			doMoveToPoint(realTime, safePos);
+		else
+			-- move to a point 90 degrees off tarO, at maxDist * 1.5.
+			local dx = math.cos(tarO + math.pi/2) * -maxDist*1.5;
+			local dy = math.sin(tarO + math.pi/2) * -maxDist*1.5;
+			local sidePos = {x=tarPos.x+dx, y=tarPos.y+dy, z=math.max(tarPos.z, myPos.z)};
+			setAction("Moving to side...");
+			doMoveToPoint(realTime, sidePos);
+		end
+	end
+	]]
+end
+
+function doMoveToPoint(realTime, tarPos)
+	local myPos = STATE.myLocation.position;
+	local diff = diff3(myPos, tarPos);
+	local dist = length2(diff);
+	local newOrientation = orient2(diff);
+	local oChanged = (STATE.myLocation.orientation ~= newOrientation);
+	STATE.myLocation.orientation = newOrientation;
+	local data = {
+		flags = MOVEFLAG_FORWARD,
+		pos = myPos,
+		o = newOrientation,
+		time = 0,
+		fallTime = 0,
+	}
+	STATE.moving = true;
+	--print(dump(data));
+	send(MSG_MOVE_START_FORWARD, data);
+	-- set timer to when we'll arrive, or at most one second.
+	STATE.moveStartTime = realTime;
+	local moveEndTime = STATE.moveStartTime + dist / myRunSpeed();
+	--print("tToPoint: "..(moveEndTime - realTime));
+	setTimer(movementTimerCallback, moveEndTime);
+end
+
 function doMoveToTarget(realTime, mo, maxDist)
 	local myPos = STATE.myLocation.position;
 	local tarPos = mo.location.position;
 	local mov = mo.movement;
 	local diff = diff3(myPos, tarPos);
-	local dist = length3(diff);
+	-- todo: fix 3D movement and change this back to length3.
+	local dist = length2(diff);
 	local newOrientation = orient2(diff);
 	local oChanged = (STATE.myLocation.orientation ~= newOrientation);
 	STATE.myLocation.orientation = newOrientation;
@@ -237,8 +359,8 @@ function doMoveToTarget(realTime, mo, maxDist)
 			c = -(a*tarPos.x + b*tarPos.y);
 			local x = myPos.x;
 			local y = myPos.y;
-			local dx = math.cos(data.o) * RUN_SPEED;
-			local dy = math.sin(data.o) * RUN_SPEED;
+			local dx = math.cos(data.o) * myRunSpeed();
+			local dy = math.sin(data.o) * myRunSpeed();
 			local t1 = (maxDist*((a^2+b^2)^0.5) - (a*x+b*y+c)) / (a*dx+b*dy);
 			local t2 = (maxDist*((a^2+b^2)^0.5) + a*x+b*y+c) / -(a*dx+b*dy);
 			local t = minGEZ(t1, t2);
@@ -252,9 +374,7 @@ function doMoveToTarget(realTime, mo, maxDist)
 			return;
 		end
 
-		-- todo: take into account movement speed modifiers,
-		-- like ghost form, mount effects and other auras.
-		local moveEndTime = STATE.moveStartTime + (dist - maxDist) / RUN_SPEED;
+		local moveEndTime = STATE.moveStartTime + (dist - maxDist) / myRunSpeed();
 		--local timerTime = math.min(moveEndTime, STATE.moveStartTime + 1);
 		local timerTime = moveEndTime;
 		--print("still T:", timerTime - realTime);

@@ -154,7 +154,7 @@ function hSMSG_QUEST_QUERY_RESPONSE(p)
 end
 
 function hSMSG_QUESTGIVER_STATUS_MULTIPLE(p)
-	print("SMSG_QUESTGIVER_STATUS_MULTIPLE", dump(p));
+	--print("SMSG_QUESTGIVER_STATUS_MULTIPLE", dump(p));
 	for i, giver in ipairs(p.givers) do
 		hSMSG_QUESTGIVER_STATUS(giver);
 	end

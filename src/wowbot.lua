@@ -8,6 +8,7 @@ SUBFILES = {
 	'chat.lua',
 	'quests.lua',
 	'item.lua',
+	'aura.lua',
 }
 for i,f in ipairs(SUBFILES) do
 	dofile('src/lua/'..f)
@@ -31,10 +32,7 @@ KnownObject = Struct.new{guid='string', values='table', monsterMovement='table',
 if(rawget(_G, 'STATE') == nil) then
 	STATE = {
 		inGroup = false,
-		leader = MovingObject.new{
-			location=Location.new{position=Position.new()},
-			movement=Movement.new(),
-		},
+		leader = false,
 		newLeader = false,
 
 		groupMembers = {},	-- set by hSMSG_GROUP_LIST.
@@ -42,11 +40,13 @@ if(rawget(_G, 'STATE') == nil) then
 		knownObjects = {},
 
 		-- key:guid. value:knownObject from knownObjects.
+		-- when adding new ones, remember to add them to knownObjectHolders, too.
 		enemies = {},
 		questGivers = {},
 		questFinishers = {},
 		lootables = {},
 		trainers = {},
+		pickpocketables = {},
 
 		looting = false,
 
@@ -79,6 +79,10 @@ if(rawget(_G, 'STATE') == nil) then
 		meleeing = false,
 		spellCooldown = 0,
 
+		stealthed = false,
+		stealthSpell = false,
+		pickpocketSpell = false,
+
 		-- key: id. value: table. All the spells we know.
 		knownSpells = {},
 
@@ -110,6 +114,7 @@ if(rawget(_G, 'STATE') == nil) then
 	STATE.knownObjectHolders = {
 		STATE.knownObjects, STATE.enemies, STATE.questGivers,
 		STATE.questFinishers, STATE.lootables, STATE.trainers,
+		STATE.pickpocketables,
 	}
 
 	-- saved to and loaded from disk.
@@ -173,44 +178,58 @@ end
 local updateMonsterPosition;
 
 function hSMSG_MONSTER_MOVE(p)
-	--print("SMSG_MONSTER_MOVE", dump(p));
+	local i, pp = next(STATE.pickpocketables);
+	if(pp and p.guid == pp.guid) then
+		print("SMSG_MONSTER_MOVE", dump(p));
+	end
+
 	local o = STATE.knownObjects[p.guid];
 	if(not o) then return; end
 	o.monsterMovement = p;
-	o.location.position = Position.new(p.point);
+	o.location.position = o.location.position or Position.new(p.point);
 	if(p.type == MonsterMoveFacingAngle) then
 		o.location.orientation = p.angle;
 	end
-	if(not o.movement) then o.movement = Movement.new(); end
+	o.movement = o.movement or Movement.new();
+	local pos = o.location.position;
 	local mov = o.movement;
 	mov.dx = 0;
 	mov.dy = 0;
 	if(p.type == MonsterMoveStop) then return; end
 	local dur = p.duration / 1000;
 	-- save destination in unused key "dst".
+	local dst;
 	if(p.count) then
 		assert(p.count <= 1);
 		if(p.count == 0) then return; end
 		-- todo: enable handling of more than 1 points.
-		p.dst = p.points[1];
+		p.dst = p.point;
 	else
 		p.dst = p.destination;
 	end
-	mov.dx = (p.dst.x - p.point.x) / dur;
-	mov.dy = (p.dst.y - p.point.y) / dur;
+	mov.dx = (p.dst.x - pos.x) / dur;
+	mov.dy = (p.dst.y - pos.y) / dur;
 	mov.startTime = getRealTime();
+	p.endTime = mov.startTime + dur;
 	-- don't bother with timers; we can update all of them at decision time.
 end
 
 function updateMonsterPosition(realTime, o)
-	--print("updateMonsterPosition", o.guid:hex());
+	local i, pp = next(STATE.pickpocketables);
+	if(pp and o.guid == pp.guid) then
+		--print("updateMonsterPosition", o.guid:hex());
+	end
+
 	-- todo: enable handling of more than 1 points.
 	local mm = o.monsterMovement;
 	local mov = o.movement;
 	local dst = mm.dst;
 	if(not mm or not mov or not dst) then return; end
 	local elapsedTime = realTime - mov.startTime;
-	if(elapsedTime >= mm.duration / 1000) then
+	if(realTime >= mm.endTime) then
+		if(pp and o.guid == pp.guid) then
+			--print("Monster stop.");
+		end
 		o.location.position = Position.new(dst);
 		mov.dx = 0;
 		mov.dy = 0;
@@ -231,6 +250,10 @@ function updateEnemyPositions(realTime)
 	end
 	if(c > 1) then
 		print(c.." enemies.");
+	end
+	for guid, o in pairs(STATE.pickpocketables) do
+		updateMonsterPosition(realTime, o);
+		c = c + 1;
 	end
 end
 
@@ -256,17 +279,17 @@ function hSMSG_GROUP_DESTROYED(p)
 	STATE.inGroup = false;
 end
 function hSMSG_GROUP_LIST(p)
-	print("SMSG_GROUP_LIST", dump(p));
-	STATE.leader.guid = p.leaderGuid;
+	--print("SMSG_GROUP_LIST", dump(p));
+	STATE.leader = STATE.knownObjects[p.leaderGuid];
 	if(p.memberCount == 0) then
 		STATE.inGroup = false;
 		print("Group disbanded.");
 	else
 		STATE.inGroup = true;
-		print("Group joined.");
+		--print("Group joined.");
 		STATE.groupMembers = p.members;
 		for i,m in ipairs(STATE.groupMembers) do
-			print(m.guid:hex());
+			--print(m.guid:hex());
 			if(STATE.newLeader == m.guid) then
 				send(CMSG_GROUP_SET_LEADER, {guid=m.guid});
 				STATE.newLeader = false;
@@ -282,6 +305,7 @@ end
 
 function loginComplete()
 	itemLoginComplete();
+	auraLoginComplete();
 end
 
 -- may need reversing.
@@ -494,7 +518,7 @@ function hSMSG_UPDATE_OBJECT(p)
 			valuesUpdated(STATE.knownObjects[b.guid], b);
 		end
 	end
-	decision(getRealTime());
+	decision();
 end
 
 function hSMSG_DESTROY_OBJECT(p)
@@ -534,6 +558,16 @@ function hSMSG_INITIAL_SPELLS(p)
 				print("Melee spell:", id);
 				STATE.meleeSpell = id;
 			end
+			if((e.id == SPELL_EFFECT_APPLY_AURA) and (e.applyAuraName == SPELL_AURA_MOD_STEALTH)) then
+				if(not STATE.stealthSpell or (STATE.stealthSpell.rank < s.rank)) then
+					print("Stealth spell: "..id.." "..s.rank);
+					STATE.stealthSpell = s;
+				end
+			end
+			if(e.id == SPELL_EFFECT_PICKPOCKET) then
+				assert(not STATE.pickpocketSpell);
+				STATE.pickpocketSpell = s;
+			end
 		end
 		STATE.knownSpells[id] = s;
 	end
@@ -572,12 +606,12 @@ function hSMSG_CAST_FAILED(p)
 		hex = string.format("0x%02X", p.result);
 	end
 	print("SMSG_CAST_FAILED", tostring(hex), dump(p));
-	decision(getRealTime());
+	decision();
 end
 
 local function handleAttackCanceled()
 	STATE.meleeing = false;
-	decision(getRealTime());
+	decision();
 end
 
 function hSMSG_ATTACKSWING_NOTINRANGE(p)
@@ -612,6 +646,18 @@ end
 function hSMSG_MESSAGECHAT(p)
 	--print("SMSG_MESSAGECHAT", dump(p));
 	handleChatMessage(p);
+end
+
+function hMSG_RAID_TARGET_UPDATE(p)
+	print("MSG_RAID_TARGET_UPDATE", dump(p));
+	if(STATE.stealthSpell and (p.id == RAID_ICON_STAR)) then
+		-- todo: also check STATE.pickpocketSpell
+		STATE.pickpocketables = {};	--hack
+		if(isValidGuid(p.guid)) then
+			STATE.pickpocketables[p.guid] = STATE.knownObjects[p.guid];
+		end
+		decision();
+	end
 end
 
 do

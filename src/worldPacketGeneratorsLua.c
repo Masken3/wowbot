@@ -422,6 +422,12 @@ static uint16 genCMSG_TRAINER_BUY_SPELL(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+static uint16 genCMSG_CANCEL_AURA(lua_State* L, byte* buf) {
+	GL_START;
+	M(uint32, spellId);
+	GL_END;
+}
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -457,6 +463,7 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_CREATURE_QUERY);
 		GEN_CASE(CMSG_TRAINER_LIST);
 		GEN_CASE(CMSG_TRAINER_BUY_SPELL);
+		GEN_CASE(CMSG_CANCEL_AURA);
 		default: return NULL;
 	}
 }

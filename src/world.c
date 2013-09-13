@@ -35,6 +35,8 @@
 #include "PlayerLua.h"
 #include "LootMgrLua.h"
 #include "GossipDefLua.h"
+#include "SpellAuraDefinesLua.h"
+#include "worldHandlersLua.h"
 
 #define DEFAULT_WORLDSERVER_PORT 8085
 
@@ -235,7 +237,8 @@ BOOL readLua(WorldSession* session) {
 					free(session->luaTimes);
 				session->luaTimes = (time_t*)malloc(sizeof(time_t)*fileCount);
 				session->luaTimeCount = fileCount;
-				LOG("New SUBFILES count: %i\n", fileCount);
+				//LOG("New SUBFILES count: %i\n", fileCount);
+				foundDifference = TRUE;
 			}
 			for(int i=0; i<fileCount; i++) {
 				lua_rawgeti(L, -1, i+1);
@@ -248,8 +251,9 @@ BOOL readLua(WorldSession* session) {
 				}
 				if(session->luaTimes[i] != s.st_mtime) {
 					session->luaTimes[i] = s.st_mtime;
+					if(!foundDifference)
+						LOG("SUBFILE diff: %s\n", buf);
 					foundDifference = TRUE;
-					LOG("SUBFILE diff: %s\n", buf);
 				}
 			}
 			lua_pop(L, 1);
@@ -442,6 +446,8 @@ void initLua(WorldSession* session) {
 	PlayerLua(L);
 	LootMgrLua(L);
 	GossipDefLua(L);
+	SpellAuraDefinesLua(L);
+	worldHandlersLua(L);
 }
 
 BOOL luaPcall(lua_State* L, int nargs) {

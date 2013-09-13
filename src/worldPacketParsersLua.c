@@ -1075,3 +1075,36 @@ void pSMSG_TRAINER_BUY_SUCCEEDED(pLUA_ARGS) {
 	M(Guid, guid);
 	M(uint32, spellId);
 }
+
+void pSMSG_SET_EXTRA_AURA_INFO(pLUA_ARGS) {
+	PL_START;
+	MV(PackedGuid, targetGuid);
+	M(byte, auraSlot);
+	M(uint32, spellId);
+	M(uint32, maxDuration);
+	M(uint32, duration);
+}
+
+void pMSG_RAID_TARGET_UPDATE(pLUA_ARGS) {
+	static const uint TARGET_ICON_COUNT = 8;
+	PL_START;
+	{
+		MM(byte, updateType);
+		if(updateType == 0) {
+			M(byte, id);
+			M(Guid, guid);
+		} else if(updateType == 1) {
+			lua_pushstring(L, "icons");
+			lua_createtable(L, TARGET_ICON_COUNT, 0);
+			for(uint32 i=1; i<=TARGET_ICON_COUNT; i++) {
+				lua_createtable(L, 0, 2);
+				M(byte, id);
+				M(Guid, guid);
+				lua_rawseti(L, -2, i);
+			}
+			lua_settable(L, -3);
+		} else {
+			LOG("ERROR: MSG_RAID_TARGET_UPDATE updateType 0x%02x\n", updateType);
+		}
+	}
+}

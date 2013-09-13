@@ -1,6 +1,7 @@
 
 -- implementation of the decision tree from notes.txt
 function decision(realTime)
+	realTime = realTime or getRealTime();
 	updateEnemyPositions(realTime);
 	updateMyPosition(realTime);
 	updateLeaderPosition(realTime);
@@ -16,12 +17,25 @@ function decision(realTime)
 	-- if an enemy targets a party member, attack that enemy.
 	-- if there are several enemies, pick any one.
 	local i, enemy = next(STATE.enemies);
-	if(enemy) then
+	if(enemy and not STATE.stealthed) then
 		setAction("Attacking "..enemy.guid:hex());
 		attack(realTime, enemy);
 		return;
 	end
 	STATE.meleeing = false;
+
+	-- STATE.pickpocketables is filled only if you have
+	-- STATE.stealthSpell and STATE.pickpocketSpell.
+	local i, p = next(STATE.pickpocketables);
+	if(p) then
+		setAction("Pickpocketing "..p.guid:hex());
+		pickpocket(p);
+		return;
+	elseif(STATE.stealthed) then
+		partyChat("Canceling stealth...");
+		send(CMSG_CANCEL_AURA, {spellId=STATE.stealthSpell.id});
+		STATE.stealthed = false;
+	end
 
 	-- if there are units that can be looted, go get them.
 	local i, lootable = next(STATE.lootables);
@@ -65,6 +79,25 @@ function decision(realTime)
 		return;
 	end
 	--print("Nothing to do.");
+end
+
+function pickpocket(target)
+	local dist = distanceToObject(target);
+	local stealthDist = (MELEE_DIST*2 + aggroRadius(target));
+	doMoveToTarget(getRealTime(), target, stealthDist);
+	if((dist <= stealthDist) and not STATE.stealthed) then
+		castSpell(STATE.stealthSpell.id, STATE.me);
+		--todo: make sure to set this to false on spell fail or aura removed.
+		--also: on stealth fail, remove all pickpocketing targets, because we'll be stuck in combat.
+		STATE.stealthed = true;
+	end
+	if(STATE.stealthed) then
+		doMoveBehindTarget(getRealTime(), target, MELEE_DIST);
+		if(dist <= MELEE_DIST and not target.bot.pickpocketed) then
+			--castSpell(STATE.pickpocketSpell.id, target);
+			target.bot.pickpocketed = true;
+		end
+	end
 end
 
 function goTrain(trainer)
@@ -158,7 +191,7 @@ function follow(mo)
 	doMoveToTarget(getRealTime(), mo, FOLLOW_DIST);
 end
 
-local function calcAvgDamage(level, e)
+function calcAvgEffectPoints(level, e)
 	local dmg = e.basePoints;
 
 	dmg = dmg + e.realPointsPerLevel * level;
@@ -260,7 +293,7 @@ function attackSpell(dist, realTime, enemy)
 				e.id == SPELL_EFFECT_SCHOOL_DAMAGE or
 				e.id == SPELL_EFFECT_NORMALIZED_WEAPON_DMG or
 				e.id == SPELL_EFFECT_WEAPON_DAMAGE) then
-				damage = damage + calcAvgDamage(level, e);
+				damage = damage + calcAvgEffectPoints(level, e);
 				-- todo: handle combo-point spells
 				-- todo: add normalized weapon damage to such effects
 				if(e.pointsPerComboPoint ~= 0) then

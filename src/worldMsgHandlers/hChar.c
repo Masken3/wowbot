@@ -11,6 +11,7 @@
 #include "worldHandlers.h"
 #include "log.h"
 #include "SharedDefines.h"
+#include "Player.h"
 
 #include "hChar.h"
 

@@ -121,6 +121,8 @@ looting: see UNIT_DYNFLAG_LOOTABLE.
 CORPSE_DYNFLAG_LOOTABLE only applies to player corpses in Battlegrounds.
 
 00:57 2013-09-11
-todo: fix rogue's combat running away
 todo: fix spell effect after combat
 todo: fix loot effect after combat
+
+08:35 2013-09-12
+todo: do stealth and pickpocketing. train on neutral mobs.

@@ -58,6 +58,10 @@ work = ExeWork.new do
 		GenLuaFromHeaderTask.new('GossipDef', 'server-code/GossipDef.h',
 			{:includedEnums=>['GossipOptionIcon']}),
 		GenDbcTask.new(DBCs),
+		GenLuaFromHeaderTask.new('SpellAuraDefines', 'server-code/SpellAuraDefines.h',
+			{:includedEnums=>['AuraType', 'AuraConstants']}),
+		GenLuaFromHeaderTask.new('worldHandlers', 'src/worldHandlers.h',
+			{:includedEnums=>['RaidIcons']}),
 	]
 	@SPECIFIC_CFLAGS = {
 		'worldPacketParsersLua.c' => ' -Wno-vla',

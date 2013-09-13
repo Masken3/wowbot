@@ -136,6 +136,11 @@ local function dropItem(p)
 	reply(p, msg)
 end
 
+local function leave(p)
+	send(CMSG_GROUP_DISBAND)
+	reply(p, 'Leaving group.')
+end
+
 function handleChatMessage(p)
 	if(p.text == 'lq') then
 		listQuests(p)
@@ -155,6 +160,8 @@ function handleChatMessage(p)
 		recreate(p)
 	elseif(p.text == 'invite') then
 		invite(p)
+	elseif(p.text == 'leave') then
+		leave(p)
 	end
 end
 

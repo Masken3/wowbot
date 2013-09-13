@@ -56,11 +56,11 @@ function doCallbacks(callbacks)
 end
 
 function hSMSG_ITEM_QUERY_SINGLE_RESPONSE(p)
-	print("SMSG_ITEM_QUERY_SINGLE_RESPONSE "..p.itemId);
+	--print("SMSG_ITEM_QUERY_SINGLE_RESPONSE "..p.itemId);
 	STATE.itemProtosWaiting[p.itemId] = nil;
 	STATE.itemProtos[p.itemId] = p;
 	if(not next(STATE.itemProtosWaiting)) then
-		print("All item protos received.");
+		--print("All item protos received.");
 		doCallbacks(STATE.itemDataCallbacks);
 	end
 end
@@ -181,19 +181,19 @@ end
 
 function itemLoginComplete()
 	-- fetch item info for all equipped items.
-	print("Equipped items:");
+	--print("Equipped items:");
 	for i = EQUIPMENT_SLOT_START, EQUIPMENT_SLOT_END-1 do
 		local equippedGuid = equipmentInSlot(i);
 		if(equippedGuid) then
 			local id = itemIdOfGuid(equippedGuid);
-			print(id, equippedGuid:hex(), STATE.knownObjects[equippedGuid].values[ITEM_FIELD_STACK_COUNT]);
+			--print(id, equippedGuid:hex(), STATE.knownObjects[equippedGuid].values[ITEM_FIELD_STACK_COUNT]);
 			itemProtoFromId(id);
 		end
 	end
-	print("Inventory items:");
+	--print("Inventory items:");
 	investigateInventory(function(o)
 		local id = itemIdOfGuid(o.guid);
-		print(id, o.guid:hex(), o.values[ITEM_FIELD_STACK_COUNT]);
+		--print(id, o.guid:hex(), o.values[ITEM_FIELD_STACK_COUNT]);
 		maybeEquip(o.guid);
 	end)
 end
