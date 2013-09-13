@@ -92,7 +92,7 @@ function pickpocket(target)
 		STATE.stealthed = true;
 	end
 	if(STATE.stealthed) then
-		doMoveBehindTarget(getRealTime(), target, MELEE_DIST);
+		doStealthMoveBehindTarget(getRealTime(), target, MELEE_DIST);
 		if(dist <= MELEE_DIST and not target.bot.pickpocketed) then
 			--castSpell(STATE.pickpocketSpell.id, target);
 			target.bot.pickpocketed = true;

@@ -34,7 +34,7 @@ function setArgTimer(callback, targetTime, ...)
 	error("not implemented");
 end
 
-function removeTimer(callback)
+function removeTimer(callback, skipExistAssert)
 	--print("removeTimer", debug.getinfo(callback).name)
 	local timers = STATE.timers
 	if(STATE.inTimerCallback) then

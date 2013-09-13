@@ -211,6 +211,102 @@ function hMovement(opcode, p)
 	end
 end
 
+local function updateMonsterPosition(realTime, o)
+	local i, pp = next(STATE.pickpocketables);
+	if(pp and o.guid == pp.guid) then
+		--print("updateMonsterPosition", o.guid:hex());
+	end
+
+	-- todo: enable handling of more than 1 points.
+	local mm = o.monsterMovement;
+	if(not mm) then return; end
+	local mov = o.movement;
+	local dst = mm.dst;
+	if(not mm or not mov or not dst) then return; end
+	local elapsedTime = realTime - mov.startTime;
+	if(realTime >= mm.endTime) then
+		if(pp and o.guid == pp.guid) then
+			--print("Monster stop.");
+		end
+		o.location.position = Position.new(dst);
+		mov.dx = 0;
+		mov.dy = 0;
+		return;
+	else
+		local pos = o.location.position;
+		pos.x = pos.x + mov.dx * elapsedTime;
+		pos.y = pos.y + mov.dy * elapsedTime;
+		mov.startTime = realTime;
+	end
+end
+
+function updateEnemyPositions(realTime)
+	local c = 0;
+	for guid, o in pairs(STATE.enemies) do
+		updateMonsterPosition(realTime, o);
+		c = c + 1;
+	end
+	if(c > 1) then
+		print(c.." enemies.");
+	end
+	for guid, o in pairs(STATE.pickpocketables) do
+		updateMonsterPosition(realTime, o);
+		c = c + 1;
+	end
+end
+
+function hSMSG_MONSTER_MOVE(p)
+	local i, pp = next(STATE.pickpocketables);
+	if(pp and p.guid == pp.guid) then
+		--print("SMSG_MONSTER_MOVE", dump(p));
+	end
+
+	local o = STATE.knownObjects[p.guid];
+	if(not o) then return; end
+	o.monsterMovement = p;
+	o.location.position = o.location.position or Position.new(p.point);
+	local loc = o.location;
+	o.movement = o.movement or Movement.new();
+	local pos = loc.position;
+	local mov = o.movement;
+	mov.dx = 0;
+	mov.dy = 0;
+	if(p.type == MonsterMoveStop) then return; end
+	local dur = p.duration / 1000;
+	-- save destination in unused key "dst".
+	local dst;
+	if(p.count) then
+		assert(p.count <= 1);
+		if(p.count == 0) then return; end
+		-- todo: enable handling of more than 1 points.
+		p.dst = p.point;
+	else
+		p.dst = p.destination;
+	end
+
+	if(p.type == MonsterMoveNormal) then
+		loc.orientation = orient2(diff3(pos, p.dst));
+	elseif(p.type == MonsterMoveFacingTarget) then
+		local spot = STATE.knownObjects[p.target].location.position;
+		loc.orientation = orient2(diff3(pos, spot));
+	elseif(p.type == MonsterMoveFacingSpot) then
+		loc.orientation = orient2(diff3(pos, p.spot));
+	elseif(p.type == MonsterMoveFacingAngle) then
+		loc.orientation = p.angle;
+	end
+
+	mov.dx = (p.dst.x - pos.x) / dur;
+	mov.dy = (p.dst.y - pos.y) / dur;
+	mov.startTime = getRealTime();
+	p.endTime = mov.startTime + dur;
+	-- don't bother with timers; we can update all of them at decision time.
+	decision();
+end
+
+function hMSG_MOVE_HEARTBEAT(p)
+	print("MSG_MOVE_HEARTBEAT", dump(p));
+end
+
 -- returns the smallest number greater than or equal to zero.
 local function minGEZ(a, b)
 	local tMax = math.max(a, b);
@@ -232,65 +328,72 @@ function aggroRadius(target)
 	return radius;
 end
 
-function doMoveBehindTarget(realTime, mo, maxDist)
+local function closestOrientedPosition(mo, angleFactor, dist)
+	local tarPos = mo.location.position;
+	local tarO = mo.location.orientation;
+	local myPos = STATE.myLocation.position;
+
+	local dx = math.cos(tarO + math.pi*angleFactor) * dist;
+	local dy = math.sin(tarO + math.pi*angleFactor) * dist;
+	local rearPos1 = {x=tarPos.x+dx, y=tarPos.y+dy, z=math.max(tarPos.z, myPos.z)};
+	local dx = math.cos(tarO - math.pi*angleFactor) * dist;
+	local dy = math.sin(tarO - math.pi*angleFactor) * dist;
+	local rearPos2 = {x=tarPos.x+dx, y=tarPos.y+dy, z=math.max(tarPos.z, myPos.z)};
+	local rearPos;
+	if(distance2(myPos, rearPos1) < distance2(myPos, rearPos2)) then
+		return rearPos1;
+	else
+		return rearPos2;
+	end
+end
+
+function doStealthMoveBehindTarget(realTime, mo, maxDist)
 	local myPos = STATE.myLocation.position;
 	local tarPos = mo.location.position;
-	return doMoveToPoint(realTime, tarPos);	--hack
---[[
-	local tarO = mo.location.orientation - math.pi;
+	local tarO = mo.location.orientation;
 	local mov = mo.movement;
 	local diff = diff3(myPos, tarPos);
 	local dist = length2(diff);
 	local newOrientation = orient2(diff);
 
 	-- max oDiff is pi radians, 180 degrees.
+	if(newOrientation < 0) then newOrientation = newOrientation + math.pi*2; end
 	local oDiff = math.abs(newOrientation - tarO);
-	print("dist: "..dist);
-	print("newOrientation: "..newOrientation, "tarO: "..tarO);
+	--print("dist: "..dist);
+	--print("newOrientation: "..newOrientation, "tarO: "..tarO);
 	if(oDiff > math.pi) then
-		print("orig oDiff: "..oDiff);
-		oDiff = oDiff - math.pi;
+		--print("orig oDiff: "..oDiff);
+		oDiff = math.pi*2 - oDiff;
 	end
-	print("oDiff: "..oDiff);
+	--print("oDiff: "..oDiff);
 	assert(oDiff <= math.pi);
-
-	-- determines which side of target we go to.
-	local oMult;
-	if((newOrientation - tarO) > 0) then
-		oMult = 1;
-	else
-		oMult = -1;
-	end
 
 	local isBehind = oDiff < (math.pi / 4);	-- 45 degrees
 	if(isBehind) then
+		--setAction("Moving to rear...");
 		return doMoveToTarget(realTime, mo, maxDist);
 	end
 	if(oDiff < (math.pi / 2)) then	-- 90 degrees
 		-- move to a point 45 degrees behind target, at maxDist.
-		local dx = math.cos(tarO + math.pi*0.75) * maxDist;
-		local dy = math.sin(tarO + math.pi*0.75) * maxDist;
-		local rearPos = {x=tarPos.x+dx, y=tarPos.y+dy, z=math.max(tarPos.z, myPos.z)};
-		setAction("Moving to rear...");
+		local rearPos = closestOrientedPosition(mo, 0.75, maxDist);
+		--setAction("Moving to side-rear...");
 		doMoveToPoint(realTime, rearPos);
 	else
 		if(dist < (maxDist * 2)) then
 			-- we're too close. gotta move away before we can safely walk around.
+			-- conflicts with "move to side".
 			local dx = math.cos(newOrientation) * -maxDist*2;
 			local dy = math.sin(newOrientation) * -maxDist*2;
 			local safePos = {x=tarPos.x+dx, y=tarPos.y+dy, z=math.max(tarPos.z, myPos.z)};
-			setAction("Moving to safe position...");
+			--setAction("Moving to safe position...");
 			doMoveToPoint(realTime, safePos);
 		else
-			-- move to a point 90 degrees off tarO, at maxDist * 1.5.
-			local dx = math.cos(tarO + math.pi/2) * -maxDist*1.5;
-			local dy = math.sin(tarO + math.pi/2) * -maxDist*1.5;
-			local sidePos = {x=tarPos.x+dx, y=tarPos.y+dy, z=math.max(tarPos.z, myPos.z)};
-			setAction("Moving to side...");
+			-- move to a point 90 degrees off tarO, at maxDist * 3.
+			local sidePos = closestOrientedPosition(mo, 0.5, maxDist*3);
+			--setAction("Moving to side...");
 			doMoveToPoint(realTime, sidePos);
 		end
 	end
-	]]
 end
 
 function doMoveToPoint(realTime, tarPos)
@@ -385,7 +488,7 @@ function doMoveToTarget(realTime, mo, maxDist)
 		myPos.z = tarPos.z;	--hack
 		sendMovement(MSG_MOVE_STOP);
 		if(not mov or (mov.dx == 0 and mov.dy == 0)) then
-			removeTimer(movementTimerCallback);
+			removeTimer(movementTimerCallback, true);
 			--print("removed timer.");
 			return;
 		end
