@@ -83,6 +83,9 @@ if(rawget(_G, 'STATE') == nil) then
 		stealthSpell = false,
 		pickpocketSpell = false,
 
+		openChestSpell = false,
+		openChestSpells = {},
+
 		-- key: id. value: table. All the spells we know.
 		knownSpells = {},
 
@@ -194,7 +197,7 @@ function hSMSG_GROUP_DESTROYED(p)
 end
 function hSMSG_GROUP_LIST(p)
 	--print("SMSG_GROUP_LIST", dump(p));
-	STATE.leader = STATE.knownObjects[p.leaderGuid];
+	STATE.leader = STATE.knownObjects[p.leaderGuid] or false;
 	if(p.memberCount == 0) then
 		STATE.inGroup = false;
 		print("Group disbanded.");
@@ -458,9 +461,10 @@ local SPELL_ATTACK_EFFECTS = {
 function hSMSG_INITIAL_SPELLS(p)
 	--print("SMSG_INITIAL_SPELLS", dump(p));
 	--print(dump(SPELL_ATTACK_EFFECTS));
+	local ocCount = 0;
 	for i,id in ipairs(p.spells) do
 		local s = cSpell(id);
-		--print(id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+		print(id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
 		for i, e in ipairs(s.effect) do
 			--print(e.id, SPELL_ATTACK_EFFECTS[e.id]);
 			if(SPELL_ATTACK_EFFECTS[e.id]) then
@@ -485,19 +489,38 @@ function hSMSG_INITIAL_SPELLS(p)
 				assert(not STATE.pickpocketSpell);
 				STATE.pickpocketSpell = s;
 			end
+			if((e.id == SPELL_EFFECT_OPEN_LOCK)) then
+				if(not STATE.openChestSpell) then
+					print("openChestSpell:", id);
+					STATE.openChestSpell = id;
+				end
+				STATE.openChestSpells[id] = s;
+				ocCount = ocCount + 1;
+			end
 		end
 		STATE.knownSpells[id] = s;
 	end
 	print("Found "..dumpKeys(STATE.attackSpells).." attack spells.");
+	print("Found "..ocCount.." openChestSpells.");
 end
 
-function castSpell(spellId, target)
+function castSpellAtUnit(spellId, target)
 	local data = {
 		spellId = spellId,
 		targetFlags = TARGET_FLAG_UNIT,
 		unitTarget = target.guid,
 	}
-	print("castSpell "..spellId.." @"..target.guid:hex());
+	print("castSpellAtUnit "..spellId.." @"..target.guid:hex());
+	send(CMSG_CAST_SPELL, data);
+end
+
+function castSpellAtGO(spellId, target)
+	local data = {
+		spellId = spellId,
+		targetFlags = bit32.bor(TARGET_FLAG_OBJECT, TARGET_FLAG_OBJECT_UNK),
+		goTarget = target.guid,
+	}
+	print("castSpellAtGO "..spellId.." @"..target.guid:hex());
 	send(CMSG_CAST_SPELL, data);
 end
 

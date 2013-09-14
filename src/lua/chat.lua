@@ -141,6 +141,40 @@ local function leave(p)
 	reply(p, 'Leaving group.')
 end
 
+local function gameobject(p)
+	local myPos = STATE.myLocation.position;
+	-- find nearest usable gameobject.
+	local closestPos;
+	local closestObject;
+	local count = 0;
+	for guid, o in pairs(STATE.knownObjects) do
+		if(bit32.btest(o.values[OBJECT_FIELD_TYPE], TYPEMASK_GAMEOBJECT) and
+			o.values[GAMEOBJECT_POS_X])
+			--bit32.btest(o.values[GAMEOBJECT_DYN_FLAGS], GO_DYNFLAG_LO_ACTIVATE))
+		then
+			count = count + 1;
+			-- problematic; stored as uint32, but are really float. how to convert? Use C.
+			local pos = Position.new{
+				x=cIntAsFloat(o.values[GAMEOBJECT_POS_X]),
+				y=cIntAsFloat(o.values[GAMEOBJECT_POS_Y]),
+				z=cIntAsFloat(o.values[GAMEOBJECT_POS_Z]),
+			}
+			if((not closestObject) or (distance3(myPos, pos) < distance3(myPos, closestPos))) then
+				closestPos = pos;
+				closestObject = o;
+			end
+		end
+	end
+	print("Found "..count.." objects.");
+	if(closestObject) then
+		partyChat(closestObject.guid:hex()..": "..distance3(myPos, closestPos).." yards.");
+		--send(CMSG_GAMEOBJ_USE, {guid=closestObject.guid});
+		castSpellAtGO(22810, closestObject);
+	else
+		partyChat("No objects found.");
+	end
+end
+
 function handleChatMessage(p)
 	if(p.text == 'lq') then
 		listQuests(p)
@@ -162,6 +196,8 @@ function handleChatMessage(p)
 		invite(p)
 	elseif(p.text == 'leave') then
 		leave(p)
+	elseif(p.text == 'go') then
+		gameobject(p)
 	end
 end
 

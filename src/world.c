@@ -417,6 +417,16 @@ static int l_setGuid(lua_State* L) {
 }
 #endif
 
+static int l_intAsFloat(lua_State* L) {
+	union {
+		uint32 i;
+		float f;
+	} u;
+	u.i = luaL_checkunsigned(L, 1);
+	lua_pushnumber(L, u.f);
+	return 1;
+}
+
 void initLua(WorldSession* session) {
 	lua_State* L = session->L;
 
@@ -429,6 +439,7 @@ void initLua(WorldSession* session) {
 	lua_register(L, "cRemoveTimer", l_removeTimer);
 	lua_register(L, "cSpellEffectName", l_spellEffectName);
 	lua_register(L, "cTraceback", l_traceback);
+	lua_register(L, "cIntAsFloat", l_intAsFloat);
 
 	registerLuaDBC(L);
 

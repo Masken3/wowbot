@@ -86,7 +86,7 @@ function pickpocket(target)
 	local stealthDist = (MELEE_DIST*2 + aggroRadius(target));
 	doMoveToTarget(getRealTime(), target, stealthDist);
 	if((dist <= stealthDist) and not STATE.stealthed) then
-		castSpell(STATE.stealthSpell.id, STATE.me);
+		castSpellAtUnit(STATE.stealthSpell.id, STATE.me);
 		--todo: make sure to set this to false on spell fail or aura removed.
 		--also: on stealth fail, remove all pickpocketing targets, because we'll be stuck in combat.
 		STATE.stealthed = true;
@@ -94,7 +94,7 @@ function pickpocket(target)
 	if(STATE.stealthed) then
 		doStealthMoveBehindTarget(getRealTime(), target, MELEE_DIST);
 		if(dist <= MELEE_DIST and not target.bot.pickpocketed) then
-			--castSpell(STATE.pickpocketSpell.id, target);
+			--castSpellAtUnit(STATE.pickpocketSpell.id, target);
 			target.bot.pickpocketed = true;
 		end
 	end
@@ -230,7 +230,7 @@ function attack(realTime, enemy)
 	if(dist < MELEE_DIST and not STATE.meleeing) then
 		print("start melee");
 		setTarget(enemy);
-		castSpell(STATE.meleeSpell, enemy);
+		castSpellAtUnit(STATE.meleeSpell, enemy);
 		send(CMSG_ATTACKSWING, {target=enemy.guid});
 		STATE.meleeing = true;
 	end
@@ -372,7 +372,7 @@ function attackSpell(dist, realTime, enemy)
 
 	if(closeEnough and bestSpell) then
 		setTarget(enemy);
-		castSpell(bestSpell.id, enemy);
+		castSpellAtUnit(bestSpell.id, enemy);
 		-- todo: handle cooldown.
 		local recovery = math.max(bestSpell.RecoveryTime,
 			bestSpell.CategoryRecoveryTime,

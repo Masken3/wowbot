@@ -1,6 +1,6 @@
 
 -- returns the distance between xyz points a and b.
-local function distance3(a, b)
+function distance3(a, b)
 	local dx = a.x - b.x
 	local dy = a.y - b.y
 	local dz = a.z - b.z

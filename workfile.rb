@@ -34,6 +34,8 @@ work = ExeWork.new do
 				'SpellAttributes', 'SpellAttributesEx', 'SpellAttributesEx2',
 				'SpellAttributesEx3', 'SpellAttributesEx4',
 				'UnitDynFlags',
+				'GameObjectFlags',
+				'GameObjectDynamicLowFlags',
 				'TradeStatus', 'Language', 'ChatMsg']}),
 		GenLuaFromHeaderTask.new('Unit', 'server-code/Unit.h',
 			{:includedEnums=>['UnitFlags', 'NPCFlags']}),
