@@ -442,6 +442,7 @@ void initLua(WorldSession* session) {
 	lua_register(L, "cIntAsFloat", l_intAsFloat);
 
 	registerLuaDBC(L);
+	registerLuaAuxDBC(L);
 
 	opcodeLua(L);
 	movementFlagsLua(L);

@@ -581,6 +581,7 @@ void pSMSG_MESSAGECHAT(pLUA_ARGS) {
 		case CHAT_MSG_GUILD:
 		case CHAT_MSG_OFFICER:
 		case CHAT_MSG_WHISPER:
+		case CHAT_MSG_WHISPER_INFORM:
 		case CHAT_MSG_RAID_LEADER:
 		case CHAT_MSG_RAID_WARNING:
 		case CHAT_MSG_BG_SYSTEM_NEUTRAL:
@@ -1125,4 +1126,9 @@ void pSMSG_GAMEOBJECT_QUERY_RESPONSE(pLUA_ARGS) {
 	M(byte, name3);
 	M(byte, name4);
 	MA(uint32, data, 24);	// see union in GameObjectInfo in GameObject.h
+}
+
+void pMSG_MINIMAP_PING(pLUA_ARGS) {
+	PL_START;
+	// we're not interested.
 }

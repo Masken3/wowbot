@@ -10,6 +10,7 @@ SUBFILES = {
 	'item.lua',
 	'aura.lua',
 	'gameobject.lua',
+	'skill.lua',
 }
 for i,f in ipairs(SUBFILES) do
 	dofile('src/lua/'..f)
@@ -122,6 +123,7 @@ if(rawget(_G, 'STATE') == nil) then
 		'classTrainers',
 		'pickpocketables',
 		'skinnables',
+		'openables',
 	}
 	for i,k in ipairs(knownObjectHolders) do
 		STATE[k] = {};
@@ -129,9 +131,13 @@ if(rawget(_G, 'STATE') == nil) then
 	end
 
 	-- saved to and loaded from disk.
+	-- call saveState() after changing any of these.
 	PERMASTATE = {
 		-- the last level we saw our trainer. saved to disk, restored on load.
 		classTrainingCompleteForLevel = 0,
+
+		-- radius within which we will gather things automatically, even if there are nearby enemies.
+		gatherRadius = 40,
 	}
 
 	-- type-securing STATE is too much work, but at least we can prevent unregistered members.
@@ -286,6 +292,7 @@ end
     bool IsMOTransport()   const { return GetHigh() == HIGHGUID_MO_TRANSPORT; }
 --]]
 local function isUnit(o)
+	if(not o) then return false; end
 	return bit32.btest(o.values[OBJECT_FIELD_TYPE], TYPEMASK_UNIT);
 end
 
@@ -341,7 +348,7 @@ function sendCreatureQuery(o, callback)
 end
 
 function hSMSG_CREATURE_QUERY_RESPONSE(p)
-	print("SMSG_CREATURE_QUERY_RESPONSE", dump(p));
+	--print("SMSG_CREATURE_QUERY_RESPONSE", dump(p));
 	local cb = STATE.creatureQueryCallbacks[p.entry];
 	if(cb) then
 		STATE.creatureQueryCallbacks[p.entry] = nil
@@ -429,7 +436,7 @@ function hSMSG_UPDATE_OBJECT(p)
 				o.values[GAMEOBJECT_POS_X])
 			then
 				-- trigger query, if needed.
-				gameObjectInfo(o);
+				gameObjectInfo(o, newGameObject);
 			end
 
 			--print("CREATE_OBJECT", b.guid:hex(), hex(o.values[OBJECT_FIELD_TYPE]), dump(b.pos));
@@ -467,7 +474,7 @@ end
 
 function hSMSG_DESTROY_OBJECT(p)
 	print("SMSG_DESTROY_OBJECT", dump(p));
-	for i, koh in ipairs(STATE.knownObjectHolders) do
+	for i, koh in pairs(STATE.knownObjectHolders) do
 		koh[p.guid] = nil;
 	end
 end
@@ -574,6 +581,7 @@ function hSMSG_CAST_FAILED(p)
 	end
 	print("SMSG_CAST_FAILED", tostring(hex), dump(p));
 	STATE.skinning = false;
+	STATE.looting = false;
 	decision();
 end
 
@@ -626,6 +634,9 @@ function hMSG_RAID_TARGET_UPDATE(p)
 		end
 		decision();
 	end
+end
+
+function hMSG_MINIMAP_PING(p)
 end
 
 do

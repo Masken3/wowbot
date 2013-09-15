@@ -179,12 +179,12 @@ end
 
 function hasQuestForItem(itemId)
 	-- check every quest
-	print("finding quests for item "..itemId.."...");
+	--print("finding quests for item "..itemId.."...");
 	for i=PLAYER_QUEST_LOG_1_1,PLAYER_QUEST_LOG_LAST_1,3 do
 		local questId = STATE.my.values[i];
 		local state = STATE.my.values[i+1];
 		if(questId and (questId > 0) and ((not state) or (bit32.band(state, 0xFF) == QUEST_STATE_NONE))) then
-			print("checking active quest "..questId..": ", dump(STATE.knownQuests[questId].objectives));
+			--print("checking active quest "..questId..": ", dump(STATE.knownQuests[questId].objectives));
 			for j, o in ipairs(STATE.knownQuests[questId].objectives) do
 				if((o.itemId == itemId) and itemInventoryCountById(itemId)) then
 					print("found quest "..questId);
@@ -193,6 +193,6 @@ function hasQuestForItem(itemId)
 			end
 		end
 	end
-	print("none found.");
+	--print("none found.");
 	return false;
 end

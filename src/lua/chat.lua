@@ -1,5 +1,9 @@
 local function reply(p, msg)
-	p.targetGuid = p.senderGuid
+	for i,m in ipairs(STATE.groupMembers) do
+		if(p.senderGuid == m.guid) then
+			p.targetName = m.name
+		end
+	end
 	p.msg = msg
 	send(CMSG_MESSAGECHAT, p)
 end
@@ -154,11 +158,7 @@ local function gameobject(p)
 		then
 			count = count + 1;
 			-- problematic; stored as uint32, but are really float. how to convert? Use C.
-			local pos = Position.new{
-				x=cIntAsFloat(o.values[GAMEOBJECT_POS_X]),
-				y=cIntAsFloat(o.values[GAMEOBJECT_POS_Y]),
-				z=cIntAsFloat(o.values[GAMEOBJECT_POS_Z]),
-			}
+			local pos = goPos(o);
 			if((not closestObject) or (distance3(myPos, pos) < distance3(myPos, closestPos))) then
 				closestPos = pos;
 				closestObject = o;
@@ -202,6 +202,13 @@ local function train(p)
 	goTrain(trainer);
 end
 
+local function gather(p)
+	local radius = tonumber(p.text:sub(8))
+	PERMASTATE.gatherRadius = radius
+	saveState()
+	reply(p, "Gather radius set: "..radius)
+end
+
 function handleChatMessage(p)
 	if(p.text == 'lq') then
 		listQuests(p)
@@ -227,7 +234,12 @@ function handleChatMessage(p)
 		gameobject(p)
 	elseif(p.text == 'train') then
 		train(p)
+	elseif(p.text:startWith('gather ')) then
+		gather(p)
+	else
+		return
 	end
+	print("Chat command: "..p.text)
 end
 
 function partyChat(msg)

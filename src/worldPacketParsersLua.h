@@ -43,6 +43,7 @@ typedef struct WorldSession WorldSession;
 	m(SMSG_SET_EXTRA_AURA_INFO)\
 	m(MSG_RAID_TARGET_UPDATE)\
 	m(SMSG_GAMEOBJECT_QUERY_RESPONSE)\
+	m(MSG_MINIMAP_PING)\
 
 #define pLUA_ARGS WorldSession* session, const char* buf, uint16 bufSize
 

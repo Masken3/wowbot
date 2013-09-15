@@ -246,7 +246,7 @@ static uint16 genCMSG_MESSAGECHAT(lua_State* L, byte* buf) {
 			break;
 		case CHAT_MSG_WHISPER:
 			// also "to"
-			M(Guid, targetGuid);
+			M(string, targetName);
 			break;
 		case CHAT_MSG_CHANNEL:
 			// also string channel name
@@ -441,6 +441,13 @@ static uint16 genCMSG_GAMEOBJECT_QUERY(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+static uint16 genMSG_MINIMAP_PING(lua_State* L, byte* buf) {
+	GL_START;
+	M(float, x);
+	M(float, y);
+	GL_END;
+}
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -479,6 +486,7 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_CANCEL_AURA);
 		GEN_CASE(CMSG_GAMEOBJ_USE);
 		GEN_CASE(CMSG_GAMEOBJECT_QUERY);
+		GEN_CASE(MSG_MINIMAP_PING);
 		default: return NULL;
 	}
 }

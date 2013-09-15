@@ -23,6 +23,7 @@ work = ExeWork.new do
 	@SOURCES = ['src', 'src/worldMsgHandlers', 'server-code/Auth']
 	@SOURCE_FILES = [
 		"#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers/spell/spellStrings.cpp",
+		"#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers/dbcSkillLineAbility/SkillLineAbility.index.cpp",
 	]
 	@SOURCE_TASKS = @REQUIREMENTS = [
 		GenTask.new('Opcodes'),
@@ -76,6 +77,9 @@ work = ExeWork.new do
 		'stackTrace.cpp' => " -I#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp",
 		'process.cpp' => " -I#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp -Wno-missing-format-attribute",
 	}
+	@SPECIFIC_CFLAGS['cDbcAux.cpp'] = @SPECIFIC_CFLAGS['cDbc.cpp'] +
+		' -Ibuild/dbcSkillLineAbility -DWOWBOT=1'
+	@SPECIFIC_CFLAGS['SkillLineAbility.index.cpp'] = @SPECIFIC_CFLAGS['cDbcAux.cpp']
 	@EXTRA_INCLUDES = ['build', 'src', 'server-code', 'server-code/Auth',
 		"#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers/spell",
 	]

@@ -82,6 +82,7 @@ int main(void) {
 	int res;
 
 	loadDBC();
+	loadAuxDBC();
 
 #ifdef WIN32
 	{

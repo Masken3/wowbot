@@ -5,6 +5,9 @@ function decision(realTime)
 	updateEnemyPositions(realTime);
 	updateMyPosition(realTime);
 	updateLeaderPosition(realTime);
+
+	local myPos = STATE.myLocation.position;
+
 	--print("decision...");
 	-- if we're already attacking someone, keep at it.
 	-- todo: handle multiple enemies here.
@@ -76,6 +79,24 @@ function decision(realTime)
 		PERMASTATE.classTrainingCompleteForLevel))
 	then
 		goTrain(trainer);
+		return;
+	end
+
+	-- gather nearby ore and herbs.
+	local minDist = PERMASTATE.gatherRadius;
+	local openable;
+	for guid, o in pairs(STATE.openables) do
+		local dist = distance3(myPos, o.location.position);
+		if((dist < minDist) and haveSkillToOpen(o)) then
+			minDist = dist;
+			openable = o;
+		end
+	end
+	if(openable) then
+		gameObjectInfo(openable, function(o, info)
+			setAction("Gathering "..info.name);
+		end);
+		goOpen(openable);
 		return;
 	end
 
@@ -157,6 +178,17 @@ function hSMSG_TRAINER_BUY_SUCCEEDED(p)
 	checkTraining(p);
 end
 
+function goOpen(o)
+	local dist = distanceToObject(o);
+	doMoveToTarget(getRealTime(), o, MELEE_DIST);
+	if((dist <= MELEE_DIST) and (not STATE.looting)) then
+		local lockIndex = goLockIndex(o);
+		local spell = STATE.openLockSpells[lockIndex];
+		castSpellAtGO(spell, o);
+		STATE.looting = true;
+	end
+end
+
 function goSkin(o)
 	local dist = distanceToObject(o);
 	doMoveToTarget(getRealTime(), o, MELEE_DIST);
@@ -199,6 +231,7 @@ function hSMSG_LOOT_RESPONSE(p)
 	send(CMSG_LOOT_RELEASE, p);
 	STATE.looting = false;
 	STATE.lootables[p.guid] = nil;
+	STATE.openables[p.guid] = nil;
 end
 
 function hSMSG_LOOT_RELEASE_RESPONSE(p)
