@@ -175,7 +175,6 @@ function goLoot(o)
 		if(not STATE.looting) then
 			send(CMSG_LOOT, {guid=o.guid});
 			STATE.looting = true;
-			STATE.lootables[o.guid] = nil;
 		end
 	end
 end
@@ -199,6 +198,7 @@ function hSMSG_LOOT_RESPONSE(p)
 	end
 	send(CMSG_LOOT_RELEASE, p);
 	STATE.looting = false;
+	STATE.lootables[p.guid] = nil;
 end
 
 function hSMSG_LOOT_RELEASE_RESPONSE(p)

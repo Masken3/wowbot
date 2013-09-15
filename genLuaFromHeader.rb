@@ -90,7 +90,8 @@ class GenLuaFromHeaderTask < MultiFileTask
 		if(@options[:includedEnums])
 			@options[:includedEnums].each do |ie|
 				#puts "test #{ie}"
-				raise if(enums[ie].empty?)
+				raise ie if(!enums[ie])
+				raise ie if(enums[ie].empty?)
 			end
 		end
 		return enums

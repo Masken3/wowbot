@@ -78,6 +78,8 @@ if(rawget(_G, 'STATE') == nil) then
 
 		skinningSpell = false,	-- spellId.
 
+		openLockSpells = {},	--miscValue:spellId.
+
 		-- key: id. value: table. All the spells we know.
 		knownSpells = {},
 
@@ -488,7 +490,7 @@ function hSMSG_INITIAL_SPELLS(p)
 	--print(dump(SPELL_ATTACK_EFFECTS));
 	for i,id in ipairs(p.spells) do
 		local s = cSpell(id);
-		print(id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+		--print(id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
 		for i, e in ipairs(s.effect) do
 			--print(e.id, SPELL_ATTACK_EFFECTS[e.id]);
 			if(SPELL_ATTACK_EFFECTS[e.id]) then
@@ -515,6 +517,13 @@ function hSMSG_INITIAL_SPELLS(p)
 			end
 			if(e.id == SPELL_EFFECT_SKINNING) then
 				STATE.skinningSpell = id;
+			end
+			if(e.id == SPELL_EFFECT_OPEN_LOCK) then
+				if(e.implicitTargetA == TARGET_GAMEOBJECT) then
+					print("OpenLockSpell "..e.miscValue..": "..id);
+					if(STATE.openLockSpells[e.miscValue]) then print("Override!"); end
+					STATE.openLockSpells[e.miscValue] = id;
+				end
 			end
 		end
 		STATE.knownSpells[id] = s;

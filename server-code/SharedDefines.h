@@ -1634,10 +1634,10 @@ enum LockKeyType
 {
 	LOCK_KEY_NONE  = 0,
 	LOCK_KEY_ITEM  = 1,
-	LOCK_KEY_SKILL = 2
+	LOCK_KEY_SKILL = 2,
 };
 
-typedef enum LockType
+enum LockType
 {
 	LOCKTYPE_PICKLOCK              = 1,
 	LOCKTYPE_HERBALISM             = 2,
@@ -1657,8 +1657,8 @@ typedef enum LockType
 	LOCKTYPE_BLASTING              = 16,
 	LOCKTYPE_SLOW_OPEN             = 17,
 	LOCKTYPE_SLOW_CLOSE            = 18,
-	LOCKTYPE_FISHING               = 19
-} LockType;
+	LOCKTYPE_FISHING               = 19,
+};
 
 enum TrainerType                                            // this is important type for npcs!
 {
@@ -1960,8 +1960,8 @@ typedef enum SkillType
 
 #define MAX_SKILL_TYPE               763
 
-inline SkillType SkillByLockType(LockType locktype);
-inline SkillType SkillByLockType(LockType locktype)
+inline SkillType SkillByLockType(enum LockType locktype);
+inline SkillType SkillByLockType(enum LockType locktype)
 {
 	switch (locktype)
 	{

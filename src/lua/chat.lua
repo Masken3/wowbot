@@ -169,7 +169,21 @@ local function gameobject(p)
 	if(closestObject) then
 		partyChat(closestObject.guid:hex()..": "..distance3(myPos, closestPos).." yards.");
 		--send(CMSG_GAMEOBJ_USE, {guid=closestObject.guid});
-		castSpellAtGO(22810, closestObject);
+		--castSpellAtGO(22810, closestObject);
+
+		local lockIndex = goLockIndex(closestObject);
+		if(lockIndex) then
+			local spell = STATE.openLockSpells[lockIndex];
+			if(spell) then
+				castSpellAtGO(spell, closestObject);
+			else
+				--partyChat("Don't know any spell to open that object.");
+				partyChat("Can't open lock index "..lockIndex);
+			end
+		else
+			-- don't know if this will work.
+			castSpellAtGO(22810, closestObject);
+		end
 	else
 		partyChat("No objects found.");
 	end
