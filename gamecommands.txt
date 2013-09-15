@@ -3,3 +3,7 @@ These are useful chat commands:
 .groupgo
 .revive
 .tele group
+
+.gob tar	Gameobject info
+.gob add <id> <respawnSecs>	Adds a new gob at your location. respawnSecs must be > 0.
+.gob del <guid>	Removes a gob. Useful if you added a bad one.

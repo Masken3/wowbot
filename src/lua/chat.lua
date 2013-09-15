@@ -217,5 +217,6 @@ function handleChatMessage(p)
 end
 
 function partyChat(msg)
+	print("partyChat("..msg..")");
 	send(CMSG_MESSAGECHAT, {type=CHAT_MSG_PARTY, language=LANG_UNIVERSAL, msg=msg})
 end

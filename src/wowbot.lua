@@ -41,6 +41,7 @@ if(rawget(_G, 'STATE') == nil) then
 		knownObjects = {},
 
 		looting = false,
+		skinning = false,
 
 		knownQuests = {},
 
@@ -74,6 +75,8 @@ if(rawget(_G, 'STATE') == nil) then
 		stealthed = false,	-- boolean.
 		stealthSpell = false,	-- spell table.
 		pickpocketSpell = false,	-- spell table.
+
+		skinningSpell = false,	-- spellId.
 
 		-- key: id. value: table. All the spells we know.
 		knownSpells = {},
@@ -116,6 +119,7 @@ if(rawget(_G, 'STATE') == nil) then
 		'lootables',
 		'classTrainers',
 		'pickpocketables',
+		'skinnables',
 	}
 	for i,k in ipairs(knownObjectHolders) do
 		STATE[k] = {};
@@ -316,6 +320,16 @@ local function valueUpdated(o, idx)
 			STATE.lootables[o.guid] = nil;
 		end
 	end
+	if(idx == UNIT_FIELD_FLAGS) then
+		if(STATE.skinningSpell) then
+			if(bit32.btest(o.values[idx], UNIT_FLAG_SKINNABLE)) then
+				partyChat("Found skinnable: "..o.guid:hex());
+				STATE.skinnables[o.guid] = o;
+			else
+				STATE.skinnables[o.guid] = nil;
+			end
+		end
+	end
 end
 
 function sendCreatureQuery(o, callback)
@@ -499,6 +513,9 @@ function hSMSG_INITIAL_SPELLS(p)
 				assert(not STATE.pickpocketSpell);
 				STATE.pickpocketSpell = s;
 			end
+			if(e.id == SPELL_EFFECT_SKINNING) then
+				STATE.skinningSpell = id;
+			end
 		end
 		STATE.knownSpells[id] = s;
 	end
@@ -547,6 +564,7 @@ function hSMSG_CAST_FAILED(p)
 		hex = string.format("0x%02X", p.result);
 	end
 	print("SMSG_CAST_FAILED", tostring(hex), dump(p));
+	STATE.skinning = false;
 	decision();
 end
 

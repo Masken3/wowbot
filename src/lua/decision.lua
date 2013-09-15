@@ -14,6 +14,17 @@ function decision(realTime)
 			return;
 		end
 	end
+
+	-- if there are units that can be skinned, go get them.
+	local i, skinnable = next(STATE.skinnables);
+	if(skinnable) then
+		setAction("Skinning "..skinnable.guid:hex());
+		goSkin(skinnable);
+		return;
+	end
+
+	STATE.skinning = false;
+
 	-- if an enemy targets a party member, attack that enemy.
 	-- if there are several enemies, pick any one.
 	local i, enemy = next(STATE.enemies);
@@ -146,12 +157,22 @@ function hSMSG_TRAINER_BUY_SUCCEEDED(p)
 	checkTraining(p);
 end
 
+function goSkin(o)
+	local dist = distanceToObject(o);
+	doMoveToTarget(getRealTime(), o, MELEE_DIST);
+	if(dist <= MELEE_DIST) then
+		if(not STATE.skinning) then
+			castSpellAtUnit(STATE.skinningSpell, o);
+			STATE.skinning = true;
+		end
+	end
+end
+
 function goLoot(o)
 	local dist = distanceToObject(o);
 	doMoveToTarget(getRealTime(), o, MELEE_DIST);
 	if(dist <= MELEE_DIST) then
 		if(not STATE.looting) then
-			print("Looting "..o.guid:hex());
 			send(CMSG_LOOT, {guid=o.guid});
 			STATE.looting = true;
 			STATE.lootables[o.guid] = nil;
