@@ -175,6 +175,19 @@ local function gameobject(p)
 	end
 end
 
+local function train(p)
+	if(p.type ~= CHAT_MSG_WHISPER) then
+		reply(p, "Must whisper this command.");
+	end
+	local trainerGuid = guidFromValues(STATE.knownObjects[p.senderGuid], UNIT_FIELD_TARGET)
+	local trainer = STATE.knownObjects[trainerGuid];
+	if(not trainer) then
+		reply(p, "No valid target!");
+		return;
+	end
+	goTrain(trainer);
+end
+
 function handleChatMessage(p)
 	if(p.text == 'lq') then
 		listQuests(p)
@@ -198,6 +211,8 @@ function handleChatMessage(p)
 		leave(p)
 	elseif(p.text == 'go') then
 		gameobject(p)
+	elseif(p.text == 'train') then
+		train(p)
 	end
 end
 

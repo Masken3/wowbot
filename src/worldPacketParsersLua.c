@@ -1108,3 +1108,21 @@ void pMSG_RAID_TARGET_UPDATE(pLUA_ARGS) {
 		}
 	}
 }
+
+void pSMSG_GAMEOBJECT_QUERY_RESPONSE(pLUA_ARGS) {
+	PL_START;
+	{
+		MM(uint32, goId);
+		if(goId & 0x80000000) {
+			LOG("Fatal error: SMSG_GAMEOBJECT_QUERY_RESPONSE: Unknown object %i\n", goId & ~0x80000000);
+			exit(1);
+		}
+	}
+	M(uint32, type);	// enum GameobjectTypes
+	M(uint32, displayId);
+	MV(string, name);
+	M(uint16, name2);
+	M(byte, name3);
+	M(byte, name4);
+	MA(uint32, data, 24);	// see union in GameObjectInfo in GameObject.h
+}

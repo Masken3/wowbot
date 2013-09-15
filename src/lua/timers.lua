@@ -47,7 +47,7 @@ function removeTimer(callback, skipExistAssert)
 		return
 	end
 	-- you may not remove a timer that doesn't exist.
-	assert(timers[callback])
+	if(not skipExistAssert) then assert(timers[callback]); end
 	local oldC = countTable(timers)
 	local closestTime = timers[callback]
 	local c = 0

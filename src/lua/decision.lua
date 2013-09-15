@@ -60,17 +60,16 @@ function decision(realTime)
 	end
 
 	-- visit our class trainer at even levels.
-	local i, trainer = next(STATE.trainers);
+	local i, trainer = next(STATE.classTrainers);
 	if(trainer and (bit32.band(STATE.myLevel, bit32.bnot(1)) >
 		PERMASTATE.classTrainingCompleteForLevel))
 	then
-		setAction("Training at "..trainer.guid:hex());
 		goTrain(trainer);
 		return;
 	end
 
 	-- don't try following the leader if we don't know where he is.
-	if(STATE.inGroup and STATE.leader.location.position.x) then
+	if(STATE.inGroup and STATE.leader and STATE.leader.location.position.x) then
 		setAction("Following leader");
 		follow(STATE.leader);
 		--local myValues = STATE.my.values;
@@ -101,6 +100,7 @@ function pickpocket(target)
 end
 
 function goTrain(trainer)
+	setAction("Training at "..trainer.guid:hex());
 	local dist = distanceToObject(trainer);
 	doMoveToTarget(getRealTime(), trainer, MELEE_DIST);
 	if(dist <= MELEE_DIST) then
@@ -118,13 +118,15 @@ local function checkTraining(p)
 		-- we're done.
 		print("Training complete.");
 		trainer.bot.chatting = false;
-		PERMASTATE.classTrainingCompleteForLevel = STATE.myLevel;
-		saveState();
+		if(STATE.classTrainers[p.guid]) then
+			PERMASTATE.classTrainingCompleteForLevel = STATE.myLevel;
+			saveState();
+		end
 	end
 end
 
 function hSMSG_TRAINER_LIST(p)
-	print("SMSG_TRAINER_LIST", dump(p));
+	--print("SMSG_TRAINER_LIST", dump(p));
 	for i, s in ipairs(p.spells) do
 		if(s.state == TRAINER_SPELL_GREEN) then
 			local cs = cSpell(s.spellId);

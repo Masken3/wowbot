@@ -124,12 +124,12 @@ function wantToWear(id)
 	-- we want to wear something with "better" stats than what we already have.
 	-- for now, assume higher id means better stats.
 	local proto = itemProtoFromId(id);
-	print("Testing weariness of item "..proto.name.." ("..id..")...");
+	--print("Testing weariness of item "..proto.name.." ("..id..")...");
 
 	-- if it's not equipment, we can't wear it.
 	local slots = itemEquipSlot(proto);
 	if(not slots) then
-		print("no slot found.");
+		--print("no slot found.");
 		return false;
 	end
 
@@ -137,12 +137,12 @@ function wantToWear(id)
 	local spellId = itemSkillSpell(proto);
 	if(spellId) then
 		if(not STATE.knownSpells[spellId]) then
-			print("proficiency not known: "..spellId);
+			--print("proficiency not known: "..spellId);
 			return false;
 		end
 	else
 		-- some items don't require skills. We can use them.
-		print("No proficiency needed. class: "..proto.itemClass.." subClass: "..proto.subClass);
+		--print("No proficiency needed. class: "..proto.itemClass.." subClass: "..proto.subClass);
 	end
 
 	if(type(slots) ~= 'table') then
@@ -153,13 +153,13 @@ function wantToWear(id)
 	for i, slot in ipairs(slots) do
 		local equippedGuid = equipmentInSlot(slot);
 		if(not equippedGuid) then
-			print("no item equipped in that slot. I'm gonna wear it!");
+			--print("no item equipped in that slot. I'm gonna wear it!");
 			return slot;
 		end
 		local eid = itemIdOfGuid(equippedGuid);
-		print("equipped: "..eid);
+		--print("equipped: "..eid);
 		--return id > eid;
-		print("price: "..vendorSalePrice(id).." vs "..vendorSalePrice(itemIdOfGuid(equippedGuid)));
+		--print("price: "..vendorSalePrice(id).." vs "..vendorSalePrice(itemIdOfGuid(equippedGuid)));
 		local ePrice = vendorSalePrice(itemIdOfGuid(equippedGuid));
 		if(vendorSalePrice(id) > ePrice) then
 			-- if we have two items that can be swapped out, pick the cheaper one.

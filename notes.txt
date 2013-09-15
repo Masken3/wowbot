@@ -126,3 +126,34 @@ todo: fix loot effect after combat
 
 08:35 2013-09-12
 todo: pickpocketing. Test it once we've trained the spell.
+
+19:17 2013-09-14
+Opening locks, such as those on chests, herbs, mining nodes or lockboxes,
+that have a LockKeyType of LOCK_KEY_SKILL,
+requires a spell with SPELL_EFFECT_OPEN_LOCK and a miscValue (enum LockType)
+that matches the lock's lockInfo->Index.
+LockKeyType LOCK_KEY_NONE can seemingly be opened by any OpenLock spell.
+LockKeyType LOCK_KEY_ITEM requires an item whose entry/id is equal to the lock's
+lockInfo->Index (not enum LockType in this case).
+
+Therefore, when investigating gameobjects, compare their locks with your knownSpells
+to find which ones you can open.
+
+The gathering profession spells,
+mining, herbalism, fishing(at marked nodes, not in open water), but not skinning,
+work on this principle.
+
+GAMEOBJECT_TYPE_ID is enum GameobjectTypes.
+GAMEOBJECT_TYPE_CHEST, GAMEOBJECT_TYPE_FISHINGNODE and GAMEOBJECT_TYPE_FISHINGHOLE are interesting.
+GAMEOBJECT_TYPE_FISHINGNODE is the bobber summoned by you.
+GAMEOBJECT_TYPE_FISHINGHOLE are permanent GOs, collections of fish or junk that you can fish in.
+
+Skinning is done by casting a spell with effect SPELL_EFFECT_SKINNING on a corpse with
+UNIT_FIELD_FLAGS UNIT_FLAG_SKINNABLE.
+
+00:17 2013-09-15
+todo: train
+ping gatherables
+command auto-range, default 40
+check hostiles in range 40
+ex: "Guarded Copper Vein, 64 yards".

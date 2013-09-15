@@ -9,6 +9,7 @@ SUBFILES = {
 	'quests.lua',
 	'item.lua',
 	'aura.lua',
+	'gameobject.lua',
 }
 for i,f in ipairs(SUBFILES) do
 	dofile('src/lua/'..f)
@@ -39,15 +40,6 @@ if(rawget(_G, 'STATE') == nil) then
 
 		knownObjects = {},
 
-		-- key:guid. value:knownObject from knownObjects.
-		-- when adding new ones, remember to add them to knownObjectHolders, too.
-		enemies = {},
-		questGivers = {},
-		questFinishers = {},
-		lootables = {},
-		trainers = {},
-		pickpocketables = {},
-
 		looting = false,
 
 		knownQuests = {},
@@ -74,14 +66,14 @@ if(rawget(_G, 'STATE') == nil) then
 		myTarget = false,	-- guid of my target.
 
 		attackSpells = {},	-- Spells we know that are useful for attacking other creatures.
-		meleeSpell = false,
-		attacking = false,
-		meleeing = false,
-		spellCooldown = 0,
+		meleeSpell = false,	-- spell id.
+		attacking = false,	-- boolean.
+		meleeing = false,	-- boolean.
+		spellCooldown = 0,	-- the realTime when the most recently spell will have cooled down.
 
-		stealthed = false,
-		stealthSpell = false,
-		pickpocketSpell = false,
+		stealthed = false,	-- boolean.
+		stealthSpell = false,	-- spell table.
+		pickpocketSpell = false,	-- spell table.
 
 		-- key: id. value: table. All the spells we know.
 		knownSpells = {},
@@ -101,6 +93,9 @@ if(rawget(_G, 'STATE') == nil) then
 
 		creatureQueryCallbacks = {},
 
+		knownGameObjects = {},
+		goInfoWaiting = {},
+
 		-- timer-related stuff
 		timers = {},
 		inTimerCallback = false,
@@ -111,11 +106,21 @@ if(rawget(_G, 'STATE') == nil) then
 
 	-- list of tables on the form guid:object.
 	-- all of them are affected by SMSG_DESTROY_OBJECT.
-	STATE.knownObjectHolders = {
-		STATE.knownObjects, STATE.enemies, STATE.questGivers,
-		STATE.questFinishers, STATE.lootables, STATE.trainers,
-		STATE.pickpocketables,
+	STATE.knownObjectHolders = {}
+
+	-- key:guid. value:knownObject from knownObjects.
+	local knownObjectHolders = {
+		'enemies',
+		'questGivers',
+		'questFinishers',
+		'lootables',
+		'classTrainers',
+		'pickpocketables',
 	}
+	for i,k in ipairs(knownObjectHolders) do
+		STATE[k] = {};
+		STATE.knownObjectHolders[k] = STATE.k;
+	end
 
 	-- saved to and loaded from disk.
 	PERMASTATE = {
@@ -299,7 +304,7 @@ local function valueUpdated(o, idx)
 				print("Found "..p.subName);
 				if(p.subName == STATE.myClassName.." Trainer") then
 					print("MINE!");
-					STATE.trainers[o.guid] = o;
+					STATE.classTrainers[o.guid] = o;
 				end
 			end)
 		end
@@ -402,6 +407,15 @@ function hSMSG_UPDATE_OBJECT(p)
 					error("Unknown highGuid");
 				end
 			end
+
+			-- gameobjects that have a location are of interest to us.
+			if(bit32.btest(o.values[OBJECT_FIELD_TYPE], TYPEMASK_GAMEOBJECT) and
+				o.values[GAMEOBJECT_POS_X])
+			then
+				-- trigger query, if needed.
+				gameObjectInfo(o);
+			end
+
 			--print("CREATE_OBJECT", b.guid:hex(), hex(o.values[OBJECT_FIELD_TYPE]), dump(b.pos));
 			--, dump(o.movement), dump(o.values));
 
