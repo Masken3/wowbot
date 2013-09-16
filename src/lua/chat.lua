@@ -209,6 +209,20 @@ local function gather(p)
 	reply(p, "Gather radius set: "..radius)
 end
 
+local function cast(p)
+	local spellId = tonumber(p.text:sub(6))
+	local s = STATE.knownSpells[spellId]
+	if(not s) then reply(p, "Don't know spell "..spellId) end
+	local targetGuid = guidFromValues(STATE.knownObjects[p.senderGuid], UNIT_FIELD_TARGET)
+	local target = STATE.knownObjects[targetGuid]
+	if(not target) then
+		reply(p, "No valid target!")
+		return;
+	end
+	castSpellAtUnit(spellId, target)
+	reply(p, "Casting "..s.name.." "..s.rank)
+end
+
 function handleChatMessage(p)
 	if(p.text == 'lq') then
 		listQuests(p)
@@ -236,6 +250,8 @@ function handleChatMessage(p)
 		train(p)
 	elseif(p.text:startWith('gather ')) then
 		gather(p)
+	elseif(p.text:startWith('cast ')) then
+		cast(p)
 	else
 		return
 	end

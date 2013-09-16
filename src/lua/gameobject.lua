@@ -83,6 +83,7 @@ function newGameObject(o, info)
 	local pos = goPos(o);
 	o.location.position = pos;
 	local myPos = STATE.myLocation.position;
+	if(info.name == "Water Barrel" or info.name == "Food Crate") then return; end
 	partyChat(info.name..", "..distance3(myPos, pos).." yards.");
 	send(MSG_MINIMAP_PING, pos);
 	STATE.openables[o.guid] = o;
