@@ -11,6 +11,7 @@ SUBFILES = {
 	'aura.lua',
 	'gameobject.lua',
 	'skill.lua',
+	'combat.lua',
 }
 for i,f in ipairs(SUBFILES) do
 	dofile('src/lua/'..f)
@@ -80,6 +81,8 @@ if(rawget(_G, 'STATE') == nil) then
 		skinningSpell = false,	-- spellId.
 
 		openLockSpells = {},	--miscValue:spellId.
+		healingSpells = {},
+		buffSpells = {},
 
 		-- key: id. value: table. All the spells we know.
 		knownSpells = {},
@@ -339,6 +342,10 @@ local function valueUpdated(o, idx)
 			end
 		end
 	end
+	if(idx == UNIT_FIELD_LEVEL and o == STATE.me) then
+		print("Level up! "..o.values[idx]);
+		STATE.myLevel = o.values[idx];
+	end
 end
 
 function sendCreatureQuery(o, callback)
@@ -502,19 +509,19 @@ function hSMSG_INITIAL_SPELLS(p)
 			--print(e.id, SPELL_ATTACK_EFFECTS[e.id]);
 			if(SPELL_ATTACK_EFFECTS[e.id]) then
 				if(not STATE.attackSpells[id]) then
-					print(id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+					print("a"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
 				end
 				STATE.attackSpells[id] = s;
 			end
 			if(e.id == SPELL_EFFECT_ATTACK) then
 				-- assuming that there's only one melee spell
 				assert(not STATE.meleeSpell);
-				print("Melee spell:", id);
+				--print("Melee spell:", id);
 				STATE.meleeSpell = id;
 			end
 			if((e.id == SPELL_EFFECT_APPLY_AURA) and (e.applyAuraName == SPELL_AURA_MOD_STEALTH)) then
 				if(not STATE.stealthSpell or (STATE.stealthSpell.rank < s.rank)) then
-					print("Stealth spell: "..id.." "..s.rank);
+					--print("Stealth spell: "..id.." "..s.rank);
 					STATE.stealthSpell = s;
 				end
 			end
@@ -527,10 +534,51 @@ function hSMSG_INITIAL_SPELLS(p)
 			end
 			if(e.id == SPELL_EFFECT_OPEN_LOCK) then
 				if(e.implicitTargetA == TARGET_GAMEOBJECT) then
-					print("OpenLockSpell "..e.miscValue..": "..id);
+					--print("OpenLockSpell "..e.miscValue..": "..id);
 					if(STATE.openLockSpells[e.miscValue]) then print("Override!"); end
 					STATE.openLockSpells[e.miscValue] = id;
 				end
+			end
+			if((e.id == SPELL_EFFECT_APPLY_AURA) and
+				(e.implicitTargetA == TARGET_SINGLE_FRIEND))
+			then
+				-- buffs
+				local buffAuras = {
+					[SPELL_AURA_MOD_ATTACKSPEED]=true,
+					[SPELL_AURA_MOD_DAMAGE_DONE]=true,
+					[SPELL_AURA_MOD_RESISTANCE]=true,
+					[SPELL_AURA_PERIODIC_ENERGIZE]=true,
+					[SPELL_AURA_MOD_STAT]=true,
+					[SPELL_AURA_MOD_SKILL]=true,
+					[SPELL_AURA_MOD_INCREASE_SPEED]=true,
+					[SPELL_AURA_MOD_INCREASE_HEALTH]=true,
+					[SPELL_AURA_MOD_INCREASE_ENERGY]=true,
+				}
+				--print("aura: "..e.applyAuraName, dump(buffAuras));
+				if(buffAuras[e.applyAuraName]) then
+					if(not STATE.buffSpells[id]) then
+						print("b"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+					end
+					STATE.buffSpells[id] = s;
+				end
+				-- HoTs
+				-- we count PW:S here.
+				if((e.applyAuraName == SPELL_AURA_SCHOOL_ABSORB) or
+					(e.applyAuraName == SPELL_AURA_PERIODIC_HEAL))
+				then
+					STATE.healingSpells[id] = s;
+				end
+				-- DoTs
+				if(e.applyAuraName == SPELL_AURA_PERIODIC_DAMAGE) then
+					STATE.attackSpells[id] = s;
+				end
+			end
+			-- direct heals
+			if(e.id == SPELL_EFFECT_HEAL) then
+				if(not STATE.healingSpells[id]) then
+					print("h"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+				end
+				STATE.healingSpells[id] = s;
 			end
 		end
 		STATE.knownSpells[id] = s;

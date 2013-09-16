@@ -31,6 +31,16 @@ function hasAura(target, spellId)
 	return false;
 end
 
+function hasAnyAura(target, spells)
+	for i=0,(MAX_AURAS-1) do
+		local auraSpellId = target.values[UNIT_FIELD_AURA + i];
+		if(spells[auraSpellId]) then
+			return true;
+		end
+	end
+	return false;
+end
+
 function GetMaxNegativeAuraModifier(target, auraType)
 	local modifier = 0;
 	investigateAuraEffects(target, function(e, level)
