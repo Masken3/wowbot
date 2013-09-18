@@ -210,14 +210,33 @@ local function gather(p)
 end
 
 local function cast(p)
-	local spellId = tonumber(p.text:sub(6))
+	local spaceIdx, countIdx = p.text:find(' ', 6)
+	local count = 1
+	local spellId
+	--print(spaceIdx, countIdx, p.text:sub(6, spaceIdx-1), p.text:sub(6))
+	if(countIdx) then
+		count = tonumber(p.text:sub(countIdx))
+		spellId = tonumber(p.text:sub(6, spaceIdx-1))
+	else
+		spellId = tonumber(p.text:sub(6))
+	end
 	local s = STATE.knownSpells[spellId]
-	if(not s) then reply(p, "Don't know spell "..spellId) end
+	if(not s) then
+		reply(p, "Don't know spell "..spellId)
+		return
+	end
 	local targetGuid = guidFromValues(STATE.knownObjects[p.senderGuid], UNIT_FIELD_TARGET)
 	local target = STATE.knownObjects[targetGuid]
 	if(not target) then
 		reply(p, "No valid target!")
-		return;
+		return
+	end
+	if(count > 1) then
+		reply(p, "Will cast "..s.name.." "..s.rank.." "..count.." times.")
+		STATE.repeatSpellCast.id = spellId
+		STATE.repeatSpellCast.count = count
+		decision()
+		return
 	end
 	castSpellAtUnit(spellId, target)
 	reply(p, "Casting "..s.name.." "..s.rank)

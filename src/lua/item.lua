@@ -348,6 +348,5 @@ function itemLink(o)
 	--|cffffffff|Hitem:2886:0:0:0|h[Crag Boar Rib]|h|r
 	local proto = itemProtoFromId(o.values[OBJECT_FIELD_ENTRY]);
 	local link = "|cff"..itemColors[proto.Quality].."|H"..itemString(o).."|h["..proto.name.."]|h|r";
-	print(link);
 	return link;
 end

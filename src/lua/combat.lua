@@ -198,13 +198,6 @@ function doSpell(dist, realTime, target, bestSpell)
 		setTarget(target);
 		castSpellAtUnit(bestSpell.id, target);
 		-- todo: handle cooldown.
-		local recovery = math.max(bestSpell.RecoveryTime,
-			bestSpell.CategoryRecoveryTime,
-			bestSpell.StartRecoveryTime);
-		local castTime = cSpellCastTime(bestSpell.CastingTimeIndex).base;
-		print("recovery: "..recovery.." castTime: "..castTime);
-		local cooldown = math.max(recovery, castTime);
-		STATE.spellCooldown = realTime + cooldown / 1000;
 		tookAction = true;
 	end
 	return tookAction;

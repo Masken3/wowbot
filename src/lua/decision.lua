@@ -52,6 +52,17 @@ function decision(realTime)
 	end
 	STATE.meleeing = false;
 
+	-- continue repeated spell casting.
+	if(STATE.repeatSpellCast.count > 0) then
+		if(STATE.spellCooldown > realTime) then return; end
+		STATE.repeatSpellCast.count = STATE.repeatSpellCast.count - 1;
+		local s = STATE.knownSpells[STATE.repeatSpellCast.id];
+		setAction("Casting "..s.name..", "..STATE.repeatSpellCast.count.." remain");
+		castSpellWithoutTarget(STATE.repeatSpellCast.id);
+		return;
+	end
+
+	-- sell items.
 	local itemToSell, dummy = next(STATE.itemsToSell);
 	local i, vendor = next(STATE.vendors);
 	if(itemToSell and vendor) then

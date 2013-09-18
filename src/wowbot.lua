@@ -32,6 +32,8 @@ MovingObject = Struct.new{guid='string', location=Location, movement=Movement}
 KnownObject = Struct.new{guid='string', values='table', monsterMovement='table',
 	location=Location, movement=Movement, bot='table', updateValuesCallbacks='table'}
 
+RepeatSpellCast = Struct.new{id='number', count='number'}
+
 if(rawget(_G, 'STATE') == nil) then
 	STATE = {
 		inGroup = false,
@@ -44,6 +46,8 @@ if(rawget(_G, 'STATE') == nil) then
 
 		looting = false,
 		skinning = false,
+
+		repeatSpellCast = RepeatSpellCast.new{id=0, count=0},
 
 		knownQuests = {},
 
@@ -636,6 +640,18 @@ function hSMSG_INITIAL_SPELLS(p)
 	print("Found "..dumpKeys(STATE.attackSpells).." attack spells.");
 end
 
+local function setSpellCooldown(spellId)
+	local s = STATE.knownSpells[spellId]
+	local recovery = math.max(s.RecoveryTime,
+		s.CategoryRecoveryTime,
+		s.StartRecoveryTime);
+	local castTime = cSpellCastTime(s.CastingTimeIndex).base;
+	-- add 100 ms lag, otherwise our cooldown will expire before the server's.
+	local cooldown = math.max(recovery, castTime) + 100;
+	--print("recovery: "..recovery.." castTime: "..castTime.." cooldown: "..cooldown);
+	STATE.spellCooldown = getRealTime() + cooldown / 1000;
+end
+
 function castSpellAtUnit(spellId, target)
 	local data = {
 		spellId = spellId,
@@ -643,6 +659,7 @@ function castSpellAtUnit(spellId, target)
 		unitTarget = target.guid,
 	}
 	print("castSpellAtUnit "..spellId.." @"..target.guid:hex());
+	setSpellCooldown(spellId);
 	send(CMSG_CAST_SPELL, data);
 end
 
@@ -653,6 +670,17 @@ function castSpellAtGO(spellId, target)
 		goTarget = target.guid,
 	}
 	print("castSpellAtGO "..spellId.." @"..target.guid:hex());
+	setSpellCooldown(spellId);
+	send(CMSG_CAST_SPELL, data);
+end
+
+function castSpellWithoutTarget(spellId)
+	local data = {
+		spellId = spellId,
+		targetFlags = 0,
+	}
+	print("castSpellWithoutTarget "..spellId.." "..getRealTime());
+	setSpellCooldown(spellId);
 	send(CMSG_CAST_SPELL, data);
 end
 
@@ -675,6 +703,7 @@ end
 function hSMSG_CAST_FAILED(p)
 	local hex;
 	if(p.result) then
+		STATE.spellCooldown = 0;
 		hex = string.format("0x%02X", p.result);
 	end
 	print("SMSG_CAST_FAILED", tostring(hex), dump(p));
