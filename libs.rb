@@ -75,6 +75,7 @@ DBCs = [
 	'dbcSpellCastTimes',
 	'dbcLock',
 	'dbcSkillLineAbility',
+	'dbcSkillLine',
 ]
 
 DBC_WORKS = DBCs.collect do |d| DbcWork.new(d) end

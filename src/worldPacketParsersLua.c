@@ -1132,3 +1132,8 @@ void pMSG_MINIMAP_PING(pLUA_ARGS) {
 	PL_START;
 	// we're not interested.
 }
+
+void pSMSG_NOTIFICATION(pLUA_ARGS) {
+	PL_START;
+	MV(string, msg);
+}

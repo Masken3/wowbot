@@ -62,7 +62,7 @@ function GetMaxPositiveAuraModifier(target, auraType)
 end
 
 function hSMSG_SET_EXTRA_AURA_INFO(p)
-	print("SMSG_SET_EXTRA_AURA_INFO", dump(p));
+	--print("SMSG_SET_EXTRA_AURA_INFO", dump(p));
 	if(STATE.stealthSpell and (p.spellId == STATE.stealthSpell.id)) then
 		print("We're stealthed!");
 		STATE.stealthed = true;

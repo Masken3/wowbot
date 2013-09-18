@@ -350,7 +350,7 @@ local function valueUpdated(o, idx)
 	if(idx == UNIT_FIELD_FLAGS) then
 		if(STATE.skinningSpell) then
 			if(bit32.btest(o.values[idx], UNIT_FLAG_SKINNABLE)) then
-				partyChat("Found skinnable: "..o.guid:hex());
+				--partyChat("Found skinnable: "..o.guid:hex());
 				STATE.skinnables[o.guid] = o;
 			else
 				STATE.skinnables[o.guid] = nil;
@@ -358,9 +358,12 @@ local function valueUpdated(o, idx)
 		end
 	end
 	if(idx == UNIT_FIELD_LEVEL and o == STATE.me) then
-		print("Level up! "..o.values[idx]);
+		if(STATE.myLevel ~= o.values[idx]) then
+			partyChat("Level up! "..o.values[idx]);
+		end
 		STATE.myLevel = o.values[idx];
 	end
+	-- money
 	if(o == STATE.me and idx == PLAYER_FIELD_COINAGE) then
 		local msg = "I have "..o.values[idx].."c";
 		if(STATE.myMoney) then
@@ -372,6 +375,27 @@ local function valueUpdated(o, idx)
 		end
 		STATE.myMoney = o.values[idx];
 	end
+	-- skills
+	if(o == STATE.me and idx >= PLAYER_SKILL_INFO_1_1 and idx <= PLAYER_SKILL_INFO_1_1+384) then
+		local offset = idx - PLAYER_SKILL_INFO_1_1;
+		local slot = math.floor(offset / 3);
+		local baseIdx = PLAYER_SKILL_INFO_1_1 + slot * 3;
+		--print(idx, offset, slot, baseIdx);
+		local skillId = bit32.band(o.values[baseIdx], 0xFFFF);
+		local skillLine = cSkillLine(skillId);
+		local max;
+		if(o.values[baseIdx+1]) then
+			max = bit32.extract(o.values[baseIdx+1], 16, 16);
+		end
+		local val = skillLevelByIndex(baseIdx);
+		if(STATE.checkNewObjectsForQuests) then
+			partyChat("Skill "..skillLine.name..": "..val.."/"..tostring(max));
+		end
+	end
+end
+
+function hSMSG_NOTIFICATION(p)
+	print("SMSG_NOTIFICATION", dump(p));
 end
 
 function sendCreatureQuery(o, callback)
@@ -506,7 +530,7 @@ function hSMSG_UPDATE_OBJECT(p)
 end
 
 function hSMSG_DESTROY_OBJECT(p)
-	print("SMSG_DESTROY_OBJECT", dump(p));
+	--print("SMSG_DESTROY_OBJECT", dump(p));
 	for i, koh in pairs(STATE.knownObjectHolders) do
 		koh[p.guid] = nil;
 	end
