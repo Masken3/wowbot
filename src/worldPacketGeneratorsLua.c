@@ -448,6 +448,15 @@ static uint16 genMSG_MINIMAP_PING(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+static uint16 genCMSG_SELL_ITEM(lua_State* L, byte* buf) {
+	GL_START;
+	M(Guid, vendorGuid);
+	M(Guid, itemGuid);
+	M(byte, count);
+	GL_END;
+}
+
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -487,6 +496,7 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_GAMEOBJ_USE);
 		GEN_CASE(CMSG_GAMEOBJECT_QUERY);
 		GEN_CASE(MSG_MINIMAP_PING);
+		GEN_CASE(CMSG_SELL_ITEM);
 		default: return NULL;
 	}
 }

@@ -15,6 +15,8 @@ These are chat commands that bots will respond to:
 
 * cast <spellId>	Cast spell at commander's target.
 
+* sell <itemId>	Sell inventory items with the specified id.
+
 * aggro type	Become aggressive against all creatures of the type of commander's target.
 	If not doing anything else, attack the nearest one.
 	Error if commander is not targeting a neutral or hostile creature.
@@ -24,3 +26,5 @@ These are chat commands that bots will respond to:
 ** money: <int><g|s|c>	Gold, Silver or Copper.
 ** item: <name> [count]
 ** all: items that are not soulbound.
+
+* echo <text>	Dump text to console. Good for debugging item links.

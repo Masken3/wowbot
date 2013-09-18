@@ -326,3 +326,28 @@ function itemInventoryCountById(itemId)
 	end)
 	return count;
 end
+
+local function itemString(o)
+	--item:itemId:enchantId:suffixId:uniqueId
+	return "item:"..o.values[OBJECT_FIELD_ENTRY]..":"..
+		(o.values[ITEM_FIELD_ENCHANTMENT] or 0)..":"..
+		(o.values[ITEM_FIELD_RANDOM_PROPERTIES_ID] or 0)..":0";
+end
+
+local itemColors = {
+	[ITEM_QUALITY_POOR] = "9d9d9d",
+	[ITEM_QUALITY_NORMAL] = "ffffff",
+	[ITEM_QUALITY_UNCOMMON] = "1eff00",
+	[ITEM_QUALITY_RARE] = "0070dd",
+	[ITEM_QUALITY_EPIC] = "a335ee",
+	[ITEM_QUALITY_LEGENDARY] = "ff8000",
+	[ITEM_QUALITY_ARTIFACT] = "e6cc80",
+};
+
+function itemLink(o)
+	--|cffffffff|Hitem:2886:0:0:0|h[Crag Boar Rib]|h|r
+	local proto = itemProtoFromId(o.values[OBJECT_FIELD_ENTRY]);
+	local link = "|cff"..itemColors[proto.Quality].."|H"..itemString(o).."|h["..proto.name.."]|h|r";
+	print(link);
+	return link;
+end

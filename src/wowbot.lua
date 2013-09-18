@@ -54,6 +54,8 @@ if(rawget(_G, 'STATE') == nil) then
 		myLevel = 0,	-- set by C function enterWorld.
 		myClassName = '',	-- set by C function enterWorld.
 
+		myMoney = false,	-- in coppers. used to determine money changes.
+
 		-- temporary set of the spells we're learning from a trainer.
 		-- if this doesn't empty, something went wrong.
 		training = {},
@@ -97,6 +99,12 @@ if(rawget(_G, 'STATE') == nil) then
 		-- they will be called when itemDataWaiting is empty.
 		itemDataCallbacks = {},
 
+		---- guid:table{slot, bag, count}
+		-- itemId:true
+		-- if not empty and a vendor is nearby,
+		-- will go to vendor and sell all inventory items with that id.
+		itemsToSell = {},
+
 		tradeGiveAll = false,
 		recreate = false,
 
@@ -127,6 +135,7 @@ if(rawget(_G, 'STATE') == nil) then
 		'pickpocketables',
 		'skinnables',
 		'openables',
+		'vendors',
 	}
 	for i,k in ipairs(knownObjectHolders) do
 		STATE[k] = {};
@@ -324,6 +333,12 @@ local function valueUpdated(o, idx)
 				end
 			end)
 		end
+		if(bit32.btest(flags, UNIT_NPC_FLAG_VENDOR)) then
+			sendCreatureQuery(o, function(p)
+				print("Found Vendor "..p.name.." <"..p.subName..">");
+				STATE.vendors[o.guid] = o;
+			end)
+		end
 	end
 	if(idx == UNIT_DYNAMIC_FLAGS) then
 		if(bit32.btest(o.values[idx], UNIT_DYNFLAG_LOOTABLE)) then
@@ -345,6 +360,17 @@ local function valueUpdated(o, idx)
 	if(idx == UNIT_FIELD_LEVEL and o == STATE.me) then
 		print("Level up! "..o.values[idx]);
 		STATE.myLevel = o.values[idx];
+	end
+	if(o == STATE.me and idx == PLAYER_FIELD_COINAGE) then
+		local msg = "I have "..o.values[idx].."c";
+		if(STATE.myMoney) then
+			local diff = o.values[idx] - STATE.myMoney;
+			if(diff > 0) then msg=msg.." +";
+			else msg=msg.." -"; end
+			msg=msg..diff;
+			partyChat(msg);
+		end
+		STATE.myMoney = o.values[idx];
 	end
 end
 

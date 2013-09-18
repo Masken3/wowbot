@@ -52,6 +52,14 @@ function decision(realTime)
 	end
 	STATE.meleeing = false;
 
+	local itemToSell, dummy = next(STATE.itemsToSell);
+	local i, vendor = next(STATE.vendors);
+	if(itemToSell and vendor) then
+		setAction("Selling "..itemProtoFromId(itemToSell).name);
+		goSell(itemToSell);
+		return;
+	end
+
 	-- STATE.pickpocketables is filled only if you have
 	-- STATE.stealthSpell and STATE.pickpocketSpell.
 	local i, p = next(STATE.pickpocketables);
@@ -142,6 +150,36 @@ function pickpocket(target)
 			--castSpellAtUnit(STATE.pickpocketSpell.id, target);
 			target.bot.pickpocketed = true;
 		end
+	end
+end
+
+local function closestVendor()
+	local dist;
+	local vendor;
+	for guid,o in pairs(STATE.vendors) do
+		local d = distanceToObject(o);
+		if((not dist) or (d < dist)) then
+			dist = d;
+			vendor = o;
+		end
+	end
+	return vendor;
+end
+
+function goSell(itemId)
+	local vendor = closestVendor();
+	local dist = distanceToObject(vendor);
+	doMoveToTarget(getRealTime(), vendor, MELEE_DIST);
+	if(dist <= MELEE_DIST) then
+		investigateInventory(function(o, bagSlot, slot)
+			local itemId = o.values[OBJECT_FIELD_ENTRY];
+			if(STATE.itemsToSell[itemId]) then
+				send(CMSG_SELL_ITEM, {vendorGuid=vendor.guid, itemGuid=o.guid,
+					count=o.values[ITEM_FIELD_STACK_COUNT]});
+			end
+		end)
+		-- clear the list afterwards, as we may have more than one stack.
+		STATE.itemsToSell = {};
 	end
 end
 

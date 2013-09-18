@@ -157,3 +157,13 @@ ping gatherables
 command auto-range, default 40
 check hostiles in range 40
 ex: "Guarded Copper Vein, 64 yards".
+
+11:01 2013-09-17
+todo:
+item links
+vendors
+money update
+
+20:03 2013-09-18
+skill value update
+cast [repeat]

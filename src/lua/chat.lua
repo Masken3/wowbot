@@ -52,7 +52,7 @@ local function listItems(p)
 	investigateInventory(function(o)
 		local id = o.values[OBJECT_FIELD_ENTRY]
 		local proto = itemProtoFromId(id)
-		msg = msg..proto.name.." ("..id..') x'..o.values[ITEM_FIELD_STACK_COUNT].."\n"
+		msg = msg..itemLink(o).." ("..id..') x'..o.values[ITEM_FIELD_STACK_COUNT].."\n"
 	end)
 	reply(p, msg)
 end
@@ -223,6 +223,26 @@ local function cast(p)
 	reply(p, "Casting "..s.name.." "..s.rank)
 end
 
+-- destroys all items in bags, but not equipped items.
+-- does destroy unequipped bags.
+local function sell(p)
+	local itemId = tonumber(p.text:sub(6))
+	local msg = 'Selling items:'
+	investigateInventory(function(o, bagSlot, slot)
+		if(itemId == o.values[OBJECT_FIELD_ENTRY]) then
+			msg = msg..o.values[OBJECT_FIELD_ENTRY]..' '..o.guid:hex().."\n"
+			--STATE.itemsToSell[o.guid] = {slot = slot, bag = bagSlot,
+				--count = o.values[ITEM_FIELD_STACK_COUNT]}
+			STATE.itemsToSell[itemId] = true
+		end
+	end)
+	reply(p, msg)
+end
+
+local function echo(p)
+	print("echo", dump(p))
+end
+
 function handleChatMessage(p)
 	if(p.text == 'lq') then
 		listQuests(p)
@@ -252,6 +272,10 @@ function handleChatMessage(p)
 		gather(p)
 	elseif(p.text:startWith('cast ')) then
 		cast(p)
+	elseif(p.text:startWith('sell ')) then
+		sell(p)
+	elseif(p.text:startWith('echo ')) then
+		echo(p)
 	else
 		return
 	end

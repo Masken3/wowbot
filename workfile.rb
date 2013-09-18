@@ -40,6 +40,7 @@ work = ExeWork.new do
 				'GameObjectDynamicLowFlags',
 				'Targets',
 				'LockKeyType', 'LockType',
+				'ItemQualities',
 				'TradeStatus', 'Language', 'ChatMsg']}),
 		GenLuaFromHeaderTask.new('Unit', 'server-code/Unit.h',
 			{:includedEnums=>['UnitFlags', 'NPCFlags']}),

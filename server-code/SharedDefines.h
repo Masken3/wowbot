@@ -238,7 +238,7 @@ enum ItemQualities
 	ITEM_QUALITY_RARE                  = 3,                 // BLUE
 	ITEM_QUALITY_EPIC                  = 4,                 // PURPLE
 	ITEM_QUALITY_LEGENDARY             = 5,                 // ORANGE
-	ITEM_QUALITY_ARTIFACT              = 6                  // LIGHT YELLOW
+	ITEM_QUALITY_ARTIFACT              = 6,                 // LIGHT YELLOW
 };
 
 #define MAX_ITEM_QUALITY                 7
