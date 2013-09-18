@@ -133,6 +133,11 @@ function decision(realTime)
 		return;
 	end
 
+	if(STATE.fishing) then
+		doFish(realTime);
+		return;
+	end
+
 	-- don't try following the leader if we don't know where he is.
 	if(STATE.inGroup and STATE.leader and STATE.leader.location.position.x) then
 		setAction("Following leader");
@@ -143,6 +148,15 @@ function decision(realTime)
 		return;
 	end
 	--print("Nothing to do.");
+end
+
+function doFish(realTime)
+	setAction("Fishing...");
+	if(not STATE.fishingBobber) then
+		if(STATE.spellCooldown > realTime) then return; end
+		castSpellWithoutTarget(STATE.fishingSpell);
+		return;
+	end
 end
 
 function pickpocket(target)

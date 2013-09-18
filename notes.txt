@@ -167,3 +167,14 @@ money update
 20:03 2013-09-18
 skill value update
 cast [repeat]
+
+00:30 2013-09-19
+Fishing requires a spell and an equipped Fishing Pole.
+It summons a NODE.
+When the node is ready to be opened, SMSG_GAMEOBJECT_CUSTOM_ANIM is sent.
+Open it with CMSG_GAMEOBJ_USE.
+If it is not opened soon enough, SMSG_FISH_NOT_HOOKED is sent.
+If your skill is not enough for the zone/hole, SMSG_FISH_ESCAPED is sent.
+
+01:16 2013-09-19
+todo: cooking

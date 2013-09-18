@@ -86,6 +86,10 @@ if(rawget(_G, 'STATE') == nil) then
 
 		skinningSpell = false,	-- spellId.
 
+		fishing = false,
+		fishingSpell = false,	-- spellId.
+		fishingBobber = false, -- KnownObject.
+
 		openLockSpells = {},	--miscValue:spellId.
 		healingSpells = {},
 		buffSpells = {},
@@ -330,16 +334,16 @@ local function valueUpdated(o, idx)
 		local flags = o.values[idx];
 		if(bit32.btest(flags, UNIT_NPC_FLAG_TRAINER)) then
 			sendCreatureQuery(o, function(p)
-				print("Found "..p.subName);
+				--print("Found "..p.subName);
 				if(p.subName == STATE.myClassName.." Trainer") then
-					print("MINE!");
+					--print("MINE!");
 					STATE.classTrainers[o.guid] = o;
 				end
 			end)
 		end
 		if(bit32.btest(flags, UNIT_NPC_FLAG_VENDOR)) then
 			sendCreatureQuery(o, function(p)
-				print("Found Vendor "..p.name.." <"..p.subName..">");
+				--print("Found Vendor "..p.name.." <"..p.subName..">");
 				STATE.vendors[o.guid] = o;
 			end)
 		end
@@ -396,6 +400,13 @@ local function valueUpdated(o, idx)
 			partyChat("Skill "..skillLine.name..": "..val.."/"..tostring(max));
 		end
 	end
+	-- fishing bobber
+	--[[	-- looks like this never happens.
+	-- we'll have to listen to SMSG_GAMEOBJECT_CUSTOM_ANIM and SMSG_FISH_NOT_HOOKED instead.
+	if(o == STATE.fishingBobber) then-- and idx == GAMEOBJECT_STATE) then
+		print("Bobber "..idx..": "..o.values[idx]);
+	end
+	]]
 end
 
 function hSMSG_NOTIFICATION(p)
@@ -538,6 +549,11 @@ function hSMSG_DESTROY_OBJECT(p)
 	for i, koh in pairs(STATE.knownObjectHolders) do
 		koh[p.guid] = nil;
 	end
+	if(STATE.fishingBobber and p.guid == STATE.fishingBobber.guid) then
+		print("fishingBobber destroyed.");
+		STATE.fishingBobber = false;
+		decision();
+	end
 end
 
 local SPELL_ATTACK_EFFECTS = {
@@ -585,6 +601,9 @@ function hSMSG_INITIAL_SPELLS(p)
 			end
 			if(e.id == SPELL_EFFECT_SKINNING) then
 				STATE.skinningSpell = id;
+			end
+			if(e.id == SPELL_EFFECT_TRANS_DOOR and e.miscValue == 35591) then
+				STATE.fishingSpell = id;
 			end
 			if(e.id == SPELL_EFFECT_OPEN_LOCK) then
 				if(e.implicitTargetA == TARGET_GAMEOBJECT) then

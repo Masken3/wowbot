@@ -1137,3 +1137,9 @@ void pSMSG_NOTIFICATION(pLUA_ARGS) {
 	PL_START;
 	MV(string, msg);
 }
+
+void pSMSG_GAMEOBJECT_CUSTOM_ANIM(pLUA_ARGS) {
+	PL_START;
+	M(Guid, guid);
+	M(uint32, animId);
+}

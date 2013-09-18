@@ -280,6 +280,7 @@ function maybeEquip(itemGuid)
 	end
 end
 
+-- slot is one of the EQUIPMENT_SLOT constants.
 function equip(itemGuid, itemId, slot)
 	local proto = itemProtoFromId(itemId);
 	local msg = "Equipping "..itemId.." "..itemGuid:hex().." "..proto.name;
@@ -349,4 +350,10 @@ function itemLink(o)
 	local proto = itemProtoFromId(o.values[OBJECT_FIELD_ENTRY]);
 	local link = "|cff"..itemColors[proto.Quality].."|H"..itemString(o).."|h["..proto.name.."]|h|r";
 	return link;
+end
+
+function isFishingPole(o)
+	local proto = itemProtoFromId(o.values[OBJECT_FIELD_ENTRY]);
+	return (proto.itemClass == ITEM_CLASS_WEAPON and
+		proto.subClass == ITEM_SUBCLASS_WEAPON_FISHING_POLE);
 end

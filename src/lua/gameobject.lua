@@ -78,6 +78,18 @@ function canOpenGO(o)
 end
 
 function newGameObject(o, info)
+	if(STATE.fishing and info.type == GAMEOBJECT_TYPE_FISHINGNODE) then
+		print("Found Fishing bobber "..o.guid:hex());
+		STATE.fishingBobber = o;
+		--[[
+		if(guidFromValues(o, OBJECT_FIELD_CREATED_BY) == STATE.myGuid) then
+			STATE.fishingBobber = o;
+		else
+			print("but it's not ours. :(");
+		end
+		]]
+		return;
+	end
 	if(not canOpenGO(o)) then return; end
 	o.location = Location.new();
 	local pos = goPos(o);
@@ -98,4 +110,27 @@ function haveSkillToOpen(o)
 	local mySkillLevel = spellSkillLevel(spellId);
 	if(not mySkillLevel) then return false; end
 	return mySkillLevel >= e.skill;
+end
+
+function hSMSG_GAMEOBJECT_CUSTOM_ANIM(p)
+	if(STATE.fishingBobber) then-- and STATE.fishingBobber.guid == p.guid) then
+		print("Opening fishingBobber "..p.guid:hex());
+		send(CMSG_GAMEOBJ_USE, {guid=p.guid});
+	end
+end
+
+function openGameobject(o)
+	local lockIndex = goLockIndex(o);
+	if(lockIndex) then
+		local spell = STATE.openLockSpells[lockIndex];
+		if(spell) then
+			castSpellAtGO(spell, o);
+		else
+			--partyChat("Don't know any spell to open that object.");
+			partyChat("Can't open lock index "..lockIndex);
+		end
+	else
+		-- don't know if this will work.
+		castSpellAtGO(22810, o);
+	end
 end

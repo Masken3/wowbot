@@ -171,19 +171,7 @@ local function gameobject(p)
 		--send(CMSG_GAMEOBJ_USE, {guid=closestObject.guid});
 		--castSpellAtGO(22810, closestObject);
 
-		local lockIndex = goLockIndex(closestObject);
-		if(lockIndex) then
-			local spell = STATE.openLockSpells[lockIndex];
-			if(spell) then
-				castSpellAtGO(spell, closestObject);
-			else
-				--partyChat("Don't know any spell to open that object.");
-				partyChat("Can't open lock index "..lockIndex);
-			end
-		else
-			-- don't know if this will work.
-			castSpellAtGO(22810, closestObject);
-		end
+		openGameobject(closestObject);
 	else
 		partyChat("No objects found.");
 	end
@@ -262,6 +250,33 @@ local function echo(p)
 	print("echo", dump(p))
 end
 
+-- start fishing.
+local function fish(p)
+	if(not STATE.fishingSpell) then
+		reply(p, "I don't know Fishing.")
+		return
+	end
+	-- if no Fishing Pole is equipped, check our inventory for one and equip it.
+	local eg = equipmentInSlot(EQUIPMENT_SLOT_MAINHAND)
+	local eo = STATE.knownObjects[eg]
+	if(not eo or not isFishingPole(eo)) then
+		local success = false
+		investigateInventory(function(o)
+			-- we may have more than one pole. equip the first one.
+			if(isFishingPole(o) and not success) then
+				equip(o.guid, o.values[OBJECT_FIELD_ENTRY], EQUIPMENT_SLOT_MAINHAND)
+				success = true
+			end
+		end)
+		if(not success) then
+			reply(p, "I don't have a Fishing Pole!")
+			return
+		end
+	end
+	STATE.fishing = true
+	reply(p, "Started Fishing.")
+end
+
 function handleChatMessage(p)
 	if(p.text == 'lq') then
 		listQuests(p)
@@ -295,6 +310,8 @@ function handleChatMessage(p)
 		sell(p)
 	elseif(p.text:startWith('echo ')) then
 		echo(p)
+	elseif(p.text == 'fish') then
+		fish(p)
 	else
 		return
 	end
