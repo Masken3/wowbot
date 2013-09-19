@@ -321,6 +321,21 @@ local function useItem(p)
 	reply(p, msg)
 end
 
+local function disenchant(p)
+	if(not STATE.disenchantSpell) then return end
+	local itemId = tonumber(p.text:sub(5))
+	local msg = 'Disenchanting item:'
+	local done = false
+	investigateInventory(function(o, bagSlot, slot)
+		if(itemId == o.values[OBJECT_FIELD_ENTRY] and not done) then
+			msg = msg..' '..o.guid:hex()
+			castSpellAtItem(STATE.disenchantSpell, o)
+			done = true
+		end
+	end)
+	reply(p, msg)
+end
+
 function handleChatMessage(p)
 	if(p.text == 'lq') then
 		listQuests(p)
@@ -362,6 +377,8 @@ function handleChatMessage(p)
 		stop(p)
 	elseif(p.text:startWith('use ')) then
 		useItem(p)
+	elseif(p.text:startWith('dis ')) then
+		disenchant(p)
 	else
 		return
 	end

@@ -23,6 +23,9 @@ These are chat commands that bots will respond to:
 
 * stop	Stop fishing.
 
+* dis <itemId>	Disenchant an inventory item.
+* dis all	Disenchant all disenchantable inventory items.
+
 * aggro type	Become aggressive against all creatures of the type of commander's target.
 	If not doing anything else, attack the nearest one.
 	Error if commander is not targeting a neutral or hostile creature.

@@ -90,6 +90,8 @@ if(rawget(_G, 'STATE') == nil) then
 		fishingSpell = false,	-- spellId.
 		fishingBobber = false, -- KnownObject.
 
+		disenchantSpell = false,	-- spellId.
+
 		openLockSpells = {},	--miscValue:spellId.
 		healingSpells = {},
 		buffSpells = {},
@@ -651,6 +653,10 @@ local function learnSpell(id)
 			end
 			STATE.healingSpells[id] = s;
 		end
+		-- disenchant
+		if(e.id == SPELL_EFFECT_DISENCHANT) then
+			STATE.disenchantSpell = id;
+		end
 	end
 	STATE.knownSpells[id] = s;
 	return s;
@@ -700,6 +706,17 @@ function castSpellAtGO(spellId, target)
 		goTarget = target.guid,
 	}
 	print("castSpellAtGO "..spellId.." @"..target.guid:hex());
+	setSpellCooldown(spellId);
+	send(CMSG_CAST_SPELL, data);
+end
+
+function castSpellAtItem(spellId, target)
+	local data = {
+		spellId = spellId,
+		targetFlags = TARGET_FLAG_ITEM,
+		itemTarget = target.guid,
+	}
+	print("castSpellAtItem "..spellId.." @"..target.guid:hex());
 	setSpellCooldown(spellId);
 	send(CMSG_CAST_SPELL, data);
 end
