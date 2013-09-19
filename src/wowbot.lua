@@ -314,7 +314,7 @@ end
     bool IsTransport()     const { return GetHigh() == HIGHGUID_TRANSPORT; }
     bool IsMOTransport()   const { return GetHigh() == HIGHGUID_MO_TRANSPORT; }
 --]]
-local function isUnit(o)
+function isUnit(o)
 	if(not o) then return false; end
 	return bit32.btest(o.values[OBJECT_FIELD_TYPE], TYPEMASK_UNIT);
 end

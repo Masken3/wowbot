@@ -148,7 +148,7 @@ function wantToWear(id)
 	if(type(slots) ~= 'table') then
 		slots = {slots};
 	end
-	local chosenSlot = nil;
+	local chosenSlot = false;
 	local chosenPrice = nil;
 	for i, slot in ipairs(slots) do
 		local equippedGuid = equipmentInSlot(slot);

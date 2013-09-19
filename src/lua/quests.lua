@@ -4,7 +4,11 @@ function getQuests(giver)
 	doMoveToTarget(getRealTime(), giver, MELEE_DIST);
 	if(dist <= MELEE_DIST) then
 		if(not giver.bot.chatting) then
-			send(CMSG_QUESTGIVER_HELLO, {guid=giver.guid});
+			if(isUnit(giver)) then
+				send(CMSG_QUESTGIVER_HELLO, {guid=giver.guid});
+			else
+				send(CMSG_GAMEOBJ_USE, {guid=giver.guid});
+			end
 			giver.bot.chatting = true;
 		end
 	end
@@ -109,7 +113,11 @@ function finishQuests(finisher)
 	doMoveToTarget(getRealTime(), finisher, MELEE_DIST);
 	if(dist <= MELEE_DIST) then
 		if(not finisher.bot.chatting) then
-			send(CMSG_QUESTGIVER_HELLO, {guid=finisher.guid});
+			if(isUnit(finisher)) then
+				send(CMSG_QUESTGIVER_HELLO, {guid=finisher.guid});
+			else
+				send(CMSG_GAMEOBJ_USE, {guid=finisher.guid});
+			end
 			finisher.bot.chatting = true;
 		end
 	end
@@ -170,7 +178,7 @@ function hSMSG_QUESTGIVER_STATUS(p)
 		print("Added quest giver "..p.guid:hex());
 		STATE.questGivers[p.guid] = STATE.knownObjects[p.guid];
 	end
-	if((p.status == DIALOG_STATUS_REWARD_REP) or
+	if(--(p.status == DIALOG_STATUS_REWARD_REP) or
 		(p.status == DIALOG_STATUS_REWARD2)) then
 		print("Added quest finisher "..p.guid:hex());
 		STATE.questFinishers[p.guid] = STATE.knownObjects[p.guid];
