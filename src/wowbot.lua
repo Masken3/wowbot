@@ -569,94 +569,104 @@ local SPELL_ATTACK_EFFECTS = {
 	[SPELL_EFFECT_NORMALIZED_WEAPON_DMG]=true,
 }
 
+local function learnSpell(id)
+	local s = cSpell(id);
+	--print(id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+	for i, e in ipairs(s.effect) do
+		--print(e.id, SPELL_ATTACK_EFFECTS[e.id]);
+		if(SPELL_ATTACK_EFFECTS[e.id]) then
+			if(not STATE.attackSpells[id]) then
+				print("a"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+			end
+			STATE.attackSpells[id] = s;
+		end
+		if(e.id == SPELL_EFFECT_ATTACK) then
+			-- assuming that there's only one melee spell
+			assert(not STATE.meleeSpell);
+			--print("Melee spell:", id);
+			STATE.meleeSpell = id;
+		end
+		if((e.id == SPELL_EFFECT_APPLY_AURA) and (e.applyAuraName == SPELL_AURA_MOD_STEALTH)) then
+			if(not STATE.stealthSpell or (STATE.stealthSpell.rank < s.rank)) then
+				--print("Stealth spell: "..id.." "..s.rank);
+				STATE.stealthSpell = s;
+			end
+		end
+		if(e.id == SPELL_EFFECT_PICKPOCKET) then
+			assert(not STATE.pickpocketSpell);
+			STATE.pickpocketSpell = s;
+		end
+		if(e.id == SPELL_EFFECT_SKINNING) then
+			STATE.skinningSpell = id;
+		end
+		if(e.id == SPELL_EFFECT_TRANS_DOOR and e.miscValue == 35591) then
+			STATE.fishingSpell = id;
+		end
+		if(e.id == SPELL_EFFECT_OPEN_LOCK) then
+			if(e.implicitTargetA == TARGET_GAMEOBJECT) then
+				--print("OpenLockSpell "..e.miscValue..": "..id);
+				if(STATE.openLockSpells[e.miscValue]) then print("Override!"); end
+				STATE.openLockSpells[e.miscValue] = id;
+			end
+		end
+		if((e.id == SPELL_EFFECT_APPLY_AURA) and
+			(e.implicitTargetA == TARGET_SINGLE_FRIEND))
+		then
+			-- buffs
+			local buffAuras = {
+				[SPELL_AURA_MOD_ATTACKSPEED]=true,
+				[SPELL_AURA_MOD_DAMAGE_DONE]=true,
+				[SPELL_AURA_MOD_RESISTANCE]=true,
+				[SPELL_AURA_PERIODIC_ENERGIZE]=true,
+				[SPELL_AURA_MOD_STAT]=true,
+				[SPELL_AURA_MOD_SKILL]=true,
+				[SPELL_AURA_MOD_INCREASE_SPEED]=true,
+				[SPELL_AURA_MOD_INCREASE_HEALTH]=true,
+				[SPELL_AURA_MOD_INCREASE_ENERGY]=true,
+			}
+			--print("aura: "..e.applyAuraName, dump(buffAuras));
+			if(buffAuras[e.applyAuraName]) then
+				if(not STATE.buffSpells[id]) then
+					print("b"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+				end
+				STATE.buffSpells[id] = s;
+			end
+			-- HoTs
+			-- we count PW:S here.
+			if((e.applyAuraName == SPELL_AURA_SCHOOL_ABSORB) or
+				(e.applyAuraName == SPELL_AURA_PERIODIC_HEAL))
+			then
+				STATE.healingSpells[id] = s;
+			end
+			-- DoTs
+			if(e.applyAuraName == SPELL_AURA_PERIODIC_DAMAGE) then
+				STATE.attackSpells[id] = s;
+			end
+		end
+		-- direct heals
+		if(e.id == SPELL_EFFECT_HEAL) then
+			if(not STATE.healingSpells[id]) then
+				print("h"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+			end
+			STATE.healingSpells[id] = s;
+		end
+	end
+	STATE.knownSpells[id] = s;
+	return s;
+end
+
 function hSMSG_INITIAL_SPELLS(p)
 	--print("SMSG_INITIAL_SPELLS", dump(p));
 	--print(dump(SPELL_ATTACK_EFFECTS));
 	for i,id in ipairs(p.spells) do
-		local s = cSpell(id);
-		--print(id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
-		for i, e in ipairs(s.effect) do
-			--print(e.id, SPELL_ATTACK_EFFECTS[e.id]);
-			if(SPELL_ATTACK_EFFECTS[e.id]) then
-				if(not STATE.attackSpells[id]) then
-					print("a"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
-				end
-				STATE.attackSpells[id] = s;
-			end
-			if(e.id == SPELL_EFFECT_ATTACK) then
-				-- assuming that there's only one melee spell
-				assert(not STATE.meleeSpell);
-				--print("Melee spell:", id);
-				STATE.meleeSpell = id;
-			end
-			if((e.id == SPELL_EFFECT_APPLY_AURA) and (e.applyAuraName == SPELL_AURA_MOD_STEALTH)) then
-				if(not STATE.stealthSpell or (STATE.stealthSpell.rank < s.rank)) then
-					--print("Stealth spell: "..id.." "..s.rank);
-					STATE.stealthSpell = s;
-				end
-			end
-			if(e.id == SPELL_EFFECT_PICKPOCKET) then
-				assert(not STATE.pickpocketSpell);
-				STATE.pickpocketSpell = s;
-			end
-			if(e.id == SPELL_EFFECT_SKINNING) then
-				STATE.skinningSpell = id;
-			end
-			if(e.id == SPELL_EFFECT_TRANS_DOOR and e.miscValue == 35591) then
-				STATE.fishingSpell = id;
-			end
-			if(e.id == SPELL_EFFECT_OPEN_LOCK) then
-				if(e.implicitTargetA == TARGET_GAMEOBJECT) then
-					--print("OpenLockSpell "..e.miscValue..": "..id);
-					if(STATE.openLockSpells[e.miscValue]) then print("Override!"); end
-					STATE.openLockSpells[e.miscValue] = id;
-				end
-			end
-			if((e.id == SPELL_EFFECT_APPLY_AURA) and
-				(e.implicitTargetA == TARGET_SINGLE_FRIEND))
-			then
-				-- buffs
-				local buffAuras = {
-					[SPELL_AURA_MOD_ATTACKSPEED]=true,
-					[SPELL_AURA_MOD_DAMAGE_DONE]=true,
-					[SPELL_AURA_MOD_RESISTANCE]=true,
-					[SPELL_AURA_PERIODIC_ENERGIZE]=true,
-					[SPELL_AURA_MOD_STAT]=true,
-					[SPELL_AURA_MOD_SKILL]=true,
-					[SPELL_AURA_MOD_INCREASE_SPEED]=true,
-					[SPELL_AURA_MOD_INCREASE_HEALTH]=true,
-					[SPELL_AURA_MOD_INCREASE_ENERGY]=true,
-				}
-				--print("aura: "..e.applyAuraName, dump(buffAuras));
-				if(buffAuras[e.applyAuraName]) then
-					if(not STATE.buffSpells[id]) then
-						print("b"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
-					end
-					STATE.buffSpells[id] = s;
-				end
-				-- HoTs
-				-- we count PW:S here.
-				if((e.applyAuraName == SPELL_AURA_SCHOOL_ABSORB) or
-					(e.applyAuraName == SPELL_AURA_PERIODIC_HEAL))
-				then
-					STATE.healingSpells[id] = s;
-				end
-				-- DoTs
-				if(e.applyAuraName == SPELL_AURA_PERIODIC_DAMAGE) then
-					STATE.attackSpells[id] = s;
-				end
-			end
-			-- direct heals
-			if(e.id == SPELL_EFFECT_HEAL) then
-				if(not STATE.healingSpells[id]) then
-					print("h"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
-				end
-				STATE.healingSpells[id] = s;
-			end
-		end
-		STATE.knownSpells[id] = s;
+		learnSpell(id);
 	end
 	print("Found "..dumpKeys(STATE.attackSpells).." attack spells.");
+end
+
+function hSMSG_LEARNED_SPELL(p)
+	local s = learnSpell(p.spellId);
+	partyChat("Learned spell "..s.name.." "..s.rank.." ("..p.spellId..")");
 end
 
 local function setSpellCooldown(spellId)

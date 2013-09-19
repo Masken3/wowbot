@@ -1143,3 +1143,8 @@ void pSMSG_GAMEOBJECT_CUSTOM_ANIM(pLUA_ARGS) {
 	M(Guid, guid);
 	M(uint32, animId);
 }
+
+void pSMSG_LEARNED_SPELL(pLUA_ARGS) {
+	PL_START;
+	M(uint32, spellId);
+}
