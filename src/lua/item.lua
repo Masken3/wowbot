@@ -196,6 +196,9 @@ function itemLoginComplete()
 		--print(id, o.guid:hex(), o.values[ITEM_FIELD_STACK_COUNT]);
 		maybeEquip(o.guid);
 	end)
+	investigateBank(function(o)
+		itemProtoFromId(itemIdOfGuid(o.guid));
+	end)
 end
 
 function itemTest()
@@ -307,17 +310,23 @@ local function baseInvestigate(directField1, directFieldLast,
 	end
 	-- bags
 	for i = bagField1, bagFieldLast, 2 do
-		local bag = STATE.knownObjects[guidFromValues(STATE.me, i)];
-		if(isValidGuid(bag)) then for j = 0, bag.values[CONTAINER_FIELD_NUM_SLOTS], 1 do
-			local guid = guidFromValues(bag, CONTAINER_FIELD_SLOT_1 + (j*2))
-			if(isValidGuid(guid)) then
-				local o = STATE.knownObjects[guid];
-				local bagSlot = bagSlotStart + ((i - bagField1) / 2);
-				local slot = j;
-				local res = f(o, bagSlot, slot);
-				if(res == false) then return; end
-			end
-		end end
+		local bagGuid = guidFromValues(STATE.me, i);
+		if(isValidGuid(bagGuid)) then
+			local bag = STATE.knownObjects[bagGuid];
+			local slots;
+			if(bag) then slots = bag.values[CONTAINER_FIELD_NUM_SLOTS]; end
+			--print(tostring(slots));
+			if(slots) then for j = 0, slots, 1 do
+				local guid = guidFromValues(bag, CONTAINER_FIELD_SLOT_1 + (j*2))
+				if(isValidGuid(guid)) then
+					local o = STATE.knownObjects[guid];
+					local bagSlot = bagSlotStart + ((i - bagField1) / 2);
+					local slot = j;
+					local res = f(o, bagSlot, slot);
+					if(res == false) then return; end
+				end
+			end end
+		end
 	end
 end
 
