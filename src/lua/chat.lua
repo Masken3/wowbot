@@ -200,7 +200,7 @@ end
 
 local function cast(p)
 	local spaceIdx, countIdx = p.text:find(' ', 6)
-	local count = 1
+	local count
 	local spellId
 	--print(spaceIdx, countIdx, p.text:sub(6, spaceIdx-1), p.text:sub(6))
 	if(countIdx) then
@@ -214,17 +214,17 @@ local function cast(p)
 		reply(p, "Don't know spell "..spellId)
 		return
 	end
-	local targetGuid = guidFromValues(STATE.knownObjects[p.senderGuid], UNIT_FIELD_TARGET)
-	local target = STATE.knownObjects[targetGuid]
-	if(not target) then
-		reply(p, "No valid target!")
-		return
-	end
-	if(count > 1) then
+	if(countIdx) then
 		reply(p, "Will cast "..s.name.." "..s.rank.." "..count.." times.")
 		STATE.repeatSpellCast.id = spellId
 		STATE.repeatSpellCast.count = count
 		decision()
+		return
+	end
+	local targetGuid = guidFromValues(STATE.knownObjects[p.senderGuid], UNIT_FIELD_TARGET)
+	local target = STATE.knownObjects[targetGuid]
+	if(not target) then
+		reply(p, "No valid target!")
 		return
 	end
 	castSpellAtUnit(spellId, target)
