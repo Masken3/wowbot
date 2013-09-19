@@ -57,6 +57,7 @@ work = ExeWork.new do
 				'ItemSubclassArmor']}),
 		GenLuaFromHeaderTask.new('Player', 'server-code/Player.h',
 			{:includedEnums=>['EquipmentSlots', 'InventorySlots', 'InventoryPackSlots',
+				'BankItemSlots', 'BankBagSlots',
 				'TradeSlots', 'TrainerSpellState', 'QuestSlotStateMask']}),
 		GenLuaFromHeaderTask.new('Config', 'server-code/SharedDefines.h',
 			{:includedEnums=>['Gender', 'Races', 'Classes'],

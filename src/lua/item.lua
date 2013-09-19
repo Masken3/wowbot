@@ -291,31 +291,48 @@ function equip(itemGuid, itemId, slot)
 	send(CMSG_AUTOEQUIP_ITEM_SLOT, {itemGuid=itemGuid, dstSlot=slot});
 end
 
-function investigateInventory(f)
+local function baseInvestigate(directField1, directFieldLast,
+	directBagSlot, directItemSlotStart,
+	bagField1, bagFieldLast, bagSlotStart, f)
 	-- backpack
-	for i = PLAYER_FIELD_PACK_SLOT_1, PLAYER_FIELD_PACK_SLOT_LAST, 2 do
+	for i = directField1, directFieldLast, 2 do
 		local guid = guidFromValues(STATE.me, i);
 		if(isValidGuid(guid)) then
 			local o = STATE.knownObjects[guid];
-			local bagSlot = INVENTORY_SLOT_BAG_0;
-			local slot = INVENTORY_SLOT_ITEM_START + ((i - PLAYER_FIELD_PACK_SLOT_1) / 2);
+			local bagSlot = directBagSlot;
+			local slot = directItemSlotStart + ((i - directField1) / 2);
 			local res = f(o, bagSlot, slot);
 			if(res == false) then return; end
 		end
 	end
 	-- bags
-	for i = PLAYER_FIELD_BAG_SLOT_1, PLAYER_FIELD_BAG_SLOT_LAST, 2 do
+	for i = bagField1, bagFieldLast, 2 do
 		local bag = STATE.knownObjects[guidFromValues(STATE.me, i)];
 		if(isValidGuid(bag)) then for j = 0, bag.values[CONTAINER_FIELD_NUM_SLOTS], 1 do
-			if(guidFromValues(bag, CONTAINER_FIELD_SLOT_1 + (j*2)) == itemGuid) then
+			local guid = guidFromValues(bag, CONTAINER_FIELD_SLOT_1 + (j*2))
+			if(isValidGuid(guid)) then
 				local o = STATE.knownObjects[guid];
-				local bagSlot = INVENTORY_SLOT_BAG_START + ((i - PLAYER_FIELD_BAG_SLOT_1) / 2);
+				local bagSlot = bagSlotStart + ((i - bagField1) / 2);
 				local slot = j;
 				local res = f(o, bagSlot, slot);
 				if(res == false) then return; end
 			end
 		end end
 	end
+end
+
+function investigateInventory(f)
+	baseInvestigate(PLAYER_FIELD_PACK_SLOT_1, PLAYER_FIELD_PACK_SLOT_LAST,
+		INVENTORY_SLOT_BAG_0, INVENTORY_SLOT_ITEM_START,
+		PLAYER_FIELD_BAG_SLOT_1, PLAYER_FIELD_BAG_SLOT_LAST,
+		INVENTORY_SLOT_BAG_START, f)
+end
+
+function investigateBank(f)
+	baseInvestigate(PLAYER_FIELD_BANK_SLOT_1, PLAYER_FIELD_BANK_SLOT_LAST,
+		INVENTORY_SLOT_BAG_0, BANK_SLOT_ITEM_START,
+		PLAYER_FIELD_BANKBAG_SLOT_1, PLAYER_FIELD_BANKBAG_SLOT_LAST,
+		BANK_SLOT_BAG_START, f)
 end
 
 function itemInventoryCountById(itemId)

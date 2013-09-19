@@ -471,6 +471,14 @@ static uint16 genCMSG_SELL_ITEM(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+// automoves an item from bank or inventory.
+// source slot is specified.
+static uint16 genCMSG_AUTOSTORE_BANK_ITEM(lua_State* L, byte* buf) {
+	GL_START;
+	M(byte, bag);
+	M(byte, slot);
+	GL_END;
+}
 
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
@@ -513,6 +521,7 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(MSG_MINIMAP_PING);
 		GEN_CASE(CMSG_SELL_ITEM);
 		GEN_CASE(CMSG_USE_ITEM);
+		GEN_CASE(CMSG_AUTOSTORE_BANK_ITEM);
 		default: return NULL;
 	}
 }

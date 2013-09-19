@@ -57,6 +57,16 @@ local function listItems(p)
 	reply(p, msg)
 end
 
+local function listBankItems(p)
+	local msg = 'Bank: '
+	investigateBank(function(o)
+		local id = o.values[OBJECT_FIELD_ENTRY]
+		local proto = itemProtoFromId(id)
+		msg = msg..itemLink(o).." ("..id..') x'..o.values[ITEM_FIELD_STACK_COUNT].."\n"
+	end)
+	reply(p, msg)
+end
+
 local function listMoney(p)
 	local msg = STATE.my.values[PLAYER_FIELD_COINAGE]..'c'
 	reply(p, msg)
@@ -336,7 +346,38 @@ local function disenchant(p)
 	reply(p, msg)
 end
 
+local function store(p)
+	local itemId = tonumber(p.text:sub(7))
+	local msg = 'Storing items'
+	local count = 0
+	investigateInventory(function(o, bagSlot, slot)
+		if(itemId == o.values[OBJECT_FIELD_ENTRY]) then
+			msg = msg..' '..o.guid:hex()
+			send(CMSG_AUTOSTORE_BANK_ITEM, {bag=bagSlot, slot=slot})
+			count = count + o.values[ITEM_FIELD_STACK_COUNT];
+		end
+	end)
+	msg = msg..', total '..count
+	reply(p, msg)
+end
+
+local function fetch(p)
+	local itemId = tonumber(p.text:sub(7))
+	local msg = 'Fetching items'
+	local count = 0
+	investigateBank(function(o, bagSlot, slot)
+		if(itemId == o.values[OBJECT_FIELD_ENTRY]) then
+			msg = msg..' '..o.guid:hex()
+			send(CMSG_AUTOSTORE_BANK_ITEM, {bag=bagSlot, slot=slot})
+			count = count + o.values[ITEM_FIELD_STACK_COUNT];
+		end
+	end)
+	msg = msg..', total '..count
+	reply(p, msg)
+end
+
 function handleChatMessage(p)
+	if(not p.text) then return end
 	if(p.text == 'lq') then
 		listQuests(p)
 	elseif(p.text == 'daq') then
@@ -379,6 +420,10 @@ function handleChatMessage(p)
 		useItem(p)
 	elseif(p.text:startWith('dis ')) then
 		disenchant(p)
+	elseif(p.text:startWith('store ')) then
+		store(p)
+	elseif(p.text == 'lb') then
+		listBankItems(p)
 	else
 		return
 	end
