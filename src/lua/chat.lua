@@ -74,6 +74,7 @@ function hSMSG_TRADE_STATUS(p)
 		print("TRADE_STATUS_OPEN_WINDOW")
 		local tradeSlot = 0
 		investigateInventory(function(o, bagSlot, slot)
+			-- todo: skip soulbound items.
 			send(CMSG_SET_TRADE_ITEM, {tradeSlot = tradeSlot, bag = bagSlot, slot = slot})
 			print(tradeSlot..": "..o.values[OBJECT_FIELD_ENTRY]..' '..o.guid:hex())
 			tradeSlot = tradeSlot + 1
@@ -277,6 +278,27 @@ local function fish(p)
 	reply(p, "Started Fishing.")
 end
 
+local function stop(p)
+	if(STATE.fishing) then
+		STATE.fishing = false
+		reply(p, "Stopped fishing.")
+	end
+end
+
+local function useItem(p)
+	local itemId = tonumber(p.text:sub(5))
+	local msg = 'Using item:'
+	local done = false
+	investigateInventory(function(o, bagSlot, slot)
+		if(itemId == o.values[OBJECT_FIELD_ENTRY] and not done) then
+			msg = msg..' '..o.guid:hex()
+			send(CMSG_USE_ITEM, {slot = slot, bag = bagSlot, spellCount = 0, targetFlags = 0})
+			done = true
+		end
+	end)
+	reply(p, msg)
+end
+
 function handleChatMessage(p)
 	if(p.text == 'lq') then
 		listQuests(p)
@@ -312,6 +334,10 @@ function handleChatMessage(p)
 		echo(p)
 	elseif(p.text == 'fish') then
 		fish(p)
+	elseif(p.text == 'stop') then
+		stop(p)
+	elseif(p.text:startWith('use ')) then
+		useItem(p)
 	else
 		return
 	end

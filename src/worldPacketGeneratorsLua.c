@@ -168,9 +168,8 @@ static uint16 genMovement(lua_State* L, byte* buf) {
 	GL_END;
 }
 
-static uint16 genCMSG_CAST_SPELL(lua_State* L, byte* buf) {
-	GL_START;
-	M(uint32, spellId);
+static void spellTargets(lua_State* L, byte** pp) {
+	byte* ptr = *pp;
 	{
 		MM(uint16, targetFlags);
 
@@ -195,6 +194,22 @@ static uint16 genCMSG_CAST_SPELL(lua_State* L, byte* buf) {
 		if (targetFlags & (TARGET_FLAG_CORPSE | TARGET_FLAG_PVP_CORPSE))
 			M(PackedGuid, corpseTarget);
 	}
+	*pp = ptr;
+}
+
+static uint16 genCMSG_CAST_SPELL(lua_State* L, byte* buf) {
+	GL_START;
+	M(uint32, spellId);
+	spellTargets(L, &ptr);
+	GL_END;
+}
+
+static uint16 genCMSG_USE_ITEM(lua_State* L, byte* buf) {
+	GL_START;
+	M(byte, bag);
+	M(byte, slot);
+	M(byte, spellCount);
+	spellTargets(L, &ptr);
 	GL_END;
 }
 
@@ -497,6 +512,7 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_GAMEOBJECT_QUERY);
 		GEN_CASE(MSG_MINIMAP_PING);
 		GEN_CASE(CMSG_SELL_ITEM);
+		GEN_CASE(CMSG_USE_ITEM);
 		default: return NULL;
 	}
 }
