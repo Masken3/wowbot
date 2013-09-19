@@ -559,6 +559,8 @@ void pSMSG_MESSAGECHAT(pLUA_ARGS) {
 	BOOL hasSenderName = FALSE;
 	byte bType;
 	PL_START;
+	if(PL_REMAIN == 0)
+		return;
 	{
 		MM(byte, type);
 		bType = type;

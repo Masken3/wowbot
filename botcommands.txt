@@ -20,7 +20,8 @@ These are chat commands that bots will respond to:
 * use <itemId>	Use an inventory item.
 
 * fish	Start fishing, if you know how.
-	We're gonna need a command to stop fishing...
+
+* stop	Stop fishing.
 
 * aggro type	Become aggressive against all creatures of the type of commander's target.
 	If not doing anything else, attack the nearest one.
@@ -29,7 +30,7 @@ These are chat commands that bots will respond to:
 
 * give <money|item|all>	Gives money or items to commander.
 ** money: <int><g|s|c>	Gold, Silver or Copper.
-** item: <name> [count]
+** item: <itemId> [count]
 ** all: items that are not soulbound.
 
 * echo <text>	Dump text to console. Good for debugging item links.

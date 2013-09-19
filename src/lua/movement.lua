@@ -141,7 +141,7 @@ function hMovement(opcode, p)
 	--print("hMovement", fg(p.guid), opcode, p.flags)
 
 	--print("p,l:", fg(p.guid), fg(STATE.leaderGuid));
-	if(p.guid == STATE.leader.guid) then
+	if(STATE.leader and p.guid == STATE.leader.guid) then
 		local realTime = getRealTime();
 		updateMyPosition(realTime);
 		--if(STATE.leader.movement.startTime) then

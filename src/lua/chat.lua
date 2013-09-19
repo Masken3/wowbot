@@ -68,6 +68,13 @@ local function giveAll(p)
 	send(CMSG_INITIATE_TRADE, {guid=p.senderGuid})
 end
 
+local function giveItem(p)
+	local itemId = tonumber(p.text:sub(6))
+	reply(p, 'giving item '..itemId..'...')
+	STATE.tradeGiveItem = itemId
+	send(CMSG_INITIATE_TRADE, {guid=p.senderGuid})
+end
+
 function hSMSG_TRADE_STATUS(p)
 	if((p.status == TRADE_STATUS_OPEN_WINDOW) and STATE.tradeGiveAll) then
 		STATE.tradeGiveAll = false
@@ -83,6 +90,21 @@ function hSMSG_TRADE_STATUS(p)
 			end
 		end)
 		print("giving "..tradeSlot.." items...")
+		send(CMSG_ACCEPT_TRADE, {padding=0})
+	elseif((p.status == TRADE_STATUS_OPEN_WINDOW) and STATE.tradeGiveItem) then
+		local tradeSlot = 0
+		investigateInventory(function(o, bagSlot, slot)
+			if(o.values[OBJECT_FIELD_ENTRY] == STATE.tradeGiveItem) then
+				send(CMSG_SET_TRADE_ITEM, {tradeSlot = tradeSlot, bag = bagSlot, slot = slot})
+				print(tradeSlot..": "..o.values[OBJECT_FIELD_ENTRY]..' '..o.guid:hex())
+				tradeSlot = tradeSlot + 1
+				if(tradeSlot >= TRADE_SLOT_TRADED_COUNT) then
+					return false
+				end
+			end
+		end)
+		print("giving "..tradeSlot.." items...")
+		STATE.tradeGiveItem = false
 		send(CMSG_ACCEPT_TRADE, {padding=0})
 	elseif(p.status == TRADE_STATUS_TRADE_CANCELED) then
 		print("Trade cancelled!")
@@ -314,6 +336,8 @@ function handleChatMessage(p)
 		listMoney(p)
 	elseif(p.text == 'give all') then
 		giveAll(p)
+	elseif(p.text:startWith('give ')) then
+		giveItem(p)
 	elseif(p.text == 'recreate') then
 		recreate(p)
 	elseif(p.text == 'invite') then

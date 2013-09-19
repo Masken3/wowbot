@@ -114,6 +114,7 @@ if(rawget(_G, 'STATE') == nil) then
 		itemsToSell = {},
 
 		tradeGiveAll = false,
+		tradeGiveItem = false,	-- itemId.
 		recreate = false,
 
 		creatureQueryCallbacks = {},
@@ -377,7 +378,7 @@ local function valueUpdated(o, idx)
 		if(STATE.myMoney) then
 			local diff = o.values[idx] - STATE.myMoney;
 			if(diff > 0) then msg=msg.." +";
-			else msg=msg.." -"; end
+			else msg=msg.." "; end
 			msg=msg..diff;
 			partyChat(msg);
 		end

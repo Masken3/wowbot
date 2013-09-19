@@ -150,6 +150,10 @@ function decision(realTime)
 	--print("Nothing to do.");
 end
 
+function leaderTarget()
+	return guidFromValues(STATE.leader, UNIT_FIELD_TARGET);
+end
+
 function doFish(realTime)
 	setAction("Fishing...");
 	if(not STATE.fishingBobber) then
@@ -296,10 +300,10 @@ function hSMSG_LOOT_RESPONSE(p)
 	print("SMSG_LOOT_RESPONSE");
 	for i, item in ipairs(p.items) do
 		print("item "..item.itemId.." x"..item.count);
-		if((item.lootSlotType == LOOT_SLOT_NORMAL) and wantToLoot(item.itemId)) or
+		if((p.lootType ~= LOOT_CORPSE) or
+			(item.lootSlotType == LOOT_SLOT_NORMAL) and wantToLoot(item.itemId))
 			-- every loot type except corpses are single-user.
 			-- in such cases, if we don't loot every item, the unlooted ones would be lost.
-			(p.lootType ~= LOOT_CORPSE)
 		then
 			print("Looting item "..item.itemId.." x"..item.count);
 			send(CMSG_AUTOSTORE_LOOT_ITEM, item);

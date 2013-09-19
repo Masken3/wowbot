@@ -38,6 +38,8 @@ function attack(realTime, enemy)
 
 	if(realTime >= STATE.spellCooldown) then
 		if(attackSpell(dist, realTime, enemy)) then return; end
+	else
+		print("Waiting for cooldown, "..(STATE.spellCooldown - realTime).." s left.");
 	end
 
 	if(dist < MELEE_DIST and not STATE.meleeing) then
@@ -46,6 +48,8 @@ function attack(realTime, enemy)
 		castSpellAtUnit(STATE.meleeSpell, enemy);
 		send(CMSG_ATTACKSWING, {target=enemy.guid});
 		STATE.meleeing = true;
+	else
+		print("no action found. melee: "..tostring(STATE.meleeing));
 	end
 end
 
@@ -127,7 +131,7 @@ function mostEffectiveSpell(spells)
 			" points: "..points..
 			" id: "..id..
 			" name: "..s.name.." "..s.rank);
-		]]
+		--]]
 		if(not availablePower) then availablePower = 0; end
 		--sanity check.
 		assert(availablePower < 100000);
@@ -155,7 +159,7 @@ function doSpell(dist, realTime, target, bestSpell)
 	local requiredDistance = MELEE_DIST;
 	local behindTarget = false;
 	if(bestSpell) then
-		print("bestSpell: "..bestSpell.name.." "..bestSpell.rank);
+		--print("bestSpell: "..bestSpell.name.." "..bestSpell.rank);
 
 		if(bit32.btest(bestSpell.AttributesEx, SPELL_ATTR_EX_BEHIND_TARGET_1) and
 			bit32.btest(bestSpell.AttributesEx2, SPELL_ATTR_EX2_BEHIND_TARGET_2))
@@ -206,6 +210,9 @@ end
 function attackSpell(dist, realTime, enemy)
 	-- look at all our spells and find the best one.
 	local bestSpell = mostEffectiveSpell(STATE.attackSpells);
+	if(not bestSpell) then
+		bestSpell = STATE.knownSpells[STATE.meleeSpell];
+	end
 	return doSpell(dist, realTime, enemy, bestSpell);
 end
 

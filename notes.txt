@@ -177,4 +177,14 @@ If it is not opened soon enough, SMSG_FISH_NOT_HOOKED is sent.
 If your skill is not enough for the zone/hole, SMSG_FISH_ESCAPED is sent.
 
 01:16 2013-09-19
-todo: cooking
+todo:
+* list known skill spells
+* auto-cooking
+** when near cooking fire, and have ingredients.
+* auto-smelting, too?
+* fix warrior and rogue combat.
+
+20:12 2013-09-19
+todo:
+* disenchant
+* bank storage

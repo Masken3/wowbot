@@ -123,7 +123,7 @@ end
 
 function openGameobject(o)
 	local lockIndex = goLockIndex(o);
-	if(lockIndex) then
+	if(goodLocks[lockIndex]) then
 		local spell = STATE.openLockSpells[lockIndex];
 		if(spell) then
 			castSpellAtGO(spell, o);
