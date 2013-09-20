@@ -288,6 +288,7 @@ function goLoot(o)
 		if(not STATE.looting) then
 			send(CMSG_LOOT, {guid=o.guid});
 			STATE.looting = true;
+			o.bot.looted = true;
 		end
 	end
 end

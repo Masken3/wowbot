@@ -352,7 +352,7 @@ local function valueUpdated(o, idx)
 		end
 	end
 	if(idx == UNIT_DYNAMIC_FLAGS) then
-		if(bit32.btest(o.values[idx], UNIT_DYNFLAG_LOOTABLE)) then
+		if(bit32.btest(o.values[idx], UNIT_DYNFLAG_LOOTABLE) and not o.bot.looted) then
 			STATE.lootables[o.guid] = o;
 		else
 			STATE.lootables[o.guid] = nil;
