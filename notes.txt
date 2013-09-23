@@ -182,5 +182,5 @@ todo:
 * auto-cooking
 ** when near cooking fire, and have ingredients.
 * auto-smelting, too?
-* equip bags.
-* repair.
+* remember invitee for auto-invite.
+* make sure movement is stopped before doing anything else.

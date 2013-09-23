@@ -98,9 +98,12 @@ function newGameObject(o, info)
 	if(info.name == "Water Barrel" or info.name == "Food Crate" or
 		info.name == "Barrel of Milk")
 	then return; end
-	partyChat(info.name..", "..distance3(myPos, pos).." yards.");
-	send(MSG_MINIMAP_PING, pos);
-	STATE.openables[o.guid] = o;
+	if(not o.bot.reported) then
+		o.bot.reported = true;
+		partyChat(info.name..", "..distance3(myPos, pos).." yards.");
+		send(MSG_MINIMAP_PING, pos);
+		STATE.openables[o.guid] = o;
+	end
 end
 
 -- returns true iff we have sufficient skill to open the lock.

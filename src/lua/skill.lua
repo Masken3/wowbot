@@ -9,6 +9,7 @@ function skillLevel(skillId)
 end
 
 function skillLevelByIndex(idx)
+	if(not STATE.my.values[idx+1]) then return nil; end
 	local value = bit32.band(STATE.my.values[idx+1], 0xFFFF);	-- base value
 	local bonus = STATE.my.values[idx+2];
 	if(bonus) then

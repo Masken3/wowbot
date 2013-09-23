@@ -1,3 +1,11 @@
+local function range(start, _end)
+	assert(_end > start);
+	local r = {};
+	for i=1,(_end-start) do
+		r[i] = start + (i-1);
+	end
+	return r;
+end
 
 local itemInventoryToEquipmentSlot = {
 	[INVTYPE_HEAD] = EQUIPMENT_SLOT_HEAD,
@@ -25,6 +33,7 @@ local itemInventoryToEquipmentSlot = {
 	[INVTYPE_THROWN] = EQUIPMENT_SLOT_RANGED,
 	[INVTYPE_RANGEDRIGHT] = EQUIPMENT_SLOT_RANGED,
 	[INVTYPE_RELIC] = EQUIPMENT_SLOT_RANGED,
+	[INVTYPE_BAG] = range(INVENTORY_SLOT_BAG_START, INVENTORY_SLOT_BAG_END),
 }
 
 -- returns a table based on DB item_template.
@@ -240,10 +249,10 @@ function handleItemPush(p)
 
 	-- item is in backpack, or directly equipped.
 	if(p.bagSlot == INVENTORY_SLOT_BAG_0) then
-		print("INVENTORY_SLOT_BAG_0.");
+		--print("INVENTORY_SLOT_BAG_0.");
 
 		if((p.itemSlot >= INVENTORY_SLOT_ITEM_START) and (p.itemSlot <= INVENTORY_SLOT_ITEM_END)) then
-			print("In backpack.");
+			--print("In backpack.");
 			local index = PLAYER_FIELD_PACK_SLOT_1 + ((p.itemSlot - INVENTORY_SLOT_ITEM_START) * 2);
 			guid = guidFromValues(STATE.me, index);
 		else

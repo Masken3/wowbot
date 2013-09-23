@@ -376,6 +376,16 @@ local function fetch(p)
 	reply(p, msg)
 end
 
+local function repair(p)
+	local targetGuid = guidFromValues(STATE.knownObjects[p.senderGuid], UNIT_FIELD_TARGET)
+	local target = STATE.knownObjects[targetGuid]
+	if(not target) then
+		reply(p, "No valid target!")
+		return
+	end
+	send(CMSG_REPAIR_ITEM, {npcGuid=targetGuid, itemGuid=ZeroGuid})
+end
+
 function handleChatMessage(p)
 	if(not p.text) then return end
 	if(p.text == 'lq') then
@@ -424,6 +434,8 @@ function handleChatMessage(p)
 		store(p)
 	elseif(p.text == 'lb') then
 		listBankItems(p)
+	elseif(p.text == 'repair') then
+		repair(p)
 	else
 		return
 	end

@@ -86,6 +86,7 @@ function decision(realTime)
 
 	-- if there are units that can be looted, go get them.
 	local i, lootable = next(STATE.lootables);
+	--if(false) then
 	if(lootable) then
 		setAction("Looting "..lootable.guid:hex());
 		goLoot(lootable);

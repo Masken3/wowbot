@@ -1,8 +1,10 @@
 These are useful chat commands:
 
-.groupgo
+.groupgo	Move group to you
 .revive
-.tele group
+.tele group <target>	Move group (including you) to target.
+.goname <charname>	Teleport to char.
+.namego	<charname>	Move char to you.
 
 .gob tar	Gameobject info
 .gob add <id> <respawnSecs>	Adds a new gob at your location. respawnSecs must be > 0.

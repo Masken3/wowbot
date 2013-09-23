@@ -30,6 +30,8 @@ These are chat commands that bots will respond to:
 * fetch <itemId>	Move all such items from bank to inventory.
 * lb	List items in bank.
 
+* repair	Repair all items at commander's target.
+
 * aggro type	Become aggressive against all creatures of the type of commander's target.
 	If not doing anything else, attack the nearest one.
 	Error if commander is not targeting a neutral or hostile creature.
