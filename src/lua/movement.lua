@@ -347,6 +347,7 @@ local function closestOrientedPosition(mo, angleFactor, dist)
 	end
 end
 
+-- returns true if we're stopped in a proper position.
 function doStealthMoveBehindTarget(realTime, mo, maxDist)
 	local myPos = STATE.myLocation.position;
 	local tarPos = mo.location.position;
@@ -377,7 +378,7 @@ function doStealthMoveBehindTarget(realTime, mo, maxDist)
 		-- move to a point 45 degrees behind target, at maxDist.
 		local rearPos = closestOrientedPosition(mo, 0.75, maxDist);
 		--setAction("Moving to side-rear...");
-		doMoveToPoint(realTime, rearPos);
+		return doMoveToPoint(realTime, rearPos);
 	else
 		if(dist < (maxDist * 2)) then
 			-- we're too close. gotta move away before we can safely walk around.
@@ -386,17 +387,17 @@ function doStealthMoveBehindTarget(realTime, mo, maxDist)
 			local dy = math.sin(newOrientation) * -maxDist*2;
 			local safePos = {x=tarPos.x+dx, y=tarPos.y+dy, z=math.max(tarPos.z, myPos.z)};
 			--setAction("Moving to safe position...");
-			doMoveToPoint(realTime, safePos);
+			return doMoveToPoint(realTime, safePos);
 		else
 			-- move to a point 90 degrees off tarO, at maxDist * 3.
 			local sidePos = closestOrientedPosition(mo, 0.5, maxDist*3);
 			--setAction("Moving to side...");
-			doMoveToPoint(realTime, sidePos);
+			return doMoveToPoint(realTime, sidePos);
 		end
 	end
 end
 
--- returns true if behind and close enough.
+-- returns true if behind and stopped and close enough.
 function doCombatMoveBehindTarget(realTime, mo)
 	local myPos = STATE.myLocation.position;
 	local tarPos = mo.location.position;
@@ -416,8 +417,7 @@ function doCombatMoveBehindTarget(realTime, mo)
 
 	local isBehind = oDiff < (math.pi / 2);	-- 90 degrees
 	if(isBehind) then
-		doMoveToTarget(realTime, mo, maxDist);
-		return dist < maxDist;
+		return doMoveToTarget(realTime, mo, maxDist);
 	end
 
 	-- we're in front of the target. run past it, then turn around.
@@ -428,6 +428,7 @@ function doCombatMoveBehindTarget(realTime, mo)
 	return false;
 end
 
+-- returns true if we're stopped in a proper position, which for this function is never.
 function doMoveToPoint(realTime, tarPos)
 	local myPos = STATE.myLocation.position;
 	local diff = diff3(myPos, tarPos);
@@ -450,8 +451,10 @@ function doMoveToPoint(realTime, tarPos)
 	local moveEndTime = STATE.moveStartTime + dist / myRunSpeed();
 	--print("tToPoint: "..(moveEndTime - realTime));
 	setTimer(movementTimerCallback, moveEndTime);
+	return false;
 end
 
+-- returns true if we're stopped in a proper position.
 function doMoveToTarget(realTime, mo, maxDist)
 	local myPos = STATE.myLocation.position;
 	local tarPos = mo.location.position;
@@ -462,7 +465,7 @@ function doMoveToTarget(realTime, mo, maxDist)
 	local newOrientation = orient2(diff);
 	local oChanged = (STATE.myLocation.orientation ~= newOrientation);
 	STATE.myLocation.orientation = newOrientation;
-	myPos.z = math.max(myPos.z, tarPos.z);	--hack
+	myPos.z = math.min(STATE.leader.location.position.z + 3, math.max(myPos.z, tarPos.z));	--hack
 	--  or dist < (FOLLOW_DIST - FOLLOW_TOLERANCE)
 	if(dist > maxDist) then
 		--print("dist:", dist);
@@ -506,7 +509,7 @@ function doMoveToTarget(realTime, mo, maxDist)
 			if(t > 0) then
 				setTimer(movementTimerCallback, realTime + t);
 			end
-			return;
+			return false;
 		end
 
 		local moveEndTime = STATE.moveStartTime + (dist - maxDist) / myRunSpeed();
@@ -514,7 +517,7 @@ function doMoveToTarget(realTime, mo, maxDist)
 		local timerTime = moveEndTime;
 		--print("still T:", timerTime - realTime);
 		setTimer(movementTimerCallback, timerTime);
-		return;
+		return false;
 	elseif(STATE.moving) then
 		--print("stop");
 		myPos.z = tarPos.z;	--hack
@@ -522,7 +525,7 @@ function doMoveToTarget(realTime, mo, maxDist)
 		if(not mov or (mov.dx == 0 and mov.dy == 0)) then
 			removeTimer(movementTimerCallback, true);
 			--print("removed timer.");
-			return;
+			return true;
 		end
 	end
 	if(oChanged) then
@@ -549,4 +552,5 @@ function doMoveToTarget(realTime, mo, maxDist)
 			sendMovement(MSG_MOVE_STOP);
 		end
 	end
+	return true;
 end

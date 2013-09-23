@@ -1,7 +1,7 @@
 -- calls f(o, info).
 -- may delay until info is available.
 function gameObjectInfo(o, f)
-	assert(bit32.btest(o.values[OBJECT_FIELD_TYPE], TYPEMASK_GAMEOBJECT));
+	assert(isGameObject(o));
 	local id = o.values[OBJECT_FIELD_ENTRY];
 	local info = STATE.knownGameObjects[id];
 	if(not info) then

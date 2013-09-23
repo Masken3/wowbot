@@ -306,6 +306,7 @@ end
 local function baseInvestigate(directField1, directFieldLast,
 	directBagSlot, directItemSlotStart,
 	bagField1, bagFieldLast, bagSlotStart, f)
+	local freeSlotCount = 0;
 	-- backpack
 	for i = directField1, directFieldLast, 2 do
 		local guid = guidFromValues(STATE.me, i);
@@ -315,6 +316,8 @@ local function baseInvestigate(directField1, directFieldLast,
 			local slot = directItemSlotStart + ((i - directField1) / 2);
 			local res = f(o, bagSlot, slot);
 			if(res == false) then return; end
+		else
+			freeSlotCount = freeSlotCount + 1;
 		end
 	end
 	-- bags
@@ -333,21 +336,24 @@ local function baseInvestigate(directField1, directFieldLast,
 					local slot = j;
 					local res = f(o, bagSlot, slot);
 					if(res == false) then return; end
+				else
+					freeSlotCount = freeSlotCount + 1;
 				end
 			end end
 		end
 	end
+	return freeSlotCount;
 end
 
 function investigateInventory(f)
-	baseInvestigate(PLAYER_FIELD_PACK_SLOT_1, PLAYER_FIELD_PACK_SLOT_LAST,
+	return baseInvestigate(PLAYER_FIELD_PACK_SLOT_1, PLAYER_FIELD_PACK_SLOT_LAST,
 		INVENTORY_SLOT_BAG_0, INVENTORY_SLOT_ITEM_START,
 		PLAYER_FIELD_BAG_SLOT_1, PLAYER_FIELD_BAG_SLOT_LAST,
 		INVENTORY_SLOT_BAG_START, f)
 end
 
 function investigateBank(f)
-	baseInvestigate(PLAYER_FIELD_BANK_SLOT_1, PLAYER_FIELD_BANK_SLOT_LAST,
+	return baseInvestigate(PLAYER_FIELD_BANK_SLOT_1, PLAYER_FIELD_BANK_SLOT_LAST,
 		INVENTORY_SLOT_BAG_0, BANK_SLOT_ITEM_START,
 		PLAYER_FIELD_BANKBAG_SLOT_1, PLAYER_FIELD_BANKBAG_SLOT_LAST,
 		BANK_SLOT_BAG_START, f)

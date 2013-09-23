@@ -161,6 +161,9 @@ if(rawget(_G, 'STATE') == nil) then
 
 		-- radius within which we will gather things automatically, even if there are nearby enemies.
 		gatherRadius = 40,
+
+		-- Guid. auto-invite this player if they come online but is not in party.
+		invitee = false,
 	}
 
 	-- type-securing STATE is too much work, but at least we can prevent unregistered members.
@@ -198,7 +201,11 @@ function saveState()
 	local file = io.open(stateFileName(), "w");
 	file:write("-- "..STATE.myClassName.."\n");
 	for k,v in pairs(PERMASTATE) do
-		file:write("PERMASTATE."..k.." = "..v..";\n");
+		local vs = tostring(v);
+		if(type(v) == 'string') then
+			vs = '"'..vs..'"';
+		end
+		file:write("PERMASTATE."..k.." = "..vs..";\n");
 	end
 	file:close();
 end
@@ -319,6 +326,11 @@ function isUnit(o)
 	return bit32.btest(o.values[OBJECT_FIELD_TYPE], TYPEMASK_UNIT);
 end
 
+function isGameObject(o)
+	if(not o) then return false; end
+	return bit32.btest(o.values[OBJECT_FIELD_TYPE], TYPEMASK_GAMEOBJECT);
+end
+
 local function isSummonedByGroupMember(o)
 	if(not o.values[UNIT_FIELD_SUMMONEDBY]) then return false; end
 	local g = guidFromValues(o, UNIT_FIELD_SUMMONEDBY);
@@ -332,6 +344,16 @@ local function isAlly(o)
 end
 
 local function valueUpdated(o, idx)
+	if(isGameObject(o)) then
+		if(idx == GAMEOBJECT_TYPE_ID) then
+			local _type = o.values[idx];
+			if(STATE.checkNewObjectsForQuests and
+				bit32.btest(_type, GAMEOBJECT_TYPE_QUESTGIVER))
+			then
+				send(CMSG_QUESTGIVER_STATUS_QUERY, o);
+			end
+		end
+	end
 	if(not isUnit(o)) then return; end
 	if(idx == UNIT_NPC_FLAGS) then
 		local flags = o.values[idx];
@@ -349,6 +371,11 @@ local function valueUpdated(o, idx)
 				--print("Found Vendor "..p.name.." <"..p.subName..">");
 				STATE.vendors[o.guid] = o;
 			end)
+		end
+		if(STATE.checkNewObjectsForQuests and
+			bit32.btest(flags, UNIT_NPC_FLAG_QUESTGIVER))
+		then
+			send(CMSG_QUESTGIVER_STATUS_QUERY, o);
 		end
 	end
 	if(idx == UNIT_DYNAMIC_FLAGS) then
@@ -400,7 +427,7 @@ local function valueUpdated(o, idx)
 		end
 		local val = skillLevelByIndex(baseIdx);
 		if(STATE.checkNewObjectsForQuests) then
-			partyChat("Skill "..skillLine.name..": "..val.."/"..tostring(max));
+			partyChat("Skill "..skillLine.name..": "..tostring(val).."/"..tostring(max));
 		end
 	end
 	-- fishing bobber
@@ -483,7 +510,8 @@ function hSMSG_UPDATE_OBJECT(p)
 				STATE.knownObjects[guid] = nil;
 			end
 		elseif(b.type == UPDATETYPE_CREATE_OBJECT or b.type == UPDATETYPE_CREATE_OBJECT2) then
-			local o = KnownObject.new{guid=b.guid, values={}, bot={}, updateValuesCallbacks={}}
+			local o = STATE.knownObjects[b.guid] or
+				KnownObject.new{guid=b.guid, values={}, bot={}, updateValuesCallbacks={}};
 			updateValues(o, b);
 			updateMovement(o, b);
 			STATE.knownObjects[b.guid] = o;
@@ -507,19 +535,21 @@ function hSMSG_UPDATE_OBJECT(p)
 			end
 
 			-- gameobjects that have a location are of interest to us.
-			if(bit32.btest(o.values[OBJECT_FIELD_TYPE], TYPEMASK_GAMEOBJECT) and
+			if(isGameObject(o) and
 				o.values[GAMEOBJECT_POS_X])
 			then
 				-- trigger query, if needed.
 				gameObjectInfo(o, newGameObject);
 			end
 
+			if(o.guid:hex() == PERMASTATE.invitee and not isGroupMember(o)) then
+				-- will trigger invite. see hSMSG_NAME_QUERY_RESPONSE.
+				send(CMSG_NAME_QUERY, o);
+			end
+
 			--print("CREATE_OBJECT", b.guid:hex(), hex(o.values[OBJECT_FIELD_TYPE]), dump(b.pos));
 			--, dump(o.movement), dump(o.values));
 
-			if(STATE.checkNewObjectsForQuests) then
-				send(CMSG_QUESTGIVER_STATUS_QUERY, {guid=b.guid});
-			end
 		elseif(b.type == UPDATETYPE_VALUES) then
 			updateValues(STATE.knownObjects[b.guid], b);
 			if(STATE.checkNewObjectsForQuests) then

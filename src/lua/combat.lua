@@ -53,6 +53,52 @@ function attack(realTime, enemy)
 	end
 end
 
+local normalizationSpeed;	-- declare function as file-local
+do
+	local OneHandSpeed = 2.4;
+	local TwoHandSpeed = 3.3;
+	local RangedSpeed = 2.8;
+	local weaponSubclassNormalizationSpeeds = {
+		[ITEM_SUBCLASS_WEAPON_DAGGER] = 1.7,
+		[ITEM_SUBCLASS_WEAPON_AXE2] = TwoHandSpeed,
+		[ITEM_SUBCLASS_WEAPON_MACE2] = TwoHandSpeed,
+		[ITEM_SUBCLASS_WEAPON_POLEARM] = TwoHandSpeed,
+		[ITEM_SUBCLASS_WEAPON_SWORD2] = TwoHandSpeed,
+		[ITEM_SUBCLASS_WEAPON_STAFF] = TwoHandSpeed,
+		[ITEM_SUBCLASS_WEAPON_EXOTIC2] = TwoHandSpeed,
+		[ITEM_SUBCLASS_WEAPON_SPEAR] = TwoHandSpeed,
+		[ITEM_SUBCLASS_WEAPON_FISHING_POLE] = TwoHandSpeed,
+		[ITEM_SUBCLASS_WEAPON_BOW] = RangedSpeed,
+		[ITEM_SUBCLASS_WEAPON_GUN] = RangedSpeed,
+		[ITEM_SUBCLASS_WEAPON_THROWN] = RangedSpeed,
+		[ITEM_SUBCLASS_WEAPON_WAND] = RangedSpeed,
+	}
+
+	function normalizationSpeed(proto)
+		if(proto._class ~= ITEM_CLASS_WEAPON) then return 0; end
+		local speed = weaponSubclassNormalizationSpeeds[proto.subClass];
+		if(speed) then
+			return speed;
+		else	-- one-handed
+			return OneHandSpeed;
+		end
+	end
+end
+
+local function avgMainhandDamage()
+	local weaponGuid = equipmentInSlot(EQUIPMENT_SLOT_MAINHAND);
+	if(not weaponGuid) then return 0; end
+	local weapon = STATE.knownObjects[weaponGuid];
+	local proto = itemProtoFromId(weapon.values[OBJECT_FIELD_ENTRY]);
+	local avg = 0;
+	for i,d in ipairs(proto.damages) do
+		avg = avg + ((d.min + d.max) / 2);
+	end
+	local attackPower = STATE.my.values[UNIT_FIELD_ATTACK_POWER] or 0;
+	avg = avg + (attackPower / 14) * normalizationSpeed(proto);
+	return avg;
+end
+
 function mostEffectiveSpell(spells)
 	local maxPpc = 0;
 	local maxPointsForFree = 0;
@@ -112,8 +158,13 @@ function mostEffectiveSpell(spells)
 				e.id == SPELL_EFFECT_HEAL)
 			then
 				points = points + calcAvgEffectPoints(level, e);
+
+				-- add normalized weapon damage to such effects
+				if(e.id == SPELL_EFFECT_NORMALIZED_WEAPON_DMG) then
+					points = points + avgMainhandDamage();
+				end
+
 				-- todo: handle combo-point spells
-				-- todo: add normalized weapon damage to such effects
 				if(e.pointsPerComboPoint ~= 0) then
 					print("ppc: "..e.pointsPerComboPoint);
 				end
@@ -193,8 +244,7 @@ function doSpell(dist, realTime, target, bestSpell)
 		tookAction = true;
 	elseif(requiredDistance) then
 		-- also sets orientation, so is worthwhile to do even if we're already in range.
-		doMoveToTarget(getRealTime(), target, requiredDistance);
-		closeEnough = (dist < requiredDistance);
+		closeEnough = doMoveToTarget(getRealTime(), target, requiredDistance);
 		tookAction = true;
 	end
 

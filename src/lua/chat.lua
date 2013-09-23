@@ -49,21 +49,23 @@ end
 
 local function listItems(p)
 	local msg = 'Inventory: '
-	investigateInventory(function(o)
+	local freeSlotCount = investigateInventory(function(o)
 		local id = o.values[OBJECT_FIELD_ENTRY]
 		local proto = itemProtoFromId(id)
 		msg = msg..itemLink(o).." ("..id..') x'..o.values[ITEM_FIELD_STACK_COUNT].."\n"
 	end)
+	msg = msg..freeSlotCount.." slots free."
 	reply(p, msg)
 end
 
 local function listBankItems(p)
 	local msg = 'Bank: '
-	investigateBank(function(o)
+	local freeSlotCount = investigateBank(function(o)
 		local id = o.values[OBJECT_FIELD_ENTRY]
 		local proto = itemProtoFromId(id)
 		msg = msg..itemLink(o).." ("..id..') x'..o.values[ITEM_FIELD_STACK_COUNT].."\n"
 	end)
+	msg = msg..freeSlotCount.." slots free."
 	reply(p, msg)
 end
 
@@ -154,6 +156,8 @@ end
 local function invite(p)
 	STATE.newLeader = p.senderGuid;
 	send(CMSG_NAME_QUERY, {guid=p.senderGuid})
+	PERMASTATE.invitee = p.senderGuid:hex()
+	saveState()
 end
 
 function hSMSG_NAME_QUERY_RESPONSE(p)
@@ -185,7 +189,7 @@ local function gameobject(p)
 	local closestObject;
 	local count = 0;
 	for guid, o in pairs(STATE.knownObjects) do
-		if(bit32.btest(o.values[OBJECT_FIELD_TYPE], TYPEMASK_GAMEOBJECT) and
+		if(isGameObject(o) and
 			o.values[GAMEOBJECT_POS_X])
 			--bit32.btest(o.values[GAMEOBJECT_DYN_FLAGS], GO_DYNFLAG_LO_ACTIVATE))
 		then

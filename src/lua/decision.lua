@@ -175,9 +175,10 @@ function pickpocket(target)
 		STATE.stealthed = true;
 	end
 	if(STATE.stealthed) then
-		doStealthMoveBehindTarget(getRealTime(), target, MELEE_DIST);
-		if(dist <= MELEE_DIST and not target.bot.pickpocketed) then
-			--castSpellAtUnit(STATE.pickpocketSpell.id, target);
+		if(doStealthMoveBehindTarget(getRealTime(), target, MELEE_DIST) and
+			not target.bot.pickpocketed)
+		then
+			castSpellAtUnit(STATE.pickpocketSpell.id, target);
 			target.bot.pickpocketed = true;
 		end
 	end
@@ -199,8 +200,7 @@ end
 function goSell(itemId)
 	local vendor = closestVendor();
 	local dist = distanceToObject(vendor);
-	doMoveToTarget(getRealTime(), vendor, MELEE_DIST);
-	if(dist <= MELEE_DIST) then
+	if(doMoveToTarget(getRealTime(), vendor, MELEE_DIST)) then
 		investigateInventory(function(o, bagSlot, slot)
 			local itemId = o.values[OBJECT_FIELD_ENTRY];
 			if(STATE.itemsToSell[itemId]) then
@@ -216,8 +216,7 @@ end
 function goTrain(trainer)
 	setAction("Training at "..trainer.guid:hex());
 	local dist = distanceToObject(trainer);
-	doMoveToTarget(getRealTime(), trainer, MELEE_DIST);
-	if(dist <= MELEE_DIST) then
+	if(doMoveToTarget(getRealTime(), trainer, MELEE_DIST)) then
 		if(not trainer.bot.chatting) then
 			send(CMSG_TRAINER_LIST, trainer);
 			trainer.bot.chatting = true;
@@ -262,8 +261,7 @@ end
 
 function goOpen(o)
 	local dist = distanceToObject(o);
-	doMoveToTarget(getRealTime(), o, MELEE_DIST);
-	if((dist <= MELEE_DIST) and (not STATE.looting)) then
+	if(doMoveToTarget(getRealTime(), o, MELEE_DIST) and (not STATE.looting)) then
 		local lockIndex = goLockIndex(o);
 		local spell = STATE.openLockSpells[lockIndex];
 		castSpellAtGO(spell, o);
@@ -273,8 +271,7 @@ end
 
 function goSkin(o)
 	local dist = distanceToObject(o);
-	doMoveToTarget(getRealTime(), o, MELEE_DIST);
-	if(dist <= MELEE_DIST) then
+	if(doMoveToTarget(getRealTime(), o, MELEE_DIST)) then
 		if(not STATE.skinning) then
 			castSpellAtUnit(STATE.skinningSpell, o);
 			STATE.skinning = true;
@@ -284,8 +281,7 @@ end
 
 function goLoot(o)
 	local dist = distanceToObject(o);
-	doMoveToTarget(getRealTime(), o, MELEE_DIST);
-	if(dist <= MELEE_DIST) then
+	if(doMoveToTarget(getRealTime(), o, MELEE_DIST)) then
 		if(not STATE.looting) then
 			send(CMSG_LOOT, {guid=o.guid});
 			STATE.looting = true;
