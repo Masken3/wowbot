@@ -408,6 +408,21 @@ local function skills(p)
 	reply(p, msg)
 end
 
+local function equip(p)
+	local itemId = tonumber(p.text:sub(7))
+	local found = false;
+	investigateInventory(function(o, bagSlot, slot)
+		if(itemId == o.values[OBJECT_FIELD_ENTRY]) then
+			found = true;
+			reply(p, "Testing "..o.guid:hex());
+			maybeEquip(o.guid, true);
+		end
+	end)
+	if(not found) then
+		reply(p, "Not found!");
+	end
+end
+
 function handleChatMessage(p)
 	if(not p.text) then return end
 	if(p.text == 'lq') then
@@ -460,6 +475,8 @@ function handleChatMessage(p)
 		repair(p)
 	elseif(p.text == 'skills') then
 		skills(p)
+	elseif(p.text:startWith('equip ')) then
+		equip(p)
 	else
 		return
 	end

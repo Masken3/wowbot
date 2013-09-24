@@ -32,6 +32,10 @@ These are chat commands that bots will respond to:
 
 * repair	Repair all items at commander's target.
 
+* skills	List all skills and their values.
+
+* equip <itemId>	Equip the item, if it's better. Verbose comparison.
+
 * aggro type	Become aggressive against all creatures of the type of commander's target.
 	If not doing anything else, attack the nearest one.
 	Error if commander is not targeting a neutral or hostile creature.

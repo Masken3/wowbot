@@ -127,17 +127,21 @@ function itemSkillSpell(proto)
 end
 
 
-function wantToWear(id)
+function wantToWear(id, verbose)
 	-- this is tricky.
 	-- we don't want to wear anything we can't wear.
 	-- we want to wear something with "better" stats than what we already have.
 	local proto = itemProtoFromId(id);
-	--print("Testing weariness of item "..proto.name.." ("..id..")...");
+	if(verbose) then
+		partyChat("Testing weariness of item "..proto.name.." ("..id..")...");
+	end
 
 	-- if it's not equipment, we can't wear it.
 	local slots = itemEquipSlot(proto);
 	if(not slots) then
-		--print("no slot found.");
+		if(verbose) then
+			partyChat("no slot found.");
+		end
 		return false;
 	end
 
@@ -145,20 +149,26 @@ function wantToWear(id)
 	local spellId = itemSkillSpell(proto);
 	if(spellId) then
 		if(not STATE.knownSpells[spellId]) then
-			--print("proficiency not known: "..spellId);
+			if(verbose) then
+				partyChat("proficiency not known: "..spellId);
+			end
 			return false;
 		end
 	else
 		-- some items don't require skills. We can use them.
-		--print("No proficiency needed. class: "..proto.itemClass.." subClass: "..proto.subClass);
+		if(verbose) then
+			partyChat("No proficiency needed. class: "..proto.itemClass.." subClass: "..proto.subClass);
+		end
 	end
 
 	-- make sure we're high enough level.
-	--[[	-- disable this test; it's applied at quest reward selection,
+	--	-- disable this test; it's applied at quest reward selection,
 	-- and we don't want to pass up the good stuff.
-	if(proto.RequiredLevel > STATE.myLevel) then
-		print("Need to be level "..proto.RequiredLevel.." to wear "..proto.name);
-		return false;
+	if(verbose) then
+		if(proto.RequiredLevel > STATE.myLevel) then
+			partyChat("Need to be level "..proto.RequiredLevel.." to wear "..proto.name);
+			return false;
+		end
 	end
 	--]]
 
@@ -167,22 +177,34 @@ function wantToWear(id)
 	end
 	local chosenSlot = false;
 	local chosenValue = nil;
-	local newValue = valueOfItem(id);
+	local newValue = valueOfItem(id, verbose);
 	for i, slot in ipairs(slots) do
 		local equippedGuid = equipmentInSlot(slot);
 		if(not equippedGuid) then
-			--print("no item equipped in that slot. I'm gonna wear it!");
+			if(verbose) then
+				partyChat("no item equipped in that slot. I'm gonna wear it!");
+			end
 			return slot;
 		end
 		local equippedId = itemIdOfGuid(equippedGuid);
 
 		-- if new item is better than equipped item, replace it.
-		local equippedValue = valueOfItem(equippedId);
+		local equippedValue = valueOfItem(equippedId, verbose);
+		if(verbose) then
+			partyChat("equipped: "..equippedValue..". new: "..newValue);
+		end
 		if(newValue > equippedValue) then
 			-- if we have two items that can be swapped out, pick the cheaper one.
+			if(verbose) then
+				partyChat("it's better.");
+			end
 			if((not chosenValue) or (equippedValue < chosenValue)) then
 				chosenSlot = slot;
 				chosenValue = newValue;
+			end
+		else
+			if(verbose) then
+				partyChat("it's worse.");
 			end
 		end
 	end
@@ -191,14 +213,17 @@ end
 
 function avgItemDamage(proto)
 	local avg = 0;
+	--print(dump(proto.damages));
 	for i,d in ipairs(proto.damages) do
 		avg = avg + ((d.min + d.max) / 2);
 	end
+	--print("avgDamage: "..avg);
 	return avg;
 end
 
 function avgItemDps(proto)
-	return avgItemDamage(proto) / proto.Delay;
+	--print("proto.Delay: "..proto.Delay);
+	return avgItemDamage(proto) / (proto.Delay / 1000);
 end
 
 ClassInfo = {
@@ -267,8 +292,17 @@ local rangedSubclass = {
 	[ITEM_SUBCLASS_WEAPON_WAND]=true,
 };
 
+local dMsg;
+
+local function addDumpIf(a, b, name, verbose)
+	if(verbose) then
+		dMsg = dMsg..name..": "..tostring(b).."\n";
+	end
+	return a+b;
+end
+
 -- only call this function if itemProtoFromId(id) returns non-nil.
-function valueOfItem(id)
+function valueOfItem(id, verbose)
 	local ip = itemProtoFromId(id);
 	assert(ip);
 	--return ip.SellPrice;
@@ -282,7 +316,10 @@ function valueOfItem(id)
 	-- unrelated factors like damage/armor are weighted arbitrarily.
 	-- adjust weighting as needed.
 	local p = itemProtoFromId(id);
-	local v = p.Armor;
+	if(verbose) then
+		dMsg = "Calculating value for "..p.name..":\n";
+	end
+	local v = addDumpIf(0, p.Armor, "Armor", verbose);
 
 	-- Resistances are situational.
 	-- In vanilla, we need only Fire in Molten Core, Nature in Ahn'Qiraj, and Frost in Naxxramas.
@@ -304,20 +341,28 @@ function valueOfItem(id)
 		combinedSecondaryStatValue = combinedSecondaryStatValue + (mods[itemModStat[s]] or 0);
 		if(s == STAT_INTELLECT) then hasSecondaryIntellect = true; end
 	end
-	v = v + primaryStatValue * 20 + combinedSecondaryStatValue * 10;
+	v = addDumpIf(v, primaryStatValue * 20 + combinedSecondaryStatValue * 10, "Stats", verbose);
 
 	if(ci.primary == STAT_INTELLECT or hasSecondaryIntellect) then
-		v = v + (mods[ITEM_MOD_MANA] or 0);
+		v = addDumpIf(v, mods[ITEM_MOD_MANA] or 0, "Mana", verbose);
 	end
 
-	v = v + (mods[ITEM_MOD_HEALTH] or 0);
+	v = addDumpIf(v, mods[ITEM_MOD_HEALTH] or 0, "Health", verbose);
 
 	-- damage is worthless on melee weapons for ranged characters.
 	-- likewise, damage is worthless on ranged weapons for melee characters.
 	-- there are some non-weapon items with damage on them,
 	-- but they're too rare to bother with now.
-	if((p._class == ITEM_CLASS_WEAPON) and (ci.ranged ~= rangedSubclass[p.subClass])) then
-		v = v + avgItemDps(p) * 100;
+	if(p._class == ITEM_CLASS_WEAPON and rangedSubclass[p.subClass] and ci.ranged)
+	then
+		v = addDumpIf(v, avgItemDps(p) * 100, "DPS ranged", verbose);
+	elseif(not ci.ranged) then
+		v = addDumpIf(v, avgItemDps(p) * 100, "DPS melee", verbose);
+	else
+		v = addDumpIf(v, avgItemDps(p), "DPS useless", verbose);
+	end
+	if(verbose) then
+		print(dMsg);
 	end
 	return v;
 end
@@ -414,13 +459,13 @@ function handleItemPush(p)
 	maybeEquip(guid);
 end
 
-function maybeEquip(itemGuid)
+function maybeEquip(itemGuid, verbose)
 	local id = itemIdOfGuid(itemGuid);
 	if(not itemProtoFromId(id)) then
 		STATE.itemDataCallbacks[itemGuid] = maybeEquip;
 		return;
 	end
-	local slot = wantToWear(id);
+	local slot = wantToWear(id, verbose);
 	if(slot) then
 		equip(itemGuid, id, slot);
 	end

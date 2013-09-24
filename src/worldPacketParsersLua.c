@@ -792,8 +792,8 @@ void pSMSG_ITEM_QUERY_SINGLE_RESPONSE(pLUA_ARGS) {
 	lua_createtable(L, MAX_ITEM_PROTO_DAMAGES, 0);
 	for(uint32 i=1; i<=MAX_ITEM_PROTO_DAMAGES; i++) {
 		lua_createtable(L, 0, 3);
-		M(uint32, min);
-		M(uint32, max);
+		M(float, min);
+		M(float, max);
 		M(uint32, type);
 		lua_rawseti(L, -2, i);
 	}
