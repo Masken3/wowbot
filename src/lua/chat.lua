@@ -281,6 +281,7 @@ local function sell(p)
 		end
 	end)
 	reply(p, msg)
+	decision()
 end
 
 local function echo(p)

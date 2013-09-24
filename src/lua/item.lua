@@ -131,7 +131,6 @@ function wantToWear(id)
 	-- this is tricky.
 	-- we don't want to wear anything we can't wear.
 	-- we want to wear something with "better" stats than what we already have.
-	-- for now, assume higher id means better stats.
 	local proto = itemProtoFromId(id);
 	--print("Testing weariness of item "..proto.name.." ("..id..")...");
 
@@ -154,38 +153,173 @@ function wantToWear(id)
 		--print("No proficiency needed. class: "..proto.itemClass.." subClass: "..proto.subClass);
 	end
 
+	-- make sure we're high enough level.
+	--[[	-- disable this test; it's applied at quest reward selection,
+	-- and we don't want to pass up the good stuff.
+	if(proto.RequiredLevel > STATE.myLevel) then
+		print("Need to be level "..proto.RequiredLevel.." to wear "..proto.name);
+		return false;
+	end
+	--]]
+
 	if(type(slots) ~= 'table') then
 		slots = {slots};
 	end
 	local chosenSlot = false;
-	local chosenPrice = nil;
+	local chosenValue = nil;
+	local newValue = valueOfItem(id);
 	for i, slot in ipairs(slots) do
 		local equippedGuid = equipmentInSlot(slot);
 		if(not equippedGuid) then
 			--print("no item equipped in that slot. I'm gonna wear it!");
 			return slot;
 		end
-		local eid = itemIdOfGuid(equippedGuid);
-		--print("equipped: "..eid);
-		--return id > eid;
-		--print("price: "..vendorSalePrice(id).." vs "..vendorSalePrice(itemIdOfGuid(equippedGuid)));
-		local ePrice = vendorSalePrice(itemIdOfGuid(equippedGuid));
-		if(vendorSalePrice(id) > ePrice) then
+		local equippedId = itemIdOfGuid(equippedGuid);
+
+		-- if new item is better than equipped item, replace it.
+		local equippedValue = valueOfItem(equippedId);
+		if(newValue > equippedValue) then
 			-- if we have two items that can be swapped out, pick the cheaper one.
-			if((not chosenPrice) or (ePrice < chosenPrice)) then
+			if((not chosenValue) or (equippedValue < chosenValue)) then
 				chosenSlot = slot;
-				chosenPrice = ePrice;
+				chosenValue = newValue;
 			end
 		end
 	end
 	return chosenSlot;
 end
 
+function avgItemDamage(proto)
+	local avg = 0;
+	for i,d in ipairs(proto.damages) do
+		avg = avg + ((d.min + d.max) / 2);
+	end
+	return avg;
+end
+
+function avgItemDps(proto)
+	return avgItemDamage(proto) / proto.Delay;
+end
+
+ClassInfo = {
+	Mage = {
+		ranged=true,
+		primary=STAT_INTELLECT,
+		secondaries={STAT_STAMINA},
+	},
+	--Druid	-- only feral spec.
+	Priest = {
+		ranged=true,
+		primary=STAT_SPIRIT,
+		secondaries={STAT_INTELLECT, STAT_STAMINA},
+	},
+	Warlock = {
+		ranged=true,
+		primary=STAT_INTELLECT,
+		secondaries={STAT_STAMINA},
+	},
+	Hunter = {
+		ranged=true,
+		primary=STAT_AGILITY,
+		secondaries={STAT_INTELLECT, STAT_STAMINA},
+	},
+	Shaman = {
+		ranged=true,	-- except Enhancement spec.
+		primary=STAT_AGILITY,	-- Enhancement
+		--primary=STAT_SPIRIT,	-- Restoration
+		--primary=STAT_INTELLECT,	-- Elemental
+		secondaries={STAT_INTELLECT, STAT_STAMINA},	-- Enhancement
+	},
+	Rogue = {
+		ranged=false,
+		primary=STAT_AGILITY,
+		secondaries={STAT_STRENGTH, STAT_STAMINA},
+	},
+	Warrior = {
+		ranged=false,
+		primary=STAT_STRENGTH,
+		secondaries={STAT_AGILITY, STAT_STAMINA},
+	},
+	Paladin = {
+		ranged=false,
+		primary=STAT_STRENGTH,	-- Retribution
+		secondaries={STAT_STAMINA},
+		--[[ Holy
+		primary=STAT_INTELLECT,
+		secondaries={STAT_SPIRIT, STAT_STAMINA},]]
+		--[[ Protection
+		primary=STAT_STAMINA,
+		secondaries={STAT_STRENGTH,STAT_AGILITY},]]
+	},
+}
+
+local itemModStat = {
+	[STAT_STRENGTH] = ITEM_MOD_STRENGTH,
+	[STAT_AGILITY] = ITEM_MOD_AGILITY,
+	[STAT_INTELLECT] = ITEM_MOD_INTELLECT,
+	[STAT_SPIRIT] = ITEM_MOD_SPIRIT,
+	[STAT_STAMINA] = ITEM_MOD_STAMINA,
+}
+
+local rangedSubclass = {
+	[ITEM_SUBCLASS_WEAPON_BOW]=true,
+	[ITEM_SUBCLASS_WEAPON_GUN]=true,
+	[ITEM_SUBCLASS_WEAPON_WAND]=true,
+};
+
 -- only call this function if itemProtoFromId(id) returns non-nil.
-function vendorSalePrice(id)
+function valueOfItem(id)
 	local ip = itemProtoFromId(id);
 	assert(ip);
-	return ip.SellPrice;
+	--return ip.SellPrice;
+
+	-- do proper value calculation.
+	-- take into account: damage, armor, stats (weighted by primary and secondaries),
+	-- resistances.
+	-- todo: take into account any spells that may be active on the item.
+	-- useful spells usually have the APPLY_AURA effect.
+
+	-- unrelated factors like damage/armor are weighted arbitrarily.
+	-- adjust weighting as needed.
+	local p = itemProtoFromId(id);
+	local v = p.Armor;
+
+	-- Resistances are situational.
+	-- In vanilla, we need only Fire in Molten Core, Nature in Ahn'Qiraj, and Frost in Naxxramas.
+	-- todo: add a command to set value for a specific resistance. ex: 'itemResValue fire 10'
+	--local avgRes = (p.HolyRes + p.FireRes + p.NatureRes + p.FrostRes + p.ShadowRes + p.ArcaneRes) / 6;
+	--v = v + avgRes * 0;
+
+	local ci = ClassInfo[STATE.myClassName];
+
+	local mods = {};
+	for i, s in ipairs(p.stats) do
+		mods[s.type] = (mods[s.type] or 0) + s.value;
+	end
+
+	local primaryStatValue = mods[itemModStat[ci.primary]] or 0;
+	local combinedSecondaryStatValue = 0;
+	local hasSecondaryIntellect = false;
+	for i, s in ipairs(ci.secondaries) do
+		combinedSecondaryStatValue = combinedSecondaryStatValue + (mods[itemModStat[s]] or 0);
+		if(s == STAT_INTELLECT) then hasSecondaryIntellect = true; end
+	end
+	v = v + primaryStatValue * 20 + combinedSecondaryStatValue * 10;
+
+	if(ci.primary == STAT_INTELLECT or hasSecondaryIntellect) then
+		v = v + (mods[ITEM_MOD_MANA] or 0);
+	end
+
+	v = v + (mods[ITEM_MOD_HEALTH] or 0);
+
+	-- damage is worthless on melee weapons for ranged characters.
+	-- likewise, damage is worthless on ranged weapons for melee characters.
+	-- there are some non-weapon items with damage on them,
+	-- but they're too rare to bother with now.
+	if((p._class == ITEM_CLASS_WEAPON) and (ci.ranged ~= rangedSubclass[p.subClass])) then
+		v = v + avgItemDps(p) * 100;
+	end
+	return v;
 end
 
 function itemLoginComplete()

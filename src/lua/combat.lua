@@ -90,10 +90,7 @@ local function avgMainhandDamage()
 	if(not weaponGuid) then return 0; end
 	local weapon = STATE.knownObjects[weaponGuid];
 	local proto = itemProtoFromId(weapon.values[OBJECT_FIELD_ENTRY]);
-	local avg = 0;
-	for i,d in ipairs(proto.damages) do
-		avg = avg + ((d.min + d.max) / 2);
-	end
+	local avg = avgItemDamage(proto);
 	local attackPower = STATE.my.values[UNIT_FIELD_ATTACK_POWER] or 0;
 	avg = avg + (attackPower / 14) * normalizationSpeed(proto);
 	return avg;

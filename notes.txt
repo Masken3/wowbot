@@ -185,5 +185,5 @@ todo:
 * auto-smelting, too?
 * command to mark a quest-giver as off-limits.
 ** alternatively, make sure bots don't accept PvP quests.
-* make armor selection dependent on armor rating instead of sell value.
 * get all level 10 class quests.
+* handle SPELL_FAILED_LINE_OF_SIGHT by requiring that the bot go closer to the target.
