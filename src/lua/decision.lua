@@ -139,6 +139,25 @@ function decision(realTime)
 		return;
 	end
 
+	-- if we're near a focus and we have reagents, then cast a spell.
+	local minDist = PERMASTATE.gatherRadius;
+	local focusObject;
+	local focusSpell;
+	for guid, o in pairs(STATE.focusObjects) do
+		local dist = distance3(myPos, o.location.position);
+		local spell = haveReagentsFor(o);
+		if((dist < minDist) and spell) then
+			minDist = dist;
+			focusObject = o;
+			focusSpell = spell;
+		end
+	end
+	if(focusObject) then
+		setAction(focusSpell.name.." @ "..focusObject.guid:hex());
+		goFocusObject(realTime, focusObject, focusSpell);
+		return;
+	end
+
 	-- don't try following the leader if we don't know where he is.
 	if(STATE.inGroup and STATE.leader and STATE.leader.location.position.x) then
 		setAction("Following leader");
@@ -151,7 +170,50 @@ function decision(realTime)
 	--print("Nothing to do.");
 end
 
+-- returns the id of the spell (with the lowest skillValue) (we have reagents for).
+function haveReagentsFor(o)
+	local goId = o.values[OBJECT_FIELD_ENTRY];
+	local info = STATE.knownGameObjects[goId];
+	assert(info);
+	local focusId = GOFocusId(info);
+	assert(focusId);
+	local spells = STATE.focusTypes[focusId];
+	assert(spells);
+	-- todo: maintain itemCounts, so we don't have to investigateInventory so often.
+	local itemCounts = {};
+	investigateInventory(function(o)
+		local itemId = o.values[OBJECT_FIELD_ENTRY];
+		itemCounts[itemId] = (itemCounts[itemId] or 0) + o.values[ITEM_FIELD_STACK_COUNT];
+	end)
+	local lowSpell;
+	local lowValue;
+	for id,s in pairs(spells) do
+		local haveAllReagents = true;
+		for i,r in ipairs(s.reagent) do
+			if(r.count > 0 and (itemCounts[r.id] or 0) < r.count) then
+				haveAllReagents = false;
+			end
+		end
+		if(haveAllReagents) then
+			local val = cSkillLineAbilityBySpell(id).minValue;
+			if(val > (lowValue or 0)) then
+				lowValue = val;
+				lowSpell = s;
+			end
+		end
+	end
+	return lowSpell;
+end
+
+function goFocusObject(realTime, o, s)
+	if(doMoveToTarget(realTime, o, MELEE_DIST)) then
+		if(STATE.spellCooldown > realTime) then return; end
+		castSpellWithoutTarget(s.id);
+	end
+end
+
 function leaderTarget()
+	if(not STATE.leader) then return nil; end
 	return guidFromValues(STATE.leader, UNIT_FIELD_TARGET);
 end
 
@@ -199,7 +261,6 @@ end
 
 function goSell(itemId)
 	local vendor = closestVendor();
-	local dist = distanceToObject(vendor);
 	if(doMoveToTarget(getRealTime(), vendor, MELEE_DIST)) then
 		investigateInventory(function(o, bagSlot, slot)
 			local itemId = o.values[OBJECT_FIELD_ENTRY];
@@ -215,7 +276,6 @@ end
 
 function goTrain(trainer)
 	setAction("Training at "..trainer.guid:hex());
-	local dist = distanceToObject(trainer);
 	if(doMoveToTarget(getRealTime(), trainer, MELEE_DIST)) then
 		if(not trainer.bot.chatting) then
 			send(CMSG_TRAINER_LIST, trainer);
@@ -260,7 +320,6 @@ function hSMSG_TRAINER_BUY_SUCCEEDED(p)
 end
 
 function goOpen(o)
-	local dist = distanceToObject(o);
 	if(doMoveToTarget(getRealTime(), o, MELEE_DIST) and (not STATE.looting)) then
 		local lockIndex = goLockIndex(o);
 		local spell = STATE.openLockSpells[lockIndex];
@@ -270,7 +329,6 @@ function goOpen(o)
 end
 
 function goSkin(o)
-	local dist = distanceToObject(o);
 	if(doMoveToTarget(getRealTime(), o, MELEE_DIST)) then
 		if(not STATE.skinning) then
 			castSpellAtUnit(STATE.skinningSpell, o);
@@ -280,7 +338,6 @@ function goSkin(o)
 end
 
 function goLoot(o)
-	local dist = distanceToObject(o);
 	if(doMoveToTarget(getRealTime(), o, MELEE_DIST)) then
 		if(not STATE.looting) then
 			send(CMSG_LOOT, {guid=o.guid});

@@ -93,11 +93,17 @@ if(rawget(_G, 'STATE') == nil) then
 		disenchantSpell = false,	-- spellId.
 
 		openLockSpells = {},	--miscValue:spellId.
+
+		-- id:spellTable
 		healingSpells = {},
 		buffSpells = {},
+		focusSpells = {},
 
 		-- key: id. value: table. All the spells we know.
 		knownSpells = {},
+
+		-- set of RequiresSpellFocus.
+		focusTypes = {},
 
 		-- set of itemIds that we need data for.
 		itemProtosWaiting = {},
@@ -147,6 +153,7 @@ if(rawget(_G, 'STATE') == nil) then
 		'skinnables',
 		'openables',
 		'vendors',
+		'focusObjects',
 	}
 	for i,k in ipairs(knownObjectHolders) do
 		STATE[k] = {};
@@ -687,6 +694,22 @@ local function learnSpell(id)
 		if(e.id == SPELL_EFFECT_DISENCHANT) then
 			STATE.disenchantSpell = id;
 		end
+		-- automatic profession spells
+		if(e.id == SPELL_EFFECT_CREATE_ITEM) then
+			if(s.RequiresSpellFocus ~= 0) then
+				-- see GAMEOBJECT_TYPE_SPELL_FOCUS and GOInfo.spellFocus.focusId.
+				-- also GOInfo.spellFocus.dist.
+				local skillId = skillIdBySpell(id);
+				if(skillId == 186 or	-- mining
+					skillId == 185 or	-- cooking
+					false)
+				then
+					STATE.focusSpells[id] = s;
+					STATE.focusTypes[s.RequiresSpellFocus] = STATE.focusTypes[s.RequiresSpellFocus] or {};
+					STATE.focusTypes[s.RequiresSpellFocus][id] = s;
+				end
+			end
+		end
 	end
 	STATE.knownSpells[id] = s;
 	return s;
@@ -782,8 +805,8 @@ function hSMSG_CAST_FAILED(p)
 	if(p.result) then
 		STATE.spellCooldown = 0;
 		hex = string.format("0x%02X", p.result);
+		print("SMSG_CAST_FAILED", tostring(hex), dump(p));
 	end
-	print("SMSG_CAST_FAILED", tostring(hex), dump(p));
 	STATE.skinning = false;
 	STATE.looting = false;
 	decision();

@@ -391,6 +391,23 @@ local function repair(p)
 	send(CMSG_REPAIR_ITEM, {npcGuid=targetGuid, itemGuid=ZeroGuid})
 end
 
+local function skills(p)
+	local msg = ''
+	for idx=PLAYER_SKILL_INFO_1_1,(PLAYER_SKILL_INFO_1_1+384),3 do
+		local skillId = bit32.band(STATE.my.values[idx] or 0, 0xFFFF)
+		local skillLine = cSkillLine(skillId)
+		if(skillLine) then
+			local max
+			if(STATE.my.values[idx+1]) then
+				max = bit32.extract(STATE.my.values[idx+1], 16, 16)
+			end
+			local val = skillLevelByIndex(idx)
+			msg = msg..skillLine.name..": "..tostring(val).."/"..tostring(max).."\n"
+		end
+	end
+	reply(p, msg)
+end
+
 function handleChatMessage(p)
 	if(not p.text) then return end
 	if(p.text == 'lq') then
@@ -441,6 +458,8 @@ function handleChatMessage(p)
 		listBankItems(p)
 	elseif(p.text == 'repair') then
 		repair(p)
+	elseif(p.text == 'skills') then
+		skills(p)
 	else
 		return
 	end

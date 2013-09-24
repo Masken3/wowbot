@@ -20,7 +20,13 @@ function skillLevelByIndex(idx)
 end
 
 function spellSkillLevel(spellId)
-	local skillId = cSkillIdBySpell(spellId);
+	local skillId = skillIdBySpell(spellId);
 	if(not skillId) then return nil; end
 	return skillLevel(skillId);
+end
+
+function skillIdBySpell(spellId)
+	local sla = cSkillLineAbilityBySpell(spellId);
+	if(not sla) then return nil; end
+	return sla.skill;
 end

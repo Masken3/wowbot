@@ -77,7 +77,21 @@ function canOpenGO(o)
 	return true;
 end
 
+function GOFocusId(info)
+	if(info.type == GAMEOBJECT_TYPE_SPELL_FOCUS) then
+		return info.data[1];
+	end
+	return nil;
+end
+
 function newGameObject(o, info)
+	local focusId = GOFocusId(info);
+	if(focusId) then
+		if(STATE.focusTypes[focusId]) then
+			STATE.focusObjects[o.guid] = o;
+		end
+		return;
+	end
 	if(STATE.fishing and info.type == GAMEOBJECT_TYPE_FISHINGNODE) then
 		print("Found Fishing bobber "..o.guid:hex());
 		STATE.fishingBobber = o;

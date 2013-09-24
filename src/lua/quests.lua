@@ -73,7 +73,7 @@ function hSMSG_QUESTGIVER_OFFER_REWARD(p)
 
 	for i, item in ipairs(p.rewChoiceItems) do
 		print("Item "..i..": "..item.itemId);
-		local v = vendorSalePrice(item.itemId) * item.count;
+		local v = valueOfItem(item.itemId) * item.count;
 		print("Value: "..v);
 		local w = wantToWear(item.itemId);
 		print("Wear: "..tostring(w));
@@ -130,13 +130,13 @@ function hSMSG_QUESTGIVER_REQUEST_ITEMS(p)
 end
 
 function hSMSG_QUESTGIVER_QUEST_COMPLETE(p)
-	print("Finished quest "..p.questId);
+	partyChat("Finished quest "..p.questId);
 end
 
 function hSMSG_QUESTGIVER_QUEST_DETAILS(p)
 	print("SMSG_QUESTGIVER_QUEST_DETAILS", dump(p));
 	send(CMSG_QUESTGIVER_ACCEPT_QUEST, p);
-	print("accepted quest "..p.questId);
+	partyChat("Accepted quest "..p.questId.." "..p.title);
 	local o = STATE.knownObjects[p.guid];
 	if(o.bot.chatting) then
 		o.bot.chatting = false;

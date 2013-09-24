@@ -245,10 +245,10 @@ function doSpell(dist, realTime, target, bestSpell)
 		tookAction = true;
 	end
 
-	if(closeEnough and bestSpell) then
+	-- todo: handle different cooldowns.
+	if(closeEnough and bestSpell and STATE.spellCooldown <= realTime) then
 		setTarget(target);
 		castSpellAtUnit(bestSpell.id, target);
-		-- todo: handle cooldown.
 		tookAction = true;
 	end
 	return tookAction;

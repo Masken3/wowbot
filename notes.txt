@@ -182,8 +182,10 @@ todo:
 * auto-cooking
 ** when near cooking fire, and have ingredients.
 ** lowest-level recipes first.
-* auto-smelting, too?
+* auto-smelting, too.
+** disable once Jewelcrafting becomes available; we'll want to prospect some of the ore.
 * command to mark a quest-giver as off-limits.
 ** alternatively, make sure bots don't accept PvP quests.
 * get all level 10 class quests.
 * handle SPELL_FAILED_LINE_OF_SIGHT by requiring that the bot go closer to the target.
+* auto-bank-store enchanting mats when they're created.

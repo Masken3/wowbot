@@ -8,7 +8,7 @@ void loadAuxDBC() {
 	SkillLineAbilityIndex::load();
 }
 
-static int l_skillIdBySpell(lua_State* L) {
+static int l_skillLineAbilityBySpell(lua_State* L) {
 	int narg = lua_gettop(L);
 	if(narg != 1) {
 		lua_pushstring(L, "l_spell error: args!");
@@ -17,7 +17,7 @@ static int l_skillIdBySpell(lua_State* L) {
 	int id = luaL_checkint(L, 1);
 	auto pair = SkillLineAbilityIndex::findSpell(id);
 	if(pair.first != pair.second) {
-		lua_pushinteger(L, pair.first->second->skill);
+		luaPushSkillLineAbility(L, *pair.first->second);
 	} else {
 		lua_pushnil(L);
 	}
@@ -26,5 +26,5 @@ static int l_skillIdBySpell(lua_State* L) {
 
 
 void registerLuaAuxDBC(lua_State* L) {
-	lua_register(L, "cSkillIdBySpell", l_skillIdBySpell);
+	lua_register(L, "cSkillLineAbilityBySpell", l_skillLineAbilityBySpell);
 }
