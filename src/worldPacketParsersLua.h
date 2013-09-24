@@ -47,6 +47,7 @@ typedef struct WorldSession WorldSession;
 	m(SMSG_NOTIFICATION)\
 	m(SMSG_GAMEOBJECT_CUSTOM_ANIM)\
 	m(SMSG_LEARNED_SPELL)\
+	m(SMSG_GAMEOBJECT_DESPAWN_ANIM)\
 
 #define pLUA_ARGS WorldSession* session, const char* buf, uint16 bufSize
 

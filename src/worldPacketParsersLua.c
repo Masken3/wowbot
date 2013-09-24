@@ -1150,3 +1150,8 @@ void pSMSG_LEARNED_SPELL(pLUA_ARGS) {
 	PL_START;
 	M(uint32, spellId);
 }
+
+void pSMSG_GAMEOBJECT_DESPAWN_ANIM(pLUA_ARGS) {
+	PL_START;
+	M(Guid, guid);
+}

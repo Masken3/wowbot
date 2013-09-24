@@ -138,6 +138,10 @@ function hSMSG_GAMEOBJECT_CUSTOM_ANIM(p)
 	end
 end
 
+function hSMSG_GAMEOBJECT_DESPAWN_ANIM(p)
+	STATE.openables[p.guid] = nil;
+end
+
 function openGameobject(o)
 	local lockIndex = goLockIndex(o);
 	if(goodLocks[lockIndex]) then
@@ -150,6 +154,7 @@ function openGameobject(o)
 		end
 	else
 		-- don't know if this will work.
+		print("Fallback.");
 		castSpellAtGO(22810, o);
 	end
 end

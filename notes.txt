@@ -189,3 +189,10 @@ todo:
 * get all level 10 class quests.
 * handle SPELL_FAILED_LINE_OF_SIGHT by requiring that the bot go closer to the target.
 * auto-bank-store enchanting mats when they're created.
+
+22:18 2013-09-24
+Enchantments include random properties.
+Each enchantment has an ID, a key to SpellItemEnchantment.dbc.
+See ApplyEnchantment.
+ItemRandomPropertiesEntry
+SpellItemEnchantmentEntry

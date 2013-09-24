@@ -351,13 +351,24 @@ local function isAlly(o)
 end
 
 local function valueUpdated(o, idx)
+	local val = o.values[idx];
 	if(isGameObject(o)) then
 		if(idx == GAMEOBJECT_TYPE_ID) then
-			local _type = o.values[idx];
+			local _type = val;
 			if(STATE.checkNewObjectsForQuests and
 				bit32.btest(_type, GAMEOBJECT_TYPE_QUESTGIVER))
 			then
 				send(CMSG_QUESTGIVER_STATUS_QUERY, o);
+			end
+		end
+		if(idx == GAMEOBJECT_FLAGS) then
+			if(bit32.btest(val, GO_FLAG_NO_INTERACT)) then
+				STATE.openables[o.guid] = nil;
+			end
+		end
+		if(idx == GAMEOBJECT_DYN_FLAGS) then
+			if(bit32.btest(val, GO_DYNFLAG_LO_NO_INTERACT)) then
+				STATE.openables[o.guid] = nil;
 			end
 		end
 	end
@@ -803,7 +814,7 @@ end
 function hSMSG_CAST_FAILED(p)
 	local hex;
 	if(p.result) then
-		STATE.spellCooldown = 0;
+		STATE.spellCooldown = getRealTime() + 1;
 		hex = string.format("0x%02X", p.result);
 		print("SMSG_CAST_FAILED", tostring(hex), dump(p));
 	end

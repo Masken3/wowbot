@@ -223,6 +223,7 @@ end
 
 function avgItemDps(proto)
 	--print("proto.Delay: "..proto.Delay);
+	if(proto.Delay == 0) then return 0; end
 	return avgItemDamage(proto) / (proto.Delay / 1000);
 end
 

@@ -186,7 +186,6 @@ void enterWorld(WorldSession* session, uint64 guid, uint8 level) {
 	m(SMSG_SPELL_START)\
 	m(SMSG_SPELL_GO)\
 	m(SMSG_SPELLLOGEXECUTE)\
-	m(SMSG_GAMEOBJECT_DESPAWN_ANIM)\
 	m(MSG_CHANNEL_UPDATE)\
 	m(SMSG_LOOT_REMOVED)\
 	m(MSG_CHANNEL_START)\

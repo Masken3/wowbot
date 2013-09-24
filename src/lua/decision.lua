@@ -130,7 +130,7 @@ function decision(realTime)
 		gameObjectInfo(openable, function(o, info)
 			setAction("Gathering "..info.name);
 		end);
-		goOpen(openable);
+		goOpen(realTime, openable);
 		return;
 	end
 
@@ -231,6 +231,7 @@ function pickpocket(target)
 	local stealthDist = (MELEE_DIST*2 + aggroRadius(target));
 	doMoveToTarget(getRealTime(), target, stealthDist);
 	if((dist <= stealthDist) and not STATE.stealthed) then
+		if(STATE.spellCooldown > realTime) then return; end
 		castSpellAtUnit(STATE.stealthSpell.id, STATE.me);
 		--todo: make sure to set this to false on spell fail or aura removed.
 		--also: on stealth fail, remove all pickpocketing targets, because we'll be stuck in combat.
@@ -319,8 +320,9 @@ function hSMSG_TRAINER_BUY_SUCCEEDED(p)
 	checkTraining(p);
 end
 
-function goOpen(o)
-	if(doMoveToTarget(getRealTime(), o, MELEE_DIST) and (not STATE.looting)) then
+function goOpen(realTime, o)
+	if(doMoveToTarget(realTime, o, MELEE_DIST) and (not STATE.looting)) then
+		if(STATE.spellCooldown > realTime) then return; end
 		local lockIndex = goLockIndex(o);
 		local spell = STATE.openLockSpells[lockIndex];
 		castSpellAtGO(spell, o);
@@ -367,7 +369,7 @@ function hSMSG_LOOT_RESPONSE(p)
 	send(CMSG_LOOT_RELEASE, p);
 	STATE.looting = false;
 	STATE.lootables[p.guid] = nil;
-	STATE.openables[p.guid] = nil;
+	--STATE.openables[p.guid] = nil;
 end
 
 function hSMSG_LOOT_RELEASE_RESPONSE(p)

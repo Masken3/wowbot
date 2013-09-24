@@ -465,7 +465,10 @@ function doMoveToTarget(realTime, mo, maxDist)
 	local newOrientation = orient2(diff);
 	local oChanged = (STATE.myLocation.orientation ~= newOrientation);
 	STATE.myLocation.orientation = newOrientation;
-	myPos.z = math.min(STATE.leader.location.position.z + 3, math.max(myPos.z, tarPos.z));	--hack
+	myPos.z = math.max(myPos.z, tarPos.z);	--hack
+	if(STATE.leader) then
+		myPos.z = math.min(STATE.leader.location.position.z + 3, myPos.z);
+	end
 	--  or dist < (FOLLOW_DIST - FOLLOW_TOLERANCE)
 	if(dist > maxDist) then
 		--print("dist:", dist);
