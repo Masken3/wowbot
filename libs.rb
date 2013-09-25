@@ -73,6 +73,7 @@ DBCs = [
 	'dbcSpellDuration',
 	'dbcSpellRange',
 	'dbcSpellCastTimes',
+	'dbcSpellItemEnchantment',
 	'dbcLock',
 	'dbcSkillLineAbility',
 	'dbcSkillLine',

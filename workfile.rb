@@ -48,7 +48,7 @@ work = ExeWork.new do
 		GenLuaFromHeaderTask.new('ObjectGuid', 'server-code/ObjectGuid.h',
 			{:includedEnums=>['TypeMask']}),
 		GenLuaFromHeaderTask.new('DBCEnums', 'server-code/DBCEnums.h',
-			{:includedEnums=>['SpellCastTargetFlags', 'SpellFamily']}),
+			{:includedEnums=>['SpellCastTargetFlags', 'SpellFamily', 'ItemEnchantmentType']}),
 		GenLuaFromHeaderTask.new('movement', 'src/movement.h',
 			{:includedEnums=>['MonsterMoveType']}),
 		GenLuaFromHeaderTask.new('QuestDef', 'server-code/QuestDef.h',
@@ -72,6 +72,8 @@ work = ExeWork.new do
 			{:includedEnums=>['AuraType', 'AuraConstants']}),
 		GenLuaFromHeaderTask.new('worldHandlers', 'src/worldHandlers.h',
 			{:includedEnums=>['RaidIcons']}),
+		GenLuaFromHeaderTask.new('Item', 'server-code/Item.h',
+			{:includedEnums=>['EnchantmentSlot', 'EnchantmentOffset']}),
 	]
 	@SPECIFIC_CFLAGS = {
 		'worldPacketParsersLua.c' => ' -Wno-vla',

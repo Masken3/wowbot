@@ -127,7 +127,7 @@ function itemSkillSpell(proto)
 end
 
 
-function wantToWear(id, verbose)
+function wantToWear(id, guid, verbose)
 	-- this is tricky.
 	-- we don't want to wear anything we can't wear.
 	-- we want to wear something with "better" stats than what we already have.
@@ -177,7 +177,7 @@ function wantToWear(id, verbose)
 	end
 	local chosenSlot = false;
 	local chosenValue = nil;
-	local newValue = valueOfItem(id, verbose);
+	local newValue = valueOfItem(id, guid, verbose);
 	for i, slot in ipairs(slots) do
 		local equippedGuid = equipmentInSlot(slot);
 		if(not equippedGuid) then
@@ -189,7 +189,7 @@ function wantToWear(id, verbose)
 		local equippedId = itemIdOfGuid(equippedGuid);
 
 		-- if new item is better than equipped item, replace it.
-		local equippedValue = valueOfItem(equippedId, verbose);
+		local equippedValue = valueOfItem(equippedId, equippedGuid, verbose);
 		if(verbose) then
 			partyChat("equipped: "..equippedValue..". new: "..newValue);
 		end
@@ -293,17 +293,92 @@ local rangedSubclass = {
 	[ITEM_SUBCLASS_WEAPON_WAND]=true,
 };
 
-local dMsg;
-
 local function addDumpIf(a, b, name, verbose)
-	if(verbose) then
-		dMsg = dMsg..name..": "..tostring(b).."\n";
+	if((verbose == true) or (b ~= 0 and verbose == 1)) then
+		print(name..": "..tostring(b));
 	end
 	return a+b;
 end
 
+local function addDamageValue(v, dps, p, ci, verbose)
+	-- damage is worthless on melee weapons for ranged characters.
+	-- likewise, damage is worthless on ranged weapons for melee characters.
+	-- there are some non-weapon items with damage on them,
+	-- but they're too rare to bother with now.
+	if(p._class == ITEM_CLASS_WEAPON and rangedSubclass[p.subClass] and ci.ranged)
+	then
+		v = addDumpIf(v, avgItemDps(p) * 100, "DPS ranged", verbose);
+	elseif(not ci.ranged) then
+		v = addDumpIf(v, avgItemDps(p) * 100, "DPS melee", verbose);
+	else
+		v = addDumpIf(v, avgItemDps(p), "DPS useless", verbose);
+	end
+	return v;
+end
+
+local function addModValues(v, mods, p, ci, verbose)
+	local primaryStatValue = mods[itemModStat[ci.primary]] or 0;
+	local combinedSecondaryStatValue = 0;
+	local hasSecondaryIntellect = false;
+	for i, s in ipairs(ci.secondaries) do
+		combinedSecondaryStatValue = combinedSecondaryStatValue + (mods[itemModStat[s]] or 0);
+		if(s == STAT_INTELLECT) then hasSecondaryIntellect = true; end
+	end
+	v = addDumpIf(v, primaryStatValue * 20 + combinedSecondaryStatValue * 10, "Stats", verbose);
+
+	if(ci.primary == STAT_INTELLECT or hasSecondaryIntellect) then
+		v = addDumpIf(v, mods[ITEM_MOD_MANA] or 0, "Mana", verbose);
+	end
+
+	v = addDumpIf(v, mods[ITEM_MOD_HEALTH] or 0, "Health", verbose);
+	return v;
+end
+
+local function enchValue(enchId, proto, ci, verbose)
+	local ench = cSpellItemEnchantment(enchId);
+	--if(not ench) then return 0; end
+
+	local v = 0;
+	local mods = {};
+	for i,e in ipairs(ench.effect) do
+		if(verbose and e.type ~= 0) then
+			print("Effect "..i..": type "..tostring(e.type).." amount "..e.amount.." spell "..e.spellId);
+		end
+		if(e.type == ITEM_ENCHANTMENT_TYPE_DAMAGE) then
+			if(proto.Delay > 0) then
+				v = addDamageValue(v, e.amount / (proto.Delay / 1000), proto, ci, verbose)
+			else
+				-- such an enchantment would affect all equipped weapons?
+				-- todo: find out. low prio.
+			end
+		end
+		if(e.type == ITEM_ENCHANTMENT_TYPE_EQUIP_SPELL) then
+			local s = cSpell(e.spellId);
+			for j,se in ipairs(s.effect) do
+				if(se.id == SPELL_EFFECT_APPLY_AURA) then
+					if(se.applyAuraName == SPELL_AURA_MOD_STAT) then
+						-- for this aura, miscValue is one of the STAT_ defines (0-4).
+						local m = itemModStat[se.miscValue];
+						-- assuming level 0 here. may need modification.
+						mods[m] = (mods[m] or 0) + calcAvgEffectPoints(0, se);
+					else
+						print("WARN: unhandled aura "..se.applyAuraName);
+					end
+				elseif(se.id ~= 0) then
+					print("WARN: unhandled effect "..se.id);
+				end
+			end
+		end
+		if(e.type == ITEM_ENCHANTMENT_TYPE_STAT) then
+			mods[e.spellId] = (mods[e.spellId] or 0) + e.amount;
+		end
+	end
+	v = addModValues(v, mods, proto, ci, verbose and 1);
+	return v;
+end
+
 -- only call this function if itemProtoFromId(id) returns non-nil.
-function valueOfItem(id, verbose)
+function valueOfItem(id, guid, verbose)
 	local ip = itemProtoFromId(id);
 	assert(ip);
 	--return ip.SellPrice;
@@ -318,7 +393,7 @@ function valueOfItem(id, verbose)
 	-- adjust weighting as needed.
 	local p = itemProtoFromId(id);
 	if(verbose) then
-		dMsg = "Calculating value for "..p.name..":\n";
+		print("Calculating value for "..p.name..":");
 	end
 	local v = addDumpIf(0, p.Armor, "Armor", verbose);
 
@@ -335,36 +410,31 @@ function valueOfItem(id, verbose)
 		mods[s.type] = (mods[s.type] or 0) + s.value;
 	end
 
-	local primaryStatValue = mods[itemModStat[ci.primary]] or 0;
-	local combinedSecondaryStatValue = 0;
-	local hasSecondaryIntellect = false;
-	for i, s in ipairs(ci.secondaries) do
-		combinedSecondaryStatValue = combinedSecondaryStatValue + (mods[itemModStat[s]] or 0);
-		if(s == STAT_INTELLECT) then hasSecondaryIntellect = true; end
-	end
-	v = addDumpIf(v, primaryStatValue * 20 + combinedSecondaryStatValue * 10, "Stats", verbose);
+	v = addModValues(v, mods, p, ci, verbose);
 
-	if(ci.primary == STAT_INTELLECT or hasSecondaryIntellect) then
-		v = addDumpIf(v, mods[ITEM_MOD_MANA] or 0, "Mana", verbose);
+	v = addDamageValue(v, avgItemDps(p), p, ci, verbose);
+
+	if(guid) then
+		local o = STATE.knownObjects[guid];
+		---- ignore player-made enchantments, because those can be put on the new item, too.
+		for slot=PERM_ENCHANTMENT_SLOT,(MAX_ENCHANTMENT_SLOT-1) do
+			local idx = ITEM_FIELD_ENCHANTMENT + slot*3;
+			--[[
+			-- ignore temporary enchantments.
+			if((o.values[idx+ENCHANTMENT_DURATION_OFFSET] or 0) == 0 and
+				(o.values[idx+ENCHANTMENT_CHARGES_OFFSET] or 0) == 0)
+			then]]do
+				local enchId = o.values[idx+ENCHANTMENT_ID_OFFSET];
+				if(enchId) then
+					if(verbose) then
+						print("Enchantment "..slot..":");
+					end
+					v = v + enchValue(enchId, p, ci, verbose);
+				end
+			end
+		end
 	end
 
-	v = addDumpIf(v, mods[ITEM_MOD_HEALTH] or 0, "Health", verbose);
-
-	-- damage is worthless on melee weapons for ranged characters.
-	-- likewise, damage is worthless on ranged weapons for melee characters.
-	-- there are some non-weapon items with damage on them,
-	-- but they're too rare to bother with now.
-	if(p._class == ITEM_CLASS_WEAPON and rangedSubclass[p.subClass] and ci.ranged)
-	then
-		v = addDumpIf(v, avgItemDps(p) * 100, "DPS ranged", verbose);
-	elseif(not ci.ranged) then
-		v = addDumpIf(v, avgItemDps(p) * 100, "DPS melee", verbose);
-	else
-		v = addDumpIf(v, avgItemDps(p), "DPS useless", verbose);
-	end
-	if(verbose) then
-		print(dMsg);
-	end
 	return v;
 end
 
@@ -466,7 +536,7 @@ function maybeEquip(itemGuid, verbose)
 		STATE.itemDataCallbacks[itemGuid] = maybeEquip;
 		return;
 	end
-	local slot = wantToWear(id, verbose);
+	local slot = wantToWear(id, itemGuid, verbose);
 	if(slot) then
 		equip(itemGuid, id, slot);
 	end

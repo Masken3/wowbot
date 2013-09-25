@@ -36,7 +36,7 @@ enum AreaTeams
 {
 	AREATEAM_NONE  = 0,
 	AREATEAM_ALLY  = 2,
-	AREATEAM_HORDE = 4
+	AREATEAM_HORDE = 4,
 };
 
 enum AreaFlags
@@ -64,7 +64,7 @@ enum FactionMasks
 	FACTION_MASK_PLAYER   = 1,                              // any player
 	FACTION_MASK_ALLIANCE = 2,                              // player or creature from alliance team
 	FACTION_MASK_HORDE    = 4,                              // player or creature from horde team
-	FACTION_MASK_MONSTER  = 8                               // aggressive creature from monster team
+	FACTION_MASK_MONSTER  = 8,                              // aggressive creature from monster team
 													// if none flags set then non-aggressive creature
 };
 
@@ -79,7 +79,7 @@ enum MapTypes
 enum AbilytyLearnType
 {
 	ABILITY_LEARNED_ON_GET_PROFESSION_SKILL     = 1,
-	ABILITY_LEARNED_ON_GET_RACE_OR_CLASS_SKILL  = 2
+	ABILITY_LEARNED_ON_GET_RACE_OR_CLASS_SKILL  = 2,
 };
 
 enum AbilitySkillFlags
@@ -95,7 +95,7 @@ enum ItemEnchantmentType
 	ITEM_ENCHANTMENT_TYPE_EQUIP_SPELL  = 3,
 	ITEM_ENCHANTMENT_TYPE_RESISTANCE   = 4,
 	ITEM_ENCHANTMENT_TYPE_STAT         = 5,
-	ITEM_ENCHANTMENT_TYPE_TOTEM        = 6
+	ITEM_ENCHANTMENT_TYPE_TOTEM        = 6,
 };
 
 // SpellEntry::Targets
@@ -125,7 +125,7 @@ enum SpellEffectIndex
 {
 	EFFECT_INDEX_0     = 0,
 	EFFECT_INDEX_1     = 1,
-	EFFECT_INDEX_2     = 2
+	EFFECT_INDEX_2     = 2,
 };
 
 #define MAX_EFFECT_INDEX 3
@@ -149,7 +149,7 @@ enum SpellFamily
 	// 14 - unused
 	SPELLFAMILY_DEATHKNIGHT = 15,
 	// 16 - unused
-	SPELLFAMILY_UNK3        = 17
+	SPELLFAMILY_UNK3        = 17,
 };
 
 #endif
