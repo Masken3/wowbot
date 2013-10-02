@@ -301,16 +301,19 @@ end
 
 function hSMSG_TRAINER_LIST(p)
 	--print("SMSG_TRAINER_LIST", dump(p));
+	local msg = ''
+	local count = 0
 	for i, s in ipairs(p.spells) do
 		if(s.state == TRAINER_SPELL_GREEN) then
 			local cs = cSpell(s.spellId);
-			local msg = "Training spell "..s.spellId.." ("..cs.name..", "..cs.rank..")...";
-			print(msg);
-			partyChat(msg);
+			msg = msg.."Training spell "..s.spellId.." ("..cs.name..", "..cs.rank..")\n";
+			count = count + 1
 			STATE.training[s.spellId] = p.guid;
 			send(CMSG_TRAINER_BUY_SPELL, {guid=p.guid, spellId=s.spellId});
 		end
 	end
+	msg = msg..count.." spells trained."
+	partyChat(msg);
 	checkTraining(p);
 end
 
@@ -344,7 +347,7 @@ function goLoot(o)
 		if(not STATE.looting) then
 			send(CMSG_LOOT, {guid=o.guid});
 			STATE.looting = true;
-			o.bot.looted = true;
+			STATE.looted[o.guid] = true;
 		end
 	end
 end

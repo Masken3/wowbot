@@ -31,25 +31,27 @@ end
 
 function attack(realTime, enemy)
 	local dist = distanceToObject(enemy);
-	print("attack, dist", dist);
+	--print("attack, dist", dist);
 
 	-- if we have a good ranged attack, use that.
 	-- otherwise, go to melee.
 
 	if(realTime >= STATE.spellCooldown) then
+		-- todo: set stance, cast party/area buffs, taunt enemies who attack non-tanks.
+
 		if(attackSpell(dist, realTime, enemy)) then return; end
 	else
-		print("Waiting for cooldown, "..(STATE.spellCooldown - realTime).." s left.");
+		--print("Waiting for cooldown, "..(STATE.spellCooldown - realTime).." s left.");
 	end
 
 	if(dist < MELEE_DIST and not STATE.meleeing) then
-		print("start melee");
+		--print("start melee");
 		setTarget(enemy);
 		castSpellAtUnit(STATE.meleeSpell, enemy);
 		send(CMSG_ATTACKSWING, {target=enemy.guid});
 		STATE.meleeing = true;
 	else
-		print("no action found. melee: "..tostring(STATE.meleeing));
+		--print("no action found. melee: "..tostring(STATE.meleeing));
 	end
 end
 
@@ -278,6 +280,7 @@ function doHeal(realTime)
 		local maxHealth = o.values[UNIT_FIELD_MAXHEALTH];
 		local health = o.values[UNIT_FIELD_HEALTH];
 		if(((maxHealth - health) >= points) or (health <= (maxHealth/2))) then
+			setAction("Healing "..o.guid:hex());
 			local dist = distanceToObject(o);
 			return doSpell(dist, realTime, o, healSpell);
 		end
@@ -294,6 +297,7 @@ function doBuff(realTime)
 		for id, s in pairs(STATE.buffSpells) do
 			if(not hasAura(o, id)) then
 				local dist = distanceToObject(o);
+				setAction("Buffing "..o.guid:hex());
 				return doSpell(dist, realTime, o, s);
 			end
 		end

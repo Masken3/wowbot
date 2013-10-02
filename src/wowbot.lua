@@ -47,6 +47,10 @@ if(rawget(_G, 'STATE') == nil) then
 		looting = false,
 		skinning = false,
 
+		-- set of guids, objects and creatures that have been looted already,
+		-- and will not be looted again.
+		looted = {},
+
 		repeatSpellCast = RepeatSpellCast.new{id=0, count=0},
 
 		knownQuests = {},
@@ -397,7 +401,7 @@ local function valueUpdated(o, idx)
 		end
 	end
 	if(idx == UNIT_DYNAMIC_FLAGS) then
-		if(bit32.btest(o.values[idx], UNIT_DYNFLAG_LOOTABLE) and not o.bot.looted) then
+		if(bit32.btest(o.values[idx], UNIT_DYNFLAG_LOOTABLE) and not STATE.looted[o.guid]) then
 			STATE.lootables[o.guid] = o;
 		else
 			STATE.lootables[o.guid] = nil;
@@ -445,7 +449,7 @@ local function valueUpdated(o, idx)
 		end
 		local val = skillLevelByIndex(baseIdx);
 		if(STATE.checkNewObjectsForQuests) then
-			partyChat("Skill "..skillLine.name..": "..tostring(val).."/"..tostring(max));
+			partyChat("Skill "..((skillLine and skillLine.name) or skillId)..": "..tostring(val).."/"..tostring(max));
 		end
 	end
 	-- fishing bobber

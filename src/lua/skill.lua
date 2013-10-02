@@ -16,7 +16,8 @@ function skillLevelByIndex(idx)
 		value = value + bit32.band(bonus, 0xFFFF) +	-- temp bonus
 			bit32.extract(bonus, 16, 16);	-- perm bonus
 	end
-	return value;
+	local max = bit32.extract(STATE.my.values[idx+1], 16, 16)
+	return value, max;
 end
 
 function spellSkillLevel(spellId)

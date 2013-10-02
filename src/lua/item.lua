@@ -512,7 +512,7 @@ function handleItemPush(p)
 	end
 
 	if((p.bagSlot >= INVENTORY_SLOT_BAG_START) and (p.bagSlot <= INVENTORY_SLOT_BAG_END)) then
-		print("In bag!");
+		--print("In bag!");
 		local bagIndex = PLAYER_FIELD_BAG_SLOT_1 + ((p.bagSlot - INVENTORY_SLOT_BAG_START) * 2);
 		local bagGuid = guidFromValues(STATE.me, bagIndex);
 		local bag = STATE.knownObjects[bagGuid];
@@ -531,6 +531,8 @@ function handleItemPush(p)
 end
 
 function maybeEquip(itemGuid, verbose)
+	if(not itemGuid) then return false; end
+	if(not STATE.knownObjects[itemGuid]) then return false; end
 	local id = itemIdOfGuid(itemGuid);
 	if(not itemProtoFromId(id)) then
 		STATE.itemDataCallbacks[itemGuid] = maybeEquip;

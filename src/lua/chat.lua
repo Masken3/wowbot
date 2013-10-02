@@ -397,11 +397,7 @@ local function skills(p)
 		local skillId = bit32.band(STATE.my.values[idx] or 0, 0xFFFF)
 		local skillLine = cSkillLine(skillId)
 		if(skillLine) then
-			local max
-			if(STATE.my.values[idx+1]) then
-				max = bit32.extract(STATE.my.values[idx+1], 16, 16)
-			end
-			local val = skillLevelByIndex(idx)
+			local val, max = skillLevelByIndex(idx)
 			msg = msg..skillLine.name..": "..tostring(val).."/"..tostring(max).."\n"
 		end
 	end
@@ -421,6 +417,29 @@ local function equip(p)
 	if(not found) then
 		reply(p, "Not found!");
 	end
+end
+
+local function spells(p)
+	local skillId = tonumber(p.text:sub(8))
+	local skillLine = cSkillLine(skillId)
+	if(not skillLine) then
+		reply(p, "Bad skillLine "..skillId)
+		return
+	end
+	local val, max = skillLevel(skillId)
+	local msg = skillLine.name..": "..tostring(val).."/"..tostring(max).."\n"
+	local lines = {}
+	for id, s in pairs(STATE.knownSpells) do
+		local sla = cSkillLineAbilityBySpell(id)
+		if(sla and sla.skill == skillId) then
+			local line = sla.minValue.."-"..sla.maxValue.." "..id.." "..s.name
+			if(#s.rank > 0) then line = line.." "..s.rank end
+			table.insert(lines, line)
+		end
+	end
+	table.sort(lines)
+	for i,line in ipairs(lines) do msg = msg..line.."\n" end
+	reply(p, msg)
 end
 
 function handleChatMessage(p)
@@ -477,6 +496,8 @@ function handleChatMessage(p)
 		skills(p)
 	elseif(p.text:startWith('equip ')) then
 		equip(p)
+	elseif(p.text:startWith('spells ')) then
+		spells(p)
 	else
 		return
 	end
