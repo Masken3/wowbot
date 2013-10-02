@@ -24,6 +24,7 @@ work = ExeWork.new do
 	@SOURCE_FILES = [
 		"#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers/spell/spellStrings.cpp",
 		"#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers/dbcSkillLineAbility/SkillLineAbility.index.cpp",
+#		"#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers/icon/icon.cpp",
 	]
 	@SOURCE_TASKS = @REQUIREMENTS = [
 		GenTask.new('Opcodes'),
@@ -79,6 +80,8 @@ work = ExeWork.new do
 		'worldPacketParsersLua.c' => ' -Wno-vla',
 		'cDbc.cpp' => " -I#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers"+
 			" -I#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp",
+		'cDbcAux.cpp' => " -I#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers"+
+			" -I#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp",
 		'exception.cpp' => " -I#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp",
 		'stackTrace.cpp' => " -I#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp",
 		'process.cpp' => " -I#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp -Wno-missing-format-attribute",
@@ -89,7 +92,7 @@ work = ExeWork.new do
 	@EXTRA_INCLUDES = ['build', 'src', 'server-code', 'server-code/Auth',
 		"#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers/spell",
 	]
-	@EXTRA_OBJECTS = DBC_WORKS
+	@EXTRA_OBJECTS = DBC_WORKS + [ICON]
 	@LIBRARIES = ['crypto', 'z']
 	if(HOST == :win32)
 		@SOURCES << "#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/util/win32"

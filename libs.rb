@@ -1,36 +1,25 @@
 require './config.rb'
 require File.expand_path "#{CONFIG_WOWFOOT_DIR}/rules/cDll.rb"
+require File.expand_path "#{CONFIG_WOWFOOT_DIR}/rules/cLib.rb"
 require "#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers/dbc/dbc.rb"
 
-commonFlags = ' -Wno-all -Wno-extra -Wno-c++-compat -Wno-missing-prototypes -Wno-missing-declarations -Wno-shadow'
+CONFIG_LIBSRC = "#{CONFIG_WOWFOOT_DIR}/wowfoot-ex/src/libs"
+require "#{CONFIG_WOWFOOT_DIR}/wowfoot-ex/config.rb"
+require "#{CONFIG_WOWFOOT_DIR}/wowfoot-ex/libs.rb"
 
 if(HOST == :linux)
 	LUA_CFLAGS = ' '+open('|pkg-config --cflags lua5.2').read.strip
 	LUA_LINKFLAGS = ' '+open('|pkg-config --libs lua5.2').read.strip
 end
 
-LIBMPQ = DllWork.new do
-	@SOURCES = [
-		"#{CONFIG_WOWFOOT_DIR}/wowfoot-ex/src/libs/libmpq/libmpq",
-	]
-	@EXTRA_INCLUDES = [
-		"#{CONFIG_WOWFOOT_DIR}/wowfoot-ex/src/libs/libmpq",
-	]
-	@EXTRA_CFLAGS = commonFlags
-	#@EXTRA_LINKFLAGS = ' -symbolic'
-	@LIBRARIES = ['bz2', 'z']
-	@LIBRARIES << 'mingwex' if(HOST == :win32)
-	@NAME = 'libmpq'
-end
-
 DBC = DllWork.new do
 	@SOURCES = [
-		"#{CONFIG_WOWFOOT_DIR}/wowfoot-ex/src/libs",
+		CONFIG_LIBSRC,
 	]
 	@SOURCE_FILES = ["#{CONFIG_WOWFOOT_DIR}/wowfoot-ex/src/dbcList.cpp"]
 	@EXTRA_INCLUDES =[
 		"#{CONFIG_WOWFOOT_DIR}/wowfoot-ex/src",
-		"#{CONFIG_WOWFOOT_DIR}/wowfoot-ex/src/libs/libmpq",
+		"#{CONFIG_LIBSRC}/libmpq",
 		"#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp",
 	]
 	@SPECIFIC_CFLAGS = {
@@ -77,6 +66,23 @@ DBCs = [
 	'dbcLock',
 	'dbcSkillLineAbility',
 	'dbcSkillLine',
+	'dbcTalent',
+	'dbcTalentTab',
 ]
 
 DBC_WORKS = DBCs.collect do |d| DbcWork.new(d) end
+
+ICON = DllWork.new do
+	@SOURCES = ["#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers/icon"]
+	@EXTRA_INCLUDES = [
+		"#{CONFIG_WOWFOOT_DIR}/wowfoot-ex/src/libs",
+		"#{CONFIG_WOWFOOT_DIR}/wowfoot-ex/src/libs/libmpq",
+		"#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers/dbc",
+		"#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp",
+	]
+	@EXTRA_CPPFLAGS = " -DWOWBOT=1 -DICONDIR_BASE=\"\\\"#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/\\\"\""
+	@prerequisites = [DirTask.new("#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/build/icon")]
+	@EXTRA_OBJECTS = [DBC, (LIBMPQ), (BLP), (SQUISH), (PALBMP), (CRBLIB)]
+	@LIBRARIES = ['png', 'jpeg']
+	@NAME = 'icon'
+end

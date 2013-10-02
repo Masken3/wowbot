@@ -12,6 +12,7 @@ SUBFILES = {
 	'gameobject.lua',
 	'skill.lua',
 	'combat.lua',
+	'gui/test.lua',
 }
 for i,f in ipairs(SUBFILES) do
 	dofile('src/lua/'..f)
