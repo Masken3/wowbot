@@ -27,6 +27,15 @@ function onResize(i)
 	resizingImages[i.Name] = nil
 	if(not next(resizingImages)) then
 		setBackgroundPosition()
+		resizingImages['foobar'] = true -- prevent further resize
+	end
+	local t = images[i.Name]
+	if(t.talent) then
+		local tab = t.tab
+		print(tab.tabPage.." "..t.talent.col.." "..t.talent.row)
+		t.i.Left = tab.tabPage * (images[tab.internalName..'TopLeft'].i.Width +
+			images[tab.internalName..'TopRight'].i.Width) + t.talent.col * t.i.Width * 1.1 + t.i.Width * 0.1
+		t.i.Top = t.talent.row * t.i.Height * 1.1 + t.i.Height * 0.1
 	end
 end
 
@@ -67,12 +76,36 @@ for tab in cTalentTabs() do
 			images[n] = t
 			resizingImages[n] = true
 			i.AutoSize = true
-			i.Hint = n
-			i.ShowHint = true
 			i:LoadFromFile(cIconRaw("Interface\\TalentFrame\\"..tab.internalName.."-"..p))
+		end
+		for talent in cTalents() do
+			if(talent.tabId == tab.id) then
+				local n = 's'..tostring(talent.id)
+				local s = cSpell(talent.spellId[1])
+				if(not s) then
+					print("talent "..n.." spellId "..talent.spellId[1].." not valid?!?")
+				end
+				local i = VCL.Image{onresize="onResize", Name=n}
+				--resizingImages[n] = true
+				images[n] = {tab=tab, spell=s, i=i, talent=talent}
+				--i.AutoSize = true
+				i.Width = 40
+				i.Height = 40
+				i.Hint = s.name
+				i.ShowHint = true
+				i.Stretch = true
+				i.Proportional = true
+				i:LoadFromFile(cIconRaw(cSpellIcon(s.spellIconID).icon))
+			end
 		end
 	end
 end
+
+cIconRaw("Interface\\TalentFrame\\TalentFrame-RankBorder")
+cIconRaw("Interface\\TalentFrame\\UI-TalentArrows")
+cIconRaw("Interface\\TalentFrame\\UI-TalentBranches")
+cIconRaw("Interface\\TalentFrame\\UI-TalentFrame-BotLeft")
+cIconRaw("Interface\\TalentFrame\\UI-TalentFrame-BotRight")
 
 mainForm:ShowModal()
 mainForm:Free()
