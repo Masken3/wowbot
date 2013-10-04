@@ -28,23 +28,11 @@ function onCloseQueryEventHandler(Sender)
 	return true -- the form can be closed
 end
 
-function onResize(i)
-	--print(i.Width, i.Name)
-	--print(dump(i))
-	resizingImages[i.Name] = nil
-	if(not next(resizingImages)) then
-		resizingImages['foobar'] = true -- prevent further resize
-		--setBackgroundPosition()
-	end
-	local t = images[i.Name]
-	if(t.talent) then
-		local tab = t.tab
-		--print(tab.tabPage.." "..t.talent.col.." "..t.talent.row)
-		t.i.Left = tab.tabPage * tabWidth +
-			t.talent.col * t.i.Width * (1+marginFraction) +
-			t.i.Width * marginFraction
-		t.i.Top = (t.talent.row+1) * t.i.Height * (1+marginFraction) + t.i.Height * marginFraction
-	end
+function setTalentIconPos(i, tab, talent)
+	i.Left = tab.tabPage * tabWidth +
+		talent.col * iconSize * (1+marginFraction) +
+		iconSize * marginFraction
+	i.Top = (talent.row+1) * iconSize * (1+marginFraction) + iconSize * marginFraction
 end
 
 function setBackgroundPosition(t)
@@ -87,7 +75,7 @@ for tab in cTalentTabs() do
 		-- tab background
 		for i,p in ipairs(backgroundParts) do
 			local n = tab.internalName..p
-			local i = VCL.Image{onresize="onResize", Name=n}
+			local i = VCL.Image{Name=n}
 			local t = {tab=tab, part=p, i=i}
 			images[n] = t
 			resizingImages[n] = true
@@ -103,7 +91,7 @@ for tab in cTalentTabs() do
 			i.Width = iconSize
 			i.Height = iconSize
 			i.Top = iconSize * marginFraction/2
-			i.Left = tabWidth * (tab.tabPage + 0.5) - (iconSize/2)
+			i.Left = tabWidth * (tab.tabPage + 0.5) - (iconSize*(1+marginFraction)/2)
 			i.Hint = tab.name
 			i.ShowHint = true
 			i.Stretch = true
@@ -118,7 +106,22 @@ for tab in cTalentTabs() do
 				if(not s) then
 					print("talent "..n.." spellId "..talent.spellId[1].." not valid?!?")
 				end
-				local i = VCL.Image{onresize="onResize", Name=n}
+
+				local shape
+				if(talent.row == 0) then
+					local s = VCL.Shape{
+						shape=VCL.stRoundRect,
+						brush={color=0x00FF00},--VCL.clGreen},
+						width=iconSize+4,
+						height=iconSize+4,
+					}
+					setTalentIconPos(s, tab, talent)
+					s.Left = s.Left - 2
+					s.Top = s.Top - 2
+					shape = s
+				end
+
+				local i = VCL.Image{Name=n}
 				--resizingImages[n] = true
 				images[n] = {tab=tab, spell=s, i=i, talent=talent}
 				--i.AutoSize = true
@@ -128,7 +131,18 @@ for tab in cTalentTabs() do
 				i.ShowHint = true
 				i.Stretch = true
 				i.Proportional = true
+				--i.Transparent = true
+				setTalentIconPos(i, tab, talent)
 				i:LoadFromFile(cIconRaw(cSpellIcon(s.spellIconID).icon))
+
+				if(talent.row == 0) then
+					local s = shape
+					local i = VCL.Image{
+						Left = i.Left+i.Width - 16,
+						Top = i.Top+i.Height - 16,
+					}
+					i:LoadFromFile(cIconRaw("Interface\\TalentFrame\\TalentFrame-RankBorder"))
+				end
 			end
 		end
 	end
