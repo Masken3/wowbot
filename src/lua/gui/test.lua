@@ -34,6 +34,22 @@ gAvailablePointsLabel = VCL.Label{
 	left = iconSize/2,
 }
 
+gOkButton = VCL.Button{
+	caption = "OK",
+	default = true,
+	top = tabHeight + iconSize/2,
+	left = tabWidth*2,
+	onClick = 'onOK',
+}
+
+gCancelButton = VCL.Button{
+	caption = "Cancel",
+	cancel = true,
+	top = tabHeight + iconSize/2,
+	left = tabWidth*2.5,
+	onClick = 'onCancel',
+}
+
 function onCloseQueryEventHandler(Sender)
 	return true -- the form can be closed
 end
@@ -410,6 +426,16 @@ function talentClick(sender, button, shift, x, y)
 		gAvailablePoints = gAvailablePoints + 1
 		updateTalent(t)
 	end
+end
+
+function onCancel(sender)
+	print("Cancel")
+	mainForm:Close()
+end
+
+function onOK(sender)
+	print("OK")
+	mainForm:Close()
 end
 
 cIconRaw("Interface\\TalentFrame\\TalentFrame-RankBorder")
