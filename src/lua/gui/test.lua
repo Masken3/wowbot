@@ -1,5 +1,9 @@
 require "vcl"
 
+VCL.clBrightGreen = 0x00ff00
+
+gAvailablePoints = 11
+
 -- internalName:tab
 local tabs = {}
 
@@ -23,6 +27,11 @@ mainForm = VCL.Form{
 	color=VCL.clBlack,
 	onclosequery = "onCloseQueryEventHandler",
 	onMouseMove='disablePopup',
+}
+
+gAvailablePointsLabel = VCL.Label{
+	top = tabHeight + iconSize/2,
+	left = iconSize/2,
 }
 
 function onCloseQueryEventHandler(Sender)
@@ -80,12 +89,18 @@ end
 
 local backgroundParts = {'TopLeft','TopRight','BottomLeft','BottomRight'}
 
+local function tabLabelCaption(tab)
+	return tab.name.." ("..tab.spentPoints.."/"..tab.rankCount..")"
+end
+
 for tab in cTalentTabs() do
 	--print(dump(tt))
 	if(tab.spellIcon == 11) then tab.tabPage = 1; end	-- patch MageFire
 	if(tab.classMask == 128) then	-- mage
 		tab.spentPoints = 0
 		tab.rankCount = 0
+		tab.rows = {}	-- row:{col:t}
+
 		-- gotta wait until onResize before AutoSize takes effect.
 		-- tab background
 		for i,p in ipairs(backgroundParts) do
@@ -114,10 +129,11 @@ for tab in cTalentTabs() do
 				do
 					local s = VCL.Shape{Name=n.."b",
 						shape=VCL.stRoundRect,
-						brush={color=0x00FF00},--VCL.clGreen},
+						brush={color=VCL.clBrightGreen},--VCL.clGreen},
 						width=iconSize+4,
 						height=iconSize+4,
 						onMouseMove='talentPopup',
+						onMouseDown='talentClick',
 					}
 					setTalentIconPos(s, tab, talent)
 					s.Left = s.Left - 2
@@ -128,6 +144,7 @@ for tab in cTalentTabs() do
 
 				local i = VCL.Image{Name=n,
 					onMouseMove='talentPopup',
+					onMouseDown='talentClick',
 				}
 				--resizingImages[n] = true
 				local rankCount=0
@@ -139,7 +156,7 @@ for tab in cTalentTabs() do
 				i.Width = iconSize
 				i.Height = iconSize
 				i.Hint = spell.name
-				i.ShowHint = true
+				i.ShowHint = false
 				i.Stretch = true
 				i.Proportional = true
 				--i.Transparent = true
@@ -148,25 +165,46 @@ for tab in cTalentTabs() do
 
 				if(shape) then
 					local s = shape
+					--[[
 					local rb = VCL.Image{Name=n.."rb",
-						Left = i.Left+i.Width - 16,
-						Top = i.Top+i.Height - 16,
+						Left = i.Left+i.Width /2,
+						Top = i.Top+i.Height /1.5,
 						onMouseMove='disablePopup',
 						Visible = false,
-						autosize=true,
+						autosize=false,
+						width=iconSize,
+						height=iconSize,
+						stretch=true,
+						proportional=false,
 					}
 					rb:LoadFromFile(cIconRaw("Interface\\TalentFrame\\TalentFrame-RankBorder"))
+					--]]
+					local spentPoints = 0
+					local l = VCL.Label{Name=n.."rb",
+						transparent=false,
+						color=VCL.clBlack,
+						visible=false,
+						caption=spentPoints.."/"..rankCount,
+						Left = i.Left+i.Width /2,
+						Top = i.Top+i.Height /1.5,
+					}
+					l.font.name="Verdana"
+					l.font.color=VCL.clBrightGreen
 					if(tab.spentPoints >= talent.row * 5) then
 						s.visible = true
-						rb.visible = true
+						--rb.visible = true
+						l.visible = true
 					end
 					local t = {tab=tab, spell=spell, i=i, talent=talent,
-						rankCount=rankCount, spentPoints=0,
-						border = shape, rankBorder = rb,
+						rankCount=rankCount, spentPoints=spentPoints,
+						border = shape, --rankBorder = rb,
+						rankLabel = l,
 					}
 					talentIcons[n] = t
 					talentIcons[n.."rb"] = t
 					talentIcons[n.."b"] = t
+					tab.rows[talent.row] = tab.rows[talent.row] or {}
+					tab.rows[talent.row][talent.col] = t
 				end
 			end
 		end
@@ -183,7 +221,7 @@ for tab in cTalentTabs() do
 			i.Proportional = true
 			i:LoadFromFile(cIconRaw(cSpellIcon(tab.spellIcon).icon))
 			local l = VCL.Label{
-				caption = tab.name.." ("..tab.spentPoints.."/"..tab.rankCount..")",
+				caption = tabLabelCaption(tab),
 				top = iconSize * marginFraction/2,
 				left = i.left + iconSize*(1+marginFraction),
 			}
@@ -231,10 +269,14 @@ function disablePopup(sender, shift, x, y)
 	end
 end
 
+local function popupRankCaption(t)
+	return "Rank "..t.spentPoints.."/"..t.rankCount
+end
+
 function talentPopup(sender, shift, x, y)
 	--print("talentPopup "..sender.name, x, y)
 	local t = talentIcons[sender.name]
-	if(not t) then return; end
+	--if(not t) then return; end
 	x = x + sender.left + iconSize
 	y = y + sender.top + iconSize
 
@@ -263,14 +305,17 @@ function talentPopup(sender, shift, x, y)
 		if(c.font) then
 			c.font.name = "Verdana"
 
-			-- causes crash
+			-- causes crash.
 			--c.Constraints.MaxWidth = popup.inner.width
 			--c.Constraints.MinWidth = 0
 			--c.Constraints.maxHeight = 1000
 			--c.Constraints.minHeight = 0
 			--c.OnChange = "onChange"
 
-			c.autosize = false
+			-- but this works.
+			c.constraints = {MaxWidth = popup.inner.width-4}
+
+			c.autosize = true
 			c.width = popup.inner.width-2
 			c.height = iconSize /2
 			c.left = x+4
@@ -285,7 +330,7 @@ function talentPopup(sender, shift, x, y)
 	popup.name.caption = t.spell.name
 
 	popup.rank.font.color = VCL.clWhite
-	popup.rank.caption = "Rank "..t.spentPoints.."/"..t.rankCount
+	popup.rank.caption = popupRankCaption(t)
 
 	popup.requirements.font.color = VCL.clRed
 	--popup.requirements.caption =
@@ -295,6 +340,77 @@ function talentPopup(sender, shift, x, y)
 end
 
 disablePopup()
+
+gAvailablePointsLabel.font.name = "Verdana"
+gAvailablePointsLabel.font.color = VCL.clWhite
+local function updateAvail()
+	gAvailablePointsLabel.caption = "Available points: "..gAvailablePoints
+end
+updateAvail()
+
+local function updateTalent(t)
+	-- update labels and shapes
+	popup.rank.caption = popupRankCaption(t)
+	t.rankLabel.caption = t.spentPoints.."/"..t.rankCount
+	t.tab.label.caption = tabLabelCaption(t.tab)
+
+	if(t.spentPoints == t.rankCount) then
+		t.rankLabel.font.color = VCL.clYellow
+		-- attempting to set brush.color directly causes crash.
+		t.border.brush = {color=VCL.clYellow}
+	else
+		t.rankLabel.font.color = VCL.clBrightGreen
+		t.border.brush = {color=VCL.clBrightGreen}
+	end
+
+	if(t.tab.spentPoints % 5 == 0) then
+		local row = t.tab.spentPoints / 5
+		local r = t.tab.rows[row]
+		if(r) then for col,t in pairs(r) do
+			t.border.visible = true
+			t.rankLabel.visible = true
+		end end
+	else
+		local row = math.floor(t.tab.spentPoints / 5)
+		local r = t.tab.rows[row+1]
+		if(r) then for col,t in pairs(r) do
+			t.border.visible = false
+			t.rankLabel.visible = false
+		end end
+	end
+	updateAvail()
+end
+
+local function canAddPoint(t)
+	if(t.spentPoints >= t.rankCount) then return false; end
+	if(gAvailablePoints <= 0) then return false; end
+	--todo: check talent requirements
+	return true
+end
+
+local function canRemovePoint(t)
+	if(t.spentPoints <= 0) then return false; end
+	-- must not allow point removal if it would lead to an impossible tree.
+	-- must not allow point removal past levels as they were on form creation.
+	return true
+end
+
+function talentClick(sender, button, shift, x, y)
+	local t = talentIcons[sender.name]
+	--print(button)
+	if(button == "mbLeft" and canAddPoint(t)) then
+		t.spentPoints = t.spentPoints + 1
+		t.tab.spentPoints = t.tab.spentPoints + 1
+		gAvailablePoints = gAvailablePoints - 1
+		updateTalent(t)
+	end
+	if(button == "mbRight" and canRemovePoint(t)) then
+		t.spentPoints = t.spentPoints - 1
+		t.tab.spentPoints = t.tab.spentPoints - 1
+		gAvailablePoints = gAvailablePoints + 1
+		updateTalent(t)
+	end
+end
 
 cIconRaw("Interface\\TalentFrame\\TalentFrame-RankBorder")
 cIconRaw("Interface\\TalentFrame\\UI-TalentArrows")
