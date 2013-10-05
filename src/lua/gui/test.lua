@@ -84,6 +84,8 @@ for tab in cTalentTabs() do
 	--print(dump(tt))
 	if(tab.spellIcon == 11) then tab.tabPage = 1; end	-- patch MageFire
 	if(tab.classMask == 128) then	-- mage
+		tab.spentPoints = 0
+		tab.rankCount = 0
 		-- gotta wait until onResize before AutoSize takes effect.
 		-- tab background
 		for i,p in ipairs(backgroundParts) do
@@ -98,19 +100,6 @@ for tab in cTalentTabs() do
 			setBackgroundPosition(t)
 			i:LoadFromFile(cIconRaw("Interface\\TalentFrame\\"..tab.internalName.."-"..p))
 		end
-		-- tab icon
-		do
-			local i = VCL.Image{onMouseMove='disablePopup'}
-			i.Width = iconSize
-			i.Height = iconSize
-			i.Top = iconSize * marginFraction/2
-			i.Left = tabWidth * (tab.tabPage + 0.5) - (iconSize*(1+marginFraction)/2)
-			i.Hint = tab.name
-			i.ShowHint = true
-			i.Stretch = true
-			i.Proportional = true
-			i:LoadFromFile(cIconRaw(cSpellIcon(tab.spellIcon).icon))
-		end
 		-- talent icons
 		for talent in cTalents() do
 			if(talent.tabId == tab.id) then
@@ -119,10 +108,11 @@ for tab in cTalentTabs() do
 				if(not spell) then
 					print("talent "..n.." spellId "..talent.spellId[1].." not valid?!?")
 				end
+				--print("talent "..n..": "..spell.name)
 
 				local shape
-				if(talent.row == 0) then
-					local s = VCL.Shape{
+				do
+					local s = VCL.Shape{Name=n.."b",
 						shape=VCL.stRoundRect,
 						brush={color=0x00FF00},--VCL.clGreen},
 						width=iconSize+4,
@@ -132,6 +122,7 @@ for tab in cTalentTabs() do
 					setTalentIconPos(s, tab, talent)
 					s.Left = s.Left - 2
 					s.Top = s.Top - 2
+					s.Visible = false
 					shape = s
 				end
 
@@ -143,7 +134,7 @@ for tab in cTalentTabs() do
 				for i,sid in ipairs(talent.spellId) do
 					if(sid ~= 0) then rankCount = i; end
 				end
-				talentIcons[n] = {tab=tab, spell=spell, i=i, talent=talent, rankCount=rankCount, spentPoints=0}
+				tab.rankCount = tab.rankCount + rankCount
 				--i.AutoSize = true
 				i.Width = iconSize
 				i.Height = iconSize
@@ -155,16 +146,50 @@ for tab in cTalentTabs() do
 				setTalentIconPos(i, tab, talent)
 				i:LoadFromFile(cIconRaw(cSpellIcon(spell.spellIconID).icon))
 
-				if(talent.row == 0) then
+				if(shape) then
 					local s = shape
-					local i = VCL.Image{--Name=n,
+					local rb = VCL.Image{Name=n.."rb",
 						Left = i.Left+i.Width - 16,
 						Top = i.Top+i.Height - 16,
-						onMouseMove='talentPopup',
+						onMouseMove='disablePopup',
+						Visible = false,
+						autosize=true,
 					}
-					i:LoadFromFile(cIconRaw("Interface\\TalentFrame\\TalentFrame-RankBorder"))
+					rb:LoadFromFile(cIconRaw("Interface\\TalentFrame\\TalentFrame-RankBorder"))
+					if(tab.spentPoints >= talent.row * 5) then
+						s.visible = true
+						rb.visible = true
+					end
+					local t = {tab=tab, spell=spell, i=i, talent=talent,
+						rankCount=rankCount, spentPoints=0,
+						border = shape, rankBorder = rb,
+					}
+					talentIcons[n] = t
+					talentIcons[n.."rb"] = t
+					talentIcons[n.."b"] = t
 				end
 			end
+		end
+		-- tab icon
+		do
+			local i = VCL.Image{onMouseMove='disablePopup'}
+			i.Width = iconSize
+			i.Height = iconSize
+			i.Top = iconSize * marginFraction/2
+			i.Left = tabWidth * tab.tabPage + (iconSize*(marginFraction))
+			i.Hint = tab.name
+			i.ShowHint = true
+			i.Stretch = true
+			i.Proportional = true
+			i:LoadFromFile(cIconRaw(cSpellIcon(tab.spellIcon).icon))
+			local l = VCL.Label{
+				caption = tab.name.." ("..tab.spentPoints.."/"..tab.rankCount..")",
+				top = iconSize * marginFraction/2,
+				left = i.left + iconSize*(1+marginFraction),
+			}
+			l.font.color = VCL.clWhite
+			l.font.name = "Verdana"
+			tab.label = l
 		end
 	end
 end
@@ -207,6 +232,7 @@ function disablePopup(sender, shift, x, y)
 end
 
 function talentPopup(sender, shift, x, y)
+	--print("talentPopup "..sender.name, x, y)
 	local t = talentIcons[sender.name]
 	if(not t) then return; end
 	x = x + sender.left + iconSize
@@ -252,7 +278,7 @@ function talentPopup(sender, shift, x, y)
 		c.onMouseMove = "disablePopup"
 	end
 	popup.description.height = iconSize * 2
-	if(up) then return; end
+	--if(up) then return; end
 
 	popup.name.font.size = popup.rank.font.size * 1.5
 	popup.name.font.color = VCL.clWhite
