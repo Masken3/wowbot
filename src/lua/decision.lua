@@ -101,7 +101,7 @@ function decision(realTime)
 		return;
 	end
 	local i, giver = next(STATE.questGivers);
-	if(giver) then
+	if(giver and PERMASTATE.autoQuestGet) then
 		setAction("Getting quests at "..giver.guid:hex());
 		getQuests(giver);
 		return;

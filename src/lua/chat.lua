@@ -456,6 +456,30 @@ local function talents(p)
 	doTalentWindow()
 end
 
+local function autoQuestGet(p)
+	local state = p.text:sub(5)
+	if(state == "off") then
+		PERMASTATE.autoQuestGet = false
+	elseif(state == "on") then
+		PERMASTATE.autoQuestGet = true
+	else
+		reply(p, "Invalid state ("..state.."). Must be 'on' or 'off'.")
+		return
+	end
+	saveState()
+	reply(p, "autoQuestGet set to '"..state.."'.")
+end
+
+local function gq(p)
+	local targetGuid = guidFromValues(STATE.knownObjects[p.senderGuid], UNIT_FIELD_TARGET)
+	local target = STATE.knownObjects[targetGuid];
+	if(not target) then
+		reply(p, "No valid target!");
+		return;
+	end
+	getQuests(target);
+end
+
 function handleChatMessage(p)
 	if(not p.text) then return end
 	if(p.text == 'lq') then
@@ -514,6 +538,10 @@ function handleChatMessage(p)
 		spells(p)
 	elseif(p.text == 'n') then
 		talents(p)
+	elseif(p.text:startWith('aqg ')) then
+		autoQuestGet(p)
+	elseif(p.text == 'gq') then
+		gq(p)
 	else
 		return
 	end

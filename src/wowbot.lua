@@ -178,6 +178,8 @@ if(rawget(_G, 'STATE') == nil) then
 
 		-- Guid. auto-invite this player if they come online but is not in party.
 		invitee = false,
+
+		autoQuestGet = true,
 	}
 
 	-- type-securing STATE is too much work, but at least we can prevent unregistered members.
