@@ -270,6 +270,16 @@ function setTarget(t)
 	send(CMSG_SET_SELECTION, {target=t.guid});
 end
 
+local function doHealSingle(o, healSpell, points, realTime)
+	local maxHealth = o.values[UNIT_FIELD_MAXHEALTH];
+	local health = o.values[UNIT_FIELD_HEALTH];
+	if(((maxHealth - health) >= points) or (health <= (maxHealth/2))) then
+		setAction("Healing "..o.guid:hex());
+		local dist = distanceToObject(o);
+		return doSpell(dist, realTime, o, healSpell);
+	end
+end
+
 -- returns true if we're healing.
 function doHeal(realTime)
 	local healSpell, points = mostEffectiveSpell(STATE.healingSpells);
@@ -277,12 +287,19 @@ function doHeal(realTime)
 	for i,m in ipairs(STATE.groupMembers) do
 		local o = STATE.knownObjects[m.guid];
 		if(not o) then return false; end
-		local maxHealth = o.values[UNIT_FIELD_MAXHEALTH];
-		local health = o.values[UNIT_FIELD_HEALTH];
-		if(((maxHealth - health) >= points) or (health <= (maxHealth/2))) then
-			setAction("Healing "..o.guid:hex());
+		local res = doHealSingle(o, healSpell, points, realTime);
+		if(res) then return res; end
+	end
+	return doHealSingle(STATE.me, healSpell, points, realTime);
+end
+
+local function doBuffSingle(o, realTime)
+	-- check all auras. if there's one aura of ours they DON'T have, give it.
+	for id, s in pairs(STATE.buffSpells) do
+		if(not hasAura(o, id)) then
 			local dist = distanceToObject(o);
-			return doSpell(dist, realTime, o, healSpell);
+			setAction("Buffing "..o.guid:hex());
+			return doSpell(dist, realTime, o, s);
 		end
 	end
 	return false;
@@ -293,14 +310,8 @@ function doBuff(realTime)
 	for i,m in ipairs(STATE.groupMembers) do
 		local o = STATE.knownObjects[m.guid];
 		if(not o) then return false; end
-		-- check all auras. if there's one aura of ours they DON'T have, give it.
-		for id, s in pairs(STATE.buffSpells) do
-			if(not hasAura(o, id)) then
-				local dist = distanceToObject(o);
-				setAction("Buffing "..o.guid:hex());
-				return doSpell(dist, realTime, o, s);
-			end
-		end
+		local res = doBuffSingle(o, realTime);
+		if(res) then return res; end
 	end
-	return false;
+	return doBuffSingle(STATE.me, realTime);
 end
