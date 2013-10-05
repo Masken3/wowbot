@@ -747,7 +747,9 @@ local function learnSpell(id)
 			end
 		end
 		-- direct heals
-		if(e.id == SPELL_EFFECT_HEAL) then
+		if(e.id == SPELL_EFFECT_HEAL and
+			(e.implicitTargetA == TARGET_SINGLE_FRIEND))
+		then
 			if(not STATE.healingSpells[id]) then
 				print("h"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
 			end
