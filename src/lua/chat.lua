@@ -279,11 +279,16 @@ end
 -- destroys all items in bags, but not equipped items.
 -- does destroy unequipped bags.
 local function sell(p)
-	local itemId = tonumber(p.text:sub(6))
 	local msg = 'Selling items:'
+	local items = {}
+	for itemId in p.text:sub(6):gmatch("%w+") do
+		--print(itemId)
+		items[tonumber(itemId)] = true
+	end
 	investigateInventory(function(o, bagSlot, slot)
-		if(itemId == o.values[OBJECT_FIELD_ENTRY]) then
-			msg = msg..o.values[OBJECT_FIELD_ENTRY]..' '..o.guid:hex().."\n"
+		local itemId = o.values[OBJECT_FIELD_ENTRY]
+		if(items[itemId]) then
+			msg = msg..itemId..' x'..o.values[ITEM_FIELD_STACK_COUNT]..' '..o.guid:hex().."\n"
 			--STATE.itemsToSell[o.guid] = {slot = slot, bag = bagSlot,
 				--count = o.values[ITEM_FIELD_STACK_COUNT]}
 			STATE.itemsToSell[itemId] = true

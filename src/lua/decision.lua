@@ -66,7 +66,7 @@ function decision(realTime)
 	local itemToSell, dummy = next(STATE.itemsToSell);
 	local i, vendor = next(STATE.vendors);
 	if(itemToSell and vendor) then
-		setAction("Selling "..itemProtoFromId(itemToSell).name);
+		setAction("Selling ...");
 		goSell(itemToSell);
 		return;
 	end
@@ -85,7 +85,15 @@ function decision(realTime)
 	end
 
 	-- if there are units that can be looted, go get them.
-	local i, lootable = next(STATE.lootables);
+	local minDist = PERMASTATE.gatherRadius;
+	local lootable;
+	for guid, o in pairs(STATE.lootables) do
+		local dist = distance3(myPos, o.location.position);
+		if((dist < minDist)) then
+			minDist = dist;
+			lootable = o;
+		end
+	end
 	--if(false) then
 	if(lootable) then
 		setAction("Looting "..lootable.guid:hex());
@@ -262,14 +270,21 @@ end
 
 function goSell(itemId)
 	local vendor = closestVendor();
+	local msg = nil
 	if(doMoveToTarget(getRealTime(), vendor, MELEE_DIST)) then
 		investigateInventory(function(o, bagSlot, slot)
 			local itemId = o.values[OBJECT_FIELD_ENTRY];
 			if(STATE.itemsToSell[itemId]) then
+				local count = o.values[ITEM_FIELD_STACK_COUNT]
 				send(CMSG_SELL_ITEM, {vendorGuid=vendor.guid, itemGuid=o.guid,
-					count=o.values[ITEM_FIELD_STACK_COUNT]});
+					count=count});
+				msg = msg or ''
+				msg = msg.."Sold "..itemProtoFromId(itemToSell).name.." x"..count.."\n"
 			end
 		end)
+		if(msg) then
+			partyChat(msg);
+		end
 		-- clear the list afterwards, as we may have more than one stack.
 		STATE.itemsToSell = {};
 	end
