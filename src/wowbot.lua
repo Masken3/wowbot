@@ -930,6 +930,12 @@ end
 function hMSG_MINIMAP_PING(p)
 end
 
+function hSMSG_LOOT_START_ROLL(p)
+	print("pass on item "..p.itemId);
+	p.rollType = ROLL_PASS;
+	send(CMSG_LOOT_ROLL, p);
+end
+
 do
 	-- lock down the Global table, to catch undefined variable creation.
 	-- this code must appear last.

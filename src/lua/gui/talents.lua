@@ -61,10 +61,8 @@ end
 function handleResults()
 	if(not results.ok) then return; end
 	for talent, maxRank in pairs(results.newTalents) do
-		local c = talentRank(talent)
-		for requestedRank=c+1, maxRank do
-			send(CMSG_LEARN_TALENT, {talentId=talent.id, requestedRank=requestedRank})
-		end
+		print("CMSG_LEARN_TALENT "..talent.id.." "..maxRank)
+		send(CMSG_LEARN_TALENT, {talentId=talent.id, requestedRank=maxRank})
 	end
 end
 
@@ -480,6 +478,7 @@ function talentClick(sender, button, shift, x, y)
 		gAvailablePoints = gAvailablePoints - 1
 		updateTalent(t)
 		results.newTalents[t.talent] = t.spentPoints
+		print("set "..t.talent.id.." "..t.spentPoints)
 	end
 	if(button == "mbRight" and canRemovePoint(t)) then
 		t.spentPoints = t.spentPoints - 1

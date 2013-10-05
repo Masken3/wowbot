@@ -1155,3 +1155,13 @@ void pSMSG_GAMEOBJECT_DESPAWN_ANIM(pLUA_ARGS) {
 	PL_START;
 	M(Guid, guid);
 }
+
+void pSMSG_LOOT_START_ROLL(pLUA_ARGS) {
+	PL_START;
+	M(Guid, lootedTarget);
+	M(uint32, slot);
+	M(uint32, itemId);
+	M(uint32, dummy);
+	M(uint32, randomPropId);
+	M(uint32, countDown);
+}

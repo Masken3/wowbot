@@ -391,7 +391,7 @@ function hSMSG_LOOT_RESPONSE(p)
 end
 
 function hSMSG_LOOT_RELEASE_RESPONSE(p)
-	print("Loot release "..p.guid:hex());
+	--print("Loot release "..p.guid:hex());
 end
 
 function follow(mo)
