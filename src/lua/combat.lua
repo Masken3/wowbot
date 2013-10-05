@@ -274,7 +274,9 @@ local function doHealSingle(o, healSpell, points, realTime)
 	local maxHealth = o.values[UNIT_FIELD_MAXHEALTH];
 	local health = o.values[UNIT_FIELD_HEALTH];
 	if(((maxHealth - health) >= points) or (health <= (maxHealth/2))) then
-		setAction("Healing "..o.guid:hex());
+		objectNameQuery(o, function(name)
+			setAction("Healing "..name);
+		end)
 		local dist = distanceToObject(o);
 		return doSpell(dist, realTime, o, healSpell);
 	end
@@ -298,7 +300,9 @@ local function doBuffSingle(o, realTime)
 	for id, s in pairs(STATE.buffSpells) do
 		if(not hasAura(o, id)) then
 			local dist = distanceToObject(o);
-			setAction("Buffing "..o.guid:hex());
+			objectNameQuery(o, function(name)
+				setAction("Buffing "..name);
+			end)
 			return doSpell(dist, realTime, o, s);
 		end
 	end

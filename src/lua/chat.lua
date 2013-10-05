@@ -161,7 +161,16 @@ local function invite(p)
 end
 
 function hSMSG_NAME_QUERY_RESPONSE(p)
-	send(CMSG_GROUP_INVITE, p)
+	local o = STATE.knownObjects[p.guid]
+	o.bot.nameData = p
+	if(STATE.newLeader == p.guid and (not isGroupMember(o))) then
+		send(CMSG_GROUP_INVITE, p)
+	end
+	if(o.bot.nameCallback) then
+		local cb = o.bot.nameCallback
+		o.bot.nameCallback = nil
+		cb(p)
+	end
 end
 
 local function dropItem(p)

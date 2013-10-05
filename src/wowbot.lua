@@ -131,6 +131,7 @@ if(rawget(_G, 'STATE') == nil) then
 		tradeGiveItem = false,	-- itemId.
 		recreate = false,
 
+		knownCreatures = {},
 		creatureQueryCallbacks = {},
 
 		knownGameObjects = {},
@@ -344,6 +345,11 @@ function isGameObject(o)
 	return bit32.btest(o.values[OBJECT_FIELD_TYPE], TYPEMASK_GAMEOBJECT);
 end
 
+function isPlayer(o)
+	if(not o) then return false; end
+	return bit32.btest(o.values[OBJECT_FIELD_TYPE], TYPEMASK_PLAYER);
+end
+
 local function isSummonedByGroupMember(o)
 	if(not o.values[UNIT_FIELD_SUMMONEDBY]) then return false; end
 	local g = guidFromValues(o, UNIT_FIELD_SUMMONEDBY);
@@ -476,17 +482,50 @@ end
 
 function sendCreatureQuery(o, callback)
 	local entry = o.values[OBJECT_FIELD_ENTRY];
+	local known = STATE.knownCreatures[entry];
+	if(known) then
+		callback(known);
+		return;
+	end
 	STATE.creatureQueryCallbacks[entry] = callback;
 	send(CMSG_CREATURE_QUERY, {guid=o.guid, entry=entry});
 end
 
 function hSMSG_CREATURE_QUERY_RESPONSE(p)
 	--print("SMSG_CREATURE_QUERY_RESPONSE", dump(p));
+	STATE.knownCreatures[p.entry] = p
 	local cb = STATE.creatureQueryCallbacks[p.entry];
 	if(cb) then
 		STATE.creatureQueryCallbacks[p.entry] = nil
 		cb(p);
 	end
+end
+
+function objectNameQuery(o, callback)
+	if(isPlayer(o)) then
+		if(o.bot.nameData) then
+			callback(o.bot.nameData.name)
+			return;
+		end
+		o.bot.nameCallback = function(p)
+			callback(p.name);
+		end
+		send(CMSG_NAME_QUERY, {guid=o.guid});
+		return;
+	end
+	if(isUnit(o)) then
+		sendCreatureQuery(o, function(k)
+			callback(k.name);
+		end)
+		return;
+	end
+	if(isGameObject(o)) then
+		gameObjectInfo(o, function(info)
+			callback(info.name);
+		end)
+		return;
+	end
+	error("objectNameQuery: Unhandled type (guid "..o.guid:hex()..")");
 end
 
 -- first write the values
