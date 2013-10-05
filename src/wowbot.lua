@@ -311,7 +311,7 @@ function isValidGuid(g)
 end
 
 -- returns true iff o is me or a member of my group.
-local function isGroupMember(o)
+function isGroupMember(o)
 	if(o.guid == STATE.myGuid) then return true; end
 	if(not STATE.inGroup) then return false; end
 	for i,m in ipairs(STATE.groupMembers) do
@@ -624,9 +624,6 @@ function hSMSG_UPDATE_OBJECT(p)
 
 		elseif(b.type == UPDATETYPE_VALUES) then
 			updateValues(STATE.knownObjects[b.guid], b);
-			if(STATE.checkNewObjectsForQuests) then
-				send(CMSG_QUESTGIVER_STATUS_QUERY, {guid=b.guid});
-			end
 			if(b.guid == STATE.myGuid) then
 				--print("UpdateObject me!");
 			end
