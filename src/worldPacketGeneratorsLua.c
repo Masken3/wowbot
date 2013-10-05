@@ -487,6 +487,13 @@ static uint16 genCMSG_REPAIR_ITEM(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+static uint16 genCMSG_LEARN_TALENT(lua_State* L, byte* buf) {
+	GL_START;
+	M(uint32, talentId);
+	M(uint32, requestedRank);
+	GL_END;
+}
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -530,6 +537,7 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_USE_ITEM);
 		GEN_CASE(CMSG_AUTOSTORE_BANK_ITEM);
 		GEN_CASE(CMSG_REPAIR_ITEM);
+		GEN_CASE(CMSG_LEARN_TALENT);
 		default: return NULL;
 	}
 }

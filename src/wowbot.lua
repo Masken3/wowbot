@@ -12,7 +12,8 @@ SUBFILES = {
 	'gameobject.lua',
 	'skill.lua',
 	'combat.lua',
-	'gui/test.lua',
+	--'gui/test.lua',
+	'gui/talents.lua',
 }
 for i,f in ipairs(SUBFILES) do
 	dofile('src/lua/'..f)
@@ -453,6 +454,13 @@ local function valueUpdated(o, idx)
 			partyChat("Skill "..((skillLine and skillLine.name) or skillId)..": "..tostring(val).."/"..tostring(max));
 		end
 	end
+	--[[
+	if(o == STATE.me and idx == PLAYER_CHARACTER_POINTS1) then
+		if(o.values[idx] > 0) then
+			doTalentWindow()
+		end
+	end
+	--]]
 	-- fishing bobber
 	--[[	-- looks like this never happens.
 	-- we'll have to listen to SMSG_GAMEOBJECT_CUSTOM_ANIM and SMSG_FISH_NOT_HOOKED instead.

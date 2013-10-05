@@ -442,6 +442,11 @@ local function spells(p)
 	reply(p, msg)
 end
 
+local function talents(p)
+	reply(p, "Opening talent window...")
+	doTalentWindow()
+end
+
 function handleChatMessage(p)
 	if(not p.text) then return end
 	if(p.text == 'lq') then
@@ -498,6 +503,8 @@ function handleChatMessage(p)
 		equip(p)
 	elseif(p.text:startWith('spells ')) then
 		spells(p)
+	elseif(p.text == 'n') then
+		talents(p)
 	else
 		return
 	end

@@ -2,7 +2,7 @@ require "vcl"
 
 VCL.clBrightGreen = 0x00ff00
 
-local gAvailablePoints = 11
+local gAvailablePoints
 
 -- internalName:tab
 local tabs = {}
@@ -18,7 +18,17 @@ local marginFraction = 0.25
 local tabWidth = iconSize*4 + (iconSize*marginFraction*6)
 local tabHeight = iconSize*8 + (iconSize*marginFraction*10)
 
-local mainForm = VCL.Form{
+local mainForm
+local initializeForm
+local handleResults
+
+local results = {
+	ok = false,
+	newTalents = {},	-- talent:maxRequestedRank
+}
+
+function doTalentWindow()
+	mainForm = VCL.Form{
 	name="mainForm",
 	caption = "Talents",
 	position="podesktopcenter",
@@ -27,14 +37,47 @@ local mainForm = VCL.Form{
 	color=VCL.clBlack,
 	onclosequery = "onCloseQueryEventHandler",
 	onMouseMove='disablePopup',
-}
+	}
+	gAvailablePoints = STATE.my.values[PLAYER_CHARACTER_POINTS1] or 0
+	initializeForm()
+	mainForm:ShowModal()
+	mainForm:Free()
+	handleResults()
+end
 
-local gAvailablePointsLabel = VCL.Label{
+local function talentRank(talent)
+	local i = 1
+	local rank = 0
+	-- earlier ranks are forgotten.
+	while(i <= 5) do
+		if(STATE.knownSpells[talent.spellId[i]]) then
+			rank = i
+		end
+		i = i + 1
+	end
+	return rank
+end
+
+function handleResults()
+	if(not results.ok) then return; end
+	for talent, maxRank in pairs(results.newTalents) do
+		local c = talentRank(talent)
+		for requestedRank=c+1, maxRank do
+			send(CMSG_LEARN_TALENT, {talentId=talent.id, requestedRank=requestedRank})
+		end
+	end
+end
+
+local gAvailablePointsLabel
+local gOkButton
+local gCancelButton
+local function createGlobals()
+gAvailablePointsLabel = VCL.Label{
 	top = tabHeight + iconSize/2,
 	left = iconSize/2,
 }
 
-local gOkButton = VCL.Button{
+gOkButton = VCL.Button{
 	caption = "OK",
 	default = true,
 	top = tabHeight + iconSize/2,
@@ -42,13 +85,14 @@ local gOkButton = VCL.Button{
 	onClick = 'onOK',
 }
 
-local gCancelButton = VCL.Button{
+gCancelButton = VCL.Button{
 	caption = "Cancel",
 	cancel = true,
 	top = tabHeight + iconSize/2,
 	left = tabWidth*2.5,
 	onClick = 'onCancel',
 }
+end
 
 function onCloseQueryEventHandler(Sender)
 	return true -- the form can be closed
@@ -109,10 +153,23 @@ local function tabLabelCaption(tab)
 	return tab.name.." ("..tab.spentPoints.."/"..tab.rankCount..")"
 end
 
+function myClassMask()
+	return bit32.lshift(1, (bit32.extract(STATE.my.values[UNIT_FIELD_BYTES_0], 8, 8) - 1))
+end
+
+function myRaceMask()
+	return bit32.lshift(1, (bit32.extract(STATE.my.values[UNIT_FIELD_BYTES_0], 0, 8) - 1))
+end
+
+function initializeForm()
+createGlobals()
+gAvailablePointsLabel.font.name = "Verdana"
+gAvailablePointsLabel.font.color = VCL.clWhite
+
 for tab in cTalentTabs() do
 	--print(dump(tt))
 	if(tab.spellIcon == 11) then tab.tabPage = 1; end	-- patch MageFire
-	if(tab.classMask == 128) then	-- mage
+	if(tab.classMask == myClassMask()) then	-- mage
 		tab.spentPoints = 0
 		tab.rankCount = 0
 		tab.rows = {}	-- row:{col:t}
@@ -195,7 +252,8 @@ for tab in cTalentTabs() do
 					}
 					rb:LoadFromFile(cIconRaw("Interface\\TalentFrame\\TalentFrame-RankBorder"))
 					--]]
-					local spentPoints = 0
+					local spentPoints = talentRank(talent)
+					tab.spentPoints = tab.spentPoints + spentPoints
 					local l = VCL.Label{Name=n.."rb",
 						transparent=false,
 						color=VCL.clBlack,
@@ -247,8 +305,14 @@ for tab in cTalentTabs() do
 		end
 	end
 end
+createPopup()
+disablePopup()
+updateAvail()
+end	--initializeForm
 
-local popup = {
+local popup
+function createPopup()
+popup = {
 	border = VCL.Shape{
 		shape=VCL.stRoundRect,
 		brush={color=VCL.clWhite},
@@ -278,6 +342,7 @@ local popup = {
 		left=4,
 	},
 }
+end
 
 function disablePopup(sender, shift, x, y)
 	for n,c in pairs(popup) do
@@ -355,14 +420,9 @@ function talentPopup(sender, shift, x, y)
 	popup.description.caption = t.spell.description
 end
 
-disablePopup()
-
-gAvailablePointsLabel.font.name = "Verdana"
-gAvailablePointsLabel.font.color = VCL.clWhite
-local function updateAvail()
+function updateAvail()
 	gAvailablePointsLabel.caption = "Available points: "..gAvailablePoints
 end
-updateAvail()
 
 local function updateTalent(t)
 	-- update labels and shapes
@@ -419,6 +479,7 @@ function talentClick(sender, button, shift, x, y)
 		t.tab.spentPoints = t.tab.spentPoints + 1
 		gAvailablePoints = gAvailablePoints - 1
 		updateTalent(t)
+		results.newTalents[t.talent] = t.spentPoints
 	end
 	if(button == "mbRight" and canRemovePoint(t)) then
 		t.spentPoints = t.spentPoints - 1
@@ -430,21 +491,13 @@ end
 
 function onCancel(sender)
 	print("Cancel")
+	results.ok = false
 	mainForm:Close()
 end
 
 function onOK(sender)
 	print("OK")
+	results.ok = true
 	mainForm:Close()
 end
 
-cIconRaw("Interface\\TalentFrame\\TalentFrame-RankBorder")
-cIconRaw("Interface\\TalentFrame\\UI-TalentArrows")
-cIconRaw("Interface\\TalentFrame\\UI-TalentBranches")
-cIconRaw("Interface\\TalentFrame\\UI-TalentFrame-BotLeft")
-cIconRaw("Interface\\TalentFrame\\UI-TalentFrame-BotRight")
-
-mainForm:ShowModal()
-mainForm:Free()
-
-exit(0)
