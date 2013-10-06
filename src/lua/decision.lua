@@ -166,6 +166,23 @@ function decision(realTime)
 		return;
 	end
 
+	if(STATE.disenchantItems) then
+		if(STATE.spellCooldown > realTime) then return; end
+		local found = false;
+		investigateInventory(function(o, bagSlot, slot)
+			local itemId = o.values[OBJECT_FIELD_ENTRY];
+			if(STATE.disenchantItems[itemId]) then
+				partyChat("Dis: "..o.guid:hex());
+				castSpellAtItem(STATE.disenchantSpell, o);
+				found = true
+				return false;
+			end
+		end)
+		if(not found) then
+			STATE.disenchantItems = false;
+		end
+	end
+
 	-- don't try following the leader if we don't know where he is.
 	if(STATE.inGroup and STATE.leader and STATE.leader.location.position.x) then
 		setAction("Following leader");

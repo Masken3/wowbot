@@ -97,6 +97,7 @@ if(rawget(_G, 'STATE') == nil) then
 		fishingBobber = false, -- KnownObject.
 
 		disenchantSpell = false,	-- spellId.
+		disenchantItems = false,	-- or itemId:true.
 
 		openLockSpells = {},	--miscValue:spellId.
 
