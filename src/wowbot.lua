@@ -103,7 +103,7 @@ if(rawget(_G, 'STATE') == nil) then
 
 		-- id:spellTable
 		healingSpells = {},
-		buffSpells = {},
+		buffSpells = {},	-- name:spellTable
 		focusSpells = {},
 
 		-- key: id. value: table. All the spells we know.
@@ -729,10 +729,13 @@ local function learnSpell(id)
 			}
 			--print("aura: "..e.applyAuraName, dump(buffAuras));
 			if(buffAuras[e.applyAuraName]) then
-				if(not STATE.buffSpells[id]) then
+				if(not STATE.buffSpells[s.name]) then
 					print("b"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+					STATE.buffSpells[s.name] = s;
+				elseif(STATE.buffSpells[s.name].rank < s.rank) then
+					print("b"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+					STATE.buffSpells[s.name] = s;
 				end
-				STATE.buffSpells[id] = s;
 			end
 			-- HoTs
 			-- we count PW:S here.

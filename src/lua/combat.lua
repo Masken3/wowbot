@@ -297,8 +297,8 @@ end
 
 local function doBuffSingle(o, realTime)
 	-- check all auras. if there's one aura of ours they DON'T have, give it.
-	for id, s in pairs(STATE.buffSpells) do
-		if(not hasAura(o, id)) then
+	for buffName, s in pairs(STATE.buffSpells) do
+		if(not hasAura(o, s.id)) then
 			local dist = distanceToObject(o);
 			objectNameQuery(o, function(name)
 				setAction("Buffing "..name);
