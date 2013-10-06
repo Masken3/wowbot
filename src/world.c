@@ -516,7 +516,7 @@ BOOL luaPcall(lua_State* L, int nargs) {
 }
 
 static void handleServerPacket(WorldSession* session, ServerPktHeader sph, char* buf) {
-#define LSP LOG("serverPacket %s (%i)\n", s, sph.size)
+#define LSP //LOG("serverPacket %s (%i)\n", s, sph.size)
 #define CASE_HANDLER(name) case name: LSP; h##name(session, buf, sph.size - 2); break;
 #define CASE_IGNORED_HANDLER(name) case name: break;
 #define CASE_LUA_HANDLER(name) _CASE_LUA_HANDLER(name, p##name);
@@ -537,9 +537,11 @@ static void handleServerPacket(WorldSession* session, ServerPktHeader sph, char*
 
 	lua_State* L = session->L;
 	const char* s = opcodeString(sph.cmd);
+	double startTime, endTime;
 
 	readLua(session);
 
+	startTime = getRealTime();
 	switch(sph.cmd) {
 		HANDLERS(CASE_HANDLER);
 		IGNORED_PACKET_TYPES(CASE_IGNORED_HANDLER);
@@ -555,4 +557,7 @@ static void handleServerPacket(WorldSession* session, ServerPktHeader sph, char*
 			}
 		}
 	}
+	endTime = getRealTime();
+	if(endTime - startTime > 0.1)
+		LOG("%s: %.3f s\n", s, endTime - startTime);
 }

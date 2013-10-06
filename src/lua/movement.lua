@@ -217,7 +217,9 @@ function hMovement(opcode, p)
 
 		-- todo: handle the case of being on different maps.
 		--print("leaderMovement", realTime);
-		decision(realTime);
+		if(STATE.leader and p.guid == STATE.leader.guid) then
+			decision(realTime);
+		end
 	end
 end
 
