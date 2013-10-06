@@ -134,14 +134,24 @@ function hMSG_MOVE_TELEPORT_ACK(p)
 	print("MSG_MOVE_TELEPORT_ACK", dump(p));
 	STATE.myLocation.position = Position.new(p.pos);
 	STATE.myLocation.orientation = p.o;
+
+	-- assume all party members moved with you
+	for i,m in ipairs(STATE.groupMembers) do
+		STATE.knownObjects[m.guid].location = STATE.knownObjects[m.guid].location or Location.new();
+		STATE.knownObjects[m.guid].location.position = Position.new(p.pos);
+	end
+
 	send(MSG_MOVE_TELEPORT_ACK, p);
+	sendMovement(MSG_MOVE_STOP);
+	STATE.moving = false;
 end
 
 function hMovement(opcode, p)
 	--print("hMovement", fg(p.guid), opcode, p.flags)
+	local o = STATE.knownObjects[p.guid];
 
 	--print("p,l:", fg(p.guid), fg(STATE.leaderGuid));
-	if(STATE.leader and p.guid == STATE.leader.guid) then
+	if(o) then
 		local realTime = getRealTime();
 		updateMyPosition(realTime);
 		--if(STATE.leader.movement.startTime) then
@@ -152,10 +162,10 @@ function hMovement(opcode, p)
 			--local d = diff3(clp, p.pos);
 			--print("diff:", d.x, d.y);
 		--end
-		STATE.leader.location.position.x = p.pos.x;
-		STATE.leader.location.position.y = p.pos.y;
-		STATE.leader.location.position.z = p.pos.z;
-		STATE.leader.location.orientation = p.o;
+		o.location.position.x = p.pos.x;
+		o.location.position.y = p.pos.y;
+		o.location.position.z = p.pos.z;
+		o.location.orientation = p.o;
 
 		local f = p.flags;
 		local speed = RUN_SPEED;	-- speed, in yards per second.
@@ -199,11 +209,11 @@ function hMovement(opcode, p)
 			-- multiply vector by half the square root of 2.
 			factor = factor * ((2^0.5) / 2);
 		end
-		if(not STATE.leader.movement) then STATE.leader.movement = Movement.new(); end
+		o.movement = o.movement or Movement.new();
 		--print("factor: "..factor.." x: "..x.." y: "..y);
-		STATE.leader.movement.dx = y * factor * math.cos(p.o) + x * factor * math.cos(p.o - math.pi/2);
-		STATE.leader.movement.dy = y * factor * math.sin(p.o) + x * factor * math.sin(p.o - math.pi/2);
-		STATE.leader.movement.startTime = realTime;
+		o.movement.dx = y * factor * math.cos(p.o) + x * factor * math.cos(p.o - math.pi/2);
+		o.movement.dy = y * factor * math.sin(p.o) + x * factor * math.sin(p.o - math.pi/2);
+		o.movement.startTime = realTime;
 
 		-- todo: handle the case of being on different maps.
 		--print("leaderMovement", realTime);
@@ -247,7 +257,7 @@ function updateEnemyPositions(realTime)
 		c = c + 1;
 	end
 	if(c > 1) then
-		print(c.." enemies.");
+		--print(c.." enemies.");
 	end
 	for guid, o in pairs(STATE.pickpocketables) do
 		updateMonsterPosition(realTime, o);
@@ -470,8 +480,11 @@ function doMoveToTarget(realTime, mo, maxDist)
 		myPos.z = math.min(STATE.leader.location.position.z + 3, myPos.z);
 	end
 	--  or dist < (FOLLOW_DIST - FOLLOW_TOLERANCE)
+	assert(dist >= 0);
 	if(dist > maxDist) then
-		--print("dist:", dist);
+		if(dist > 100) then
+			print("dist:", dist, mo.guid:hex());
+		end
 		local data = {
 			flags = MOVEFLAG_FORWARD,
 			pos = myPos,
@@ -530,10 +543,10 @@ function doMoveToTarget(realTime, mo, maxDist)
 			--print("removed timer.");
 			return true;
 		end
-	end
-	if(oChanged) then
+	elseif(oChanged) then
 		sendMovement(MSG_MOVE_SET_FACING);
 	end
+	assert(not STATE.moving);
 	if(mov and (mov.dx ~= 0 or mov.dy ~= 0)) then
 		-- see math-notes.txt, 2013-08-18 20:03:46
 		local dx = mov.dx;
@@ -551,8 +564,6 @@ function doMoveToTarget(realTime, mo, maxDist)
 			--"xyabc", x, y, a, b, c, "mov:"..dump(mov));
 		if(t > 0) then
 			setTimer(movementTimerCallback, realTime + t);
-		else
-			sendMovement(MSG_MOVE_STOP);
 		end
 	end
 	return true;

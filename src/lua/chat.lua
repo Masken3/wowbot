@@ -359,6 +359,7 @@ local function disenchant(p)
 	local itemId = tonumber(p.text:sub(5))
 	STATE.disenchantItems = STATE.disenchantItems or {}
 	STATE.disenchantItems[itemId] = true
+	decision()
 end
 
 local function store(p)

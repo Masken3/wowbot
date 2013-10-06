@@ -165,7 +165,7 @@ function mostEffectiveSpell(spells)
 
 				-- todo: handle combo-point spells
 				if(e.pointsPerComboPoint ~= 0) then
-					print("ppc: "..e.pointsPerComboPoint);
+					--print("ppc: "..e.pointsPerComboPoint);
 				end
 			end
 		end
@@ -239,11 +239,11 @@ function doSpell(dist, realTime, target, bestSpell)
 	local closeEnough = true;
 	local tookAction = false;
 	if(behindTarget) then
-		closeEnough = doCombatMoveBehindTarget(getRealTime(), target);
+		closeEnough = doCombatMoveBehindTarget(realTime, target);
 		tookAction = true;
 	elseif(requiredDistance) then
 		-- also sets orientation, so is worthwhile to do even if we're already in range.
-		closeEnough = doMoveToTarget(getRealTime(), target, requiredDistance);
+		closeEnough = doMoveToTarget(realTime, target, requiredDistance);
 		tookAction = true;
 	end
 
