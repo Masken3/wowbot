@@ -128,7 +128,7 @@ if(rawget(_G, 'STATE') == nil) then
 		itemsToSell = {},
 
 		tradeGiveAll = false,
-		tradeGiveItem = false,	-- itemId.
+		tradeGiveItems = {},	-- itemId:true.
 		recreate = false,
 
 		knownCreatures = {},

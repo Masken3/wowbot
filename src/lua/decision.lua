@@ -279,7 +279,7 @@ function goSell(itemId)
 				send(CMSG_SELL_ITEM, {vendorGuid=vendor.guid, itemGuid=o.guid,
 					count=count});
 				msg = msg or ''
-				msg = msg.."Sold "..itemProtoFromId(itemToSell).name.." x"..count.."\n"
+				msg = msg.."Sold "..itemProtoFromId(itemId).name.." x"..count.."\n"
 			end
 		end)
 		if(msg) then

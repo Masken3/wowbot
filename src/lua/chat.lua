@@ -81,9 +81,12 @@ local function giveAll(p)
 end
 
 local function giveItem(p)
-	local itemId = tonumber(p.text:sub(6))
-	reply(p, 'giving item '..itemId..'...')
-	STATE.tradeGiveItem = itemId
+	local items = {}
+	for itemId in p.text:sub(6):gmatch("%w+") do
+		items[tonumber(itemId)] = true
+	end
+	reply(p, 'giving items...')
+	STATE.tradeGiveItems = items
 	send(CMSG_INITIATE_TRADE, {guid=p.senderGuid})
 end
 
@@ -103,12 +106,13 @@ function hSMSG_TRADE_STATUS(p)
 		end)
 		print("giving "..tradeSlot.." items...")
 		send(CMSG_ACCEPT_TRADE, {padding=0})
-	elseif((p.status == TRADE_STATUS_OPEN_WINDOW) and STATE.tradeGiveItem) then
+	elseif((p.status == TRADE_STATUS_OPEN_WINDOW) and STATE.tradeGiveItems) then
 		local tradeSlot = 0
 		investigateInventory(function(o, bagSlot, slot)
-			if(o.values[OBJECT_FIELD_ENTRY] == STATE.tradeGiveItem) then
+			local itemId = o.values[OBJECT_FIELD_ENTRY]
+			if(STATE.tradeGiveItems[itemId]) then
 				send(CMSG_SET_TRADE_ITEM, {tradeSlot = tradeSlot, bag = bagSlot, slot = slot})
-				print(tradeSlot..": "..o.values[OBJECT_FIELD_ENTRY]..' '..o.guid:hex())
+				print(tradeSlot..": "..itemId..' '..o.guid:hex())
 				tradeSlot = tradeSlot + 1
 				if(tradeSlot >= TRADE_SLOT_TRADED_COUNT) then
 					return false
@@ -116,7 +120,7 @@ function hSMSG_TRADE_STATUS(p)
 			end
 		end)
 		print("giving "..tradeSlot.." items...")
-		STATE.tradeGiveItem = false
+		STATE.tradeGiveItems = false
 		send(CMSG_ACCEPT_TRADE, {padding=0})
 	elseif(p.status == TRADE_STATUS_TRADE_CANCELED) then
 		print("Trade cancelled!")
@@ -485,6 +489,26 @@ local function gq(p)
 	getQuests(target);
 end
 
+local function listBags(p)
+	local msg = 'Bags ('..countFreeSlots().." free slots)\n"
+	local freeSlotCount = investigateBags(function(bag, bagSlot, slotCount)
+		local id = bag.values[OBJECT_FIELD_ENTRY]
+		local proto = itemProtoFromId(id)
+		msg = msg..itemLink(bag).." "..slotCount.."\n"
+	end)
+	reply(p, msg)
+end
+
+local function listBankBags(p)
+	local msg = 'Bank bags ('..countFreeBankSlots().." free slots)\n"
+	local freeSlotCount = investigateBankBags(function(bag, bagSlot, slotCount)
+		local id = bag.values[OBJECT_FIELD_ENTRY]
+		local proto = itemProtoFromId(id)
+		msg = msg..itemLink(bag).." "..slotCount.."\n"
+	end)
+	reply(p, msg)
+end
+
 function handleChatMessage(p)
 	if(not p.text) then return end
 	if(p.text == 'lq') then
@@ -531,6 +555,8 @@ function handleChatMessage(p)
 		disenchant(p)
 	elseif(p.text:startWith('store ')) then
 		store(p)
+	elseif(p.text:startWith('fetch ')) then
+		fetch(p)
 	elseif(p.text == 'lb') then
 		listBankItems(p)
 	elseif(p.text == 'repair') then
@@ -547,6 +573,10 @@ function handleChatMessage(p)
 		autoQuestGet(p)
 	elseif(p.text == 'gq') then
 		gq(p)
+	elseif(p.text == 'lg') then
+		listBags(p)
+	elseif(p.text == 'lbg') then
+		listBankBags(p)
 	else
 		return
 	end

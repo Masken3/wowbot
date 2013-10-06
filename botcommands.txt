@@ -7,6 +7,9 @@ These are chat commands that bots will respond to:
 * dai	Drop All Items. (except equipped items). Use only for debugging.
 * drop <itemId>	Drop items with the specified id.
 * lm	List Money
+* lb	List Bank items
+* lg	List baGs.
+* lbg	List Bank baGs.
 
 * go	GameObject. Use the nearest usable object within 20 yards.
 

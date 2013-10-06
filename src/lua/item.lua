@@ -458,6 +458,12 @@ function itemLoginComplete()
 	investigateBank(function(o)
 		itemProtoFromId(itemIdOfGuid(o.guid));
 	end)
+	investigateBags(function(o)
+		itemProtoFromId(itemIdOfGuid(o.guid));
+	end)
+	investigateBankBags(function(o)
+		itemProtoFromId(itemIdOfGuid(o.guid));
+	end)
 end
 
 function itemTest()
@@ -555,6 +561,22 @@ function equip(itemGuid, itemId, slot)
 	send(CMSG_AUTOEQUIP_ITEM_SLOT, {itemGuid=itemGuid, dstSlot=slot});
 end
 
+function baseInvestigateBags(bagField1, bagFieldLast, bagSlotStart, f)
+	for i = bagField1, bagFieldLast, 2 do
+		local bagGuid = guidFromValues(STATE.me, i);
+		if(isValidGuid(bagGuid)) then
+			local bag = STATE.knownObjects[bagGuid];
+			if(bag) then
+				local slotCount = bag.values[CONTAINER_FIELD_NUM_SLOTS];
+				if(slotCount) then
+					local bagSlot = bagSlotStart + ((i - bagField1) / 2);
+					f(bag, bagSlot, slotCount);
+				end
+			end
+		end
+	end
+end
+
 local function baseInvestigate(directField1, directFieldLast,
 	directBagSlot, directItemSlotStart,
 	bagField1, bagFieldLast, bagSlotStart, f)
@@ -573,28 +595,29 @@ local function baseInvestigate(directField1, directFieldLast,
 		end
 	end
 	-- bags
-	for i = bagField1, bagFieldLast, 2 do
-		local bagGuid = guidFromValues(STATE.me, i);
-		if(isValidGuid(bagGuid)) then
-			local bag = STATE.knownObjects[bagGuid];
-			local slots;
-			if(bag) then slots = bag.values[CONTAINER_FIELD_NUM_SLOTS]; end
-			--print(tostring(slots));
-			if(slots) then for j = 0, slots, 1 do
-				local guid = guidFromValues(bag, CONTAINER_FIELD_SLOT_1 + (j*2))
-				if(isValidGuid(guid)) then
-					local o = STATE.knownObjects[guid];
-					local bagSlot = bagSlotStart + ((i - bagField1) / 2);
-					local slot = j;
-					local res = f(o, bagSlot, slot);
-					if(res == false) then return; end
-				else
-					freeSlotCount = freeSlotCount + 1;
-				end
-			end end
+	baseInvestigateBags(bagField1, bagFieldLast, bagSlotStart, function(bag, bagSlot, slotCount)
+		--print(slotCount);
+		for j = 0, slotCount, 1 do
+			local guid = guidFromValues(bag, CONTAINER_FIELD_SLOT_1 + (j*2))
+			if(isValidGuid(guid)) then
+				local o = STATE.knownObjects[guid];
+				local slot = j;
+				local res = f(o, bagSlot, slot);
+				if(res == false) then return; end
+			else
+				freeSlotCount = freeSlotCount + 1;
+			end
 		end
-	end
+	end)
 	return freeSlotCount;
+end
+
+function countFreeSlots()
+	return investigateInventory(function()end)
+end
+
+function countFreeBankSlots()
+	return investigateInventory(function()end)
 end
 
 function investigateInventory(f)
@@ -608,6 +631,16 @@ function investigateBank(f)
 	return baseInvestigate(PLAYER_FIELD_BANK_SLOT_1, PLAYER_FIELD_BANK_SLOT_LAST,
 		INVENTORY_SLOT_BAG_0, BANK_SLOT_ITEM_START,
 		PLAYER_FIELD_BANKBAG_SLOT_1, PLAYER_FIELD_BANKBAG_SLOT_LAST,
+		BANK_SLOT_BAG_START, f)
+end
+
+function investigateBags(f)
+	baseInvestigateBags(PLAYER_FIELD_BAG_SLOT_1, PLAYER_FIELD_BAG_SLOT_LAST,
+		BANK_SLOT_BAG_START, f)
+end
+
+function investigateBankBags(f)
+	baseInvestigateBags(PLAYER_FIELD_BANKBAG_SLOT_1, PLAYER_FIELD_BANKBAG_SLOT_LAST,
 		BANK_SLOT_BAG_START, f)
 end
 
