@@ -71,6 +71,16 @@ static int luaT_int(lua_State* L, const char* key) {
 	return i;
 }
 
+// table on top of stack
+static int luaT_bool(lua_State* L, const char* key) {
+	int i;
+	lua_pushstring(L, key);
+	lua_gettable(L, -2);
+	i = lua_toboolean(L, -1);
+	lua_pop(L, 1);
+	return i;
+}
+
 static int luaPanic(lua_State *L) {
 	LOG("luaPanic: %s\n", lua_tostring(L, -1));
 	*(int*)NULL = 0;	// induce a crash that can be caught by a debugger.
@@ -138,6 +148,8 @@ int main(void) {
 			sessions[i].race = luaT_int(L, "race");
 			sessions[i].gender = luaT_int(L, "gender");
 			sessions[i].realmName = realmName;
+			sessions[i].amTank = luaT_bool(L, "tank");
+			sessions[i].amHealer = luaT_bool(L, "healer");
 			fprintf(sqlFile, "('%s', SHA1(CONCAT(UPPER('%s'),':',UPPER('%s'))))",
 				sessions[i].accountName, sessions[i].accountName, sessions[i].password);
 			if(i != toonCount - 1)

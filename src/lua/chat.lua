@@ -502,6 +502,10 @@ local function listBankBags(p)
 	reply(p, msg)
 end
 
+local function report(p)
+	reply(p, STATE.currentAction)
+end
+
 function handleChatMessage(p)
 	if(not p.text) then return end
 	if(p.text == 'lq') then
@@ -570,6 +574,8 @@ function handleChatMessage(p)
 		listBags(p)
 	elseif(p.text == 'lbg') then
 		listBankBags(p)
+	elseif(p.text == 'report') then
+		report(p)
 	else
 		return
 	end

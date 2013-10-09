@@ -164,6 +164,14 @@ void enterWorld(WorldSession* session, uint64 guid, uint8 level) {
 	lua_pushstring(L, className(session->_class));
 	lua_settable(L, -3);
 
+	lua_pushstring(L, "amTank");
+	lua_pushboolean(L, session->amTank);
+	lua_settable(L, -3);
+
+	lua_pushstring(L, "amHealer");
+	lua_pushboolean(L, session->amHealer);
+	lua_settable(L, -3);
+
 	lua_pop(L, 1);
 
 	lua_getglobal(L, "loadState");
@@ -184,14 +192,10 @@ void enterWorld(WorldSession* session, uint64 guid, uint8 level) {
 	m(MSG_MOVE_HEARTBEAT)\
 	m(SMSG_SET_PROFICIENCY)\
 	m(SMSG_PARTY_MEMBER_STATS)\
-	m(SMSG_SPELL_START)\
-	m(SMSG_SPELL_GO)\
 	m(SMSG_SPELLLOGEXECUTE)\
 	m(MSG_CHANNEL_UPDATE)\
 	m(SMSG_LOOT_REMOVED)\
 	m(MSG_CHANNEL_START)\
-	m(SMSG_SPELL_FAILURE)\
-	m(SMSG_SPELL_FAILED_OTHER)\
 	m(SMSG_UPDATE_AURA_DURATION)\
 	m(SMSG_SET_EXTRA_AURA_INFO_NEED_UPDATE)\
 	m(SMSG_WEATHER)\

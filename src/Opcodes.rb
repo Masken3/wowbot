@@ -307,8 +307,8 @@ Opcodes = {
 	:SMSG_SPELL_START                                => 0x131,
 	:SMSG_SPELL_GO                                   => 0x132,
 	:SMSG_SPELL_FAILURE                              => 0x133,
-	:SMSG_SPELL_COOLDOWN                             => 0x134,
-	:SMSG_COOLDOWN_EVENT                             => 0x135,
+	:SMSG_SPELL_COOLDOWN                             => 0x134,	# starts cooldown period.
+	:SMSG_COOLDOWN_EVENT                             => 0x135,	# rare.
 	:CMSG_CANCEL_AURA                                => 0x136,
 	:SMSG_UPDATE_AURA_DURATION                       => 0x137,
 	:SMSG_PET_CAST_FAILED                            => 0x138,
@@ -477,7 +477,13 @@ Opcodes = {
 	:SMSG_STOP_MIRROR_TIMER                          => 0x1DB,
 	:CMSG_PING                                       => 0x1DC,
 	:SMSG_PONG                                       => 0x1DD,
+
+	# ends the cooldown for a single spell.
+	# happens on a few occasions, such as Rogue's Preparation.
+	# can also happen on admin command, or some spell fails.
+	# not useful for us.
 	:SMSG_CLEAR_COOLDOWN                             => 0x1DE,
+
 	:SMSG_GAMEOBJECT_PAGETEXT                        => 0x1DF,
 	:CMSG_SETSHEATHED                                => 0x1E0,
 	:SMSG_COOLDOWN_CHEAT                             => 0x1E1,

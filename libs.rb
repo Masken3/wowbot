@@ -43,7 +43,7 @@ class DbcWork < DllWork
 				"build/#{name}",
 			]
 			@SOURCE_TASKS ||= []
-			@SOURCE_TASKS << DbcCppTask.new(name, {:criticalSection=>false, :lua=>true})
+			@SOURCE_TASKS << DbcCppTask.new(name, {:criticalSection=>false, :lua=>true, :logging=>false})
 			@EXTRA_OBJECTS = [DBC]
 			if(HOST == :win32)
 				@LIBRARIES = ['lua']

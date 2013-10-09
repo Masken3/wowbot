@@ -14,6 +14,7 @@ SUBFILES = {
 	'combat.lua',
 	--'gui/test.lua',
 	'gui/talents.lua',
+	'spell_threat.lua',
 }
 for i,f in ipairs(SUBFILES) do
 	dofile('src/lua/'..f)
@@ -26,7 +27,7 @@ end
 Position = Struct.new{x='number', y='number', z='number'}
 Location = Struct.new{mapId='number', position=Position, orientation='number'}
 Movement = Struct.new{dx='number', dy='number', startTime='number'}
-MovingObject = Struct.new{guid='string', location=Location, movement=Movement}
+--MovingObject = Struct.new{guid='string', location=Location, movement=Movement}
 
 -- values is an int-key table. See UpdateFields.h for a list of keys.
 -- bot is for storing our own data concerning this object.
@@ -39,6 +40,7 @@ RepeatSpellCast = Struct.new{id='number', count='number'}
 if(rawget(_G, 'STATE') == nil) then
 	STATE = {
 		inGroup = false,
+		leaderGuid = false,
 		leader = false,
 		newLeader = false,
 
@@ -60,9 +62,13 @@ if(rawget(_G, 'STATE') == nil) then
 		checkNewObjectsForQuests = false,	-- set to true after login.
 
 		reloadCount = 0,
-		myGuid = '',	-- set by C function enterWorld.
-		myLevel = 0,	-- set by C function enterWorld.
-		myClassName = '',	-- set by C function enterWorld.
+
+		-- set by C function enterWorld.
+		myGuid = '',
+		myLevel = 0,
+		myClassName = '',
+		amTank = false,
+		amHealer = false,
 
 		myMoney = false,	-- in coppers. used to determine money changes.
 
@@ -81,10 +87,15 @@ if(rawget(_G, 'STATE') == nil) then
 		myTarget = false,	-- guid of my target.
 
 		attackSpells = {},	-- Spells we know that are useful for attacking other creatures.
-		meleeSpell = false,	-- spell id.
+		meleeSpell = false,	-- spell table.
 		attacking = false,	-- boolean.
 		meleeing = false,	-- boolean.
-		spellCooldown = 0,	-- the realTime when the most recently spell will have cooled down.
+
+		casting = false,	-- boolean.
+
+		spellCooldowns = {},	-- id:targetTime
+		spellCategoryCooldowns = {},	-- spell.Category:targetTime
+		spellGlobalCooldowns = {},	-- spell.StartRecoveryCategory:targetTime
 
 		stealthed = false,	-- boolean.
 		stealthSpell = false,	-- spell table.
@@ -99,12 +110,14 @@ if(rawget(_G, 'STATE') == nil) then
 		disenchantSpell = false,	-- spellId.
 		disenchantItems = false,	-- or itemId:true.
 
-		openLockSpells = {},	--miscValue:spellId.
+		openLockSpells = {},	--miscValue:spellTable.
 
 		-- id:spellTable
 		healingSpells = {},
 		buffSpells = {},	-- name:spellTable
+		combatBuffSpells = {},	-- name:spellTable	-- like a warrior's Shouts
 		focusSpells = {},
+		tauntSpell = false,	-- spellTable
 
 		-- key: id. value: table. All the spells we know.
 		knownSpells = {},
@@ -122,7 +135,6 @@ if(rawget(_G, 'STATE') == nil) then
 		-- they will be called when itemDataWaiting is empty.
 		itemDataCallbacks = {},
 
-		---- guid:table{slot, bag, count}
 		-- itemId:true
 		-- if not empty and a vendor is nearby,
 		-- will go to vendor and sell all inventory items with that id.
@@ -259,6 +271,7 @@ end
 function hSMSG_GROUP_LIST(p)
 	--print("SMSG_GROUP_LIST", dump(p));
 	STATE.leader = STATE.knownObjects[p.leaderGuid] or false;
+	STATE.leaderGuid = p.leaderGuid;
 	if(p.memberCount == 0) then
 		STATE.inGroup = false;
 		print("Group disbanded.");
@@ -360,7 +373,7 @@ local function isSummonedByGroupMember(o)
 end
 
 -- returns true iff o is a member of my group (including me), or a pet or summon belonging to a member.
-local function isAlly(o)
+function isAlly(o)
 	if(not isUnit(o)) then return false; end
 	return isGroupMember(o) or isSummonedByGroupMember(o);
 end
@@ -485,6 +498,7 @@ end
 
 function sendCreatureQuery(o, callback)
 	local entry = o.values[OBJECT_FIELD_ENTRY];
+	if(not entry) then return; end
 	local known = STATE.knownCreatures[entry];
 	if(known) then
 		callback(known);
@@ -615,6 +629,10 @@ function hSMSG_UPDATE_OBJECT(p)
 				gameObjectInfo(o, newGameObject);
 			end
 
+			if(isUnit(o)) then
+				sendCreatureQuery(o, newUnit);
+			end
+
 			if(o.guid:hex() == PERMASTATE.invitee and not isGroupMember(o)) then
 				-- will trigger invite. see hSMSG_NAME_QUERY_RESPONSE.
 				send(CMSG_NAME_QUERY, o);
@@ -647,11 +665,15 @@ function hSMSG_UPDATE_OBJECT(p)
 	decision();
 end
 
+function newUnit(k)
+end
+
 function hSMSG_DESTROY_OBJECT(p)
-	--print("SMSG_DESTROY_OBJECT", dump(p));
+	print("SMSG_DESTROY_OBJECT", dump(p));
 	for i, koh in pairs(STATE.knownObjectHolders) do
-		koh[p.guid] = nil;
+		--koh[p.guid] = nil;
 	end
+	--STATE.knownObjects[p.guid] = nil;
 	if(STATE.fishingBobber and p.guid == STATE.fishingBobber.guid) then
 		print("fishingBobber destroyed.");
 		STATE.fishingBobber = false;
@@ -687,7 +709,7 @@ local function learnSpell(id)
 			-- assuming that there's only one melee spell
 			assert(not STATE.meleeSpell);
 			--print("Melee spell:", id);
-			STATE.meleeSpell = id;
+			STATE.meleeSpell = s;
 		end
 		if((e.id == SPELL_EFFECT_APPLY_AURA) and (e.applyAuraName == SPELL_AURA_MOD_STEALTH)) then
 			if(not STATE.stealthSpell or (STATE.stealthSpell.rank < s.rank)) then
@@ -709,7 +731,7 @@ local function learnSpell(id)
 			if(e.implicitTargetA == TARGET_GAMEOBJECT) then
 				--print("OpenLockSpell "..e.miscValue..": "..id);
 				if(STATE.openLockSpells[e.miscValue]) then print("Override!"); end
-				STATE.openLockSpells[e.miscValue] = id;
+				STATE.openLockSpells[e.miscValue] = s;
 			end
 		end
 		if((e.id == SPELL_EFFECT_APPLY_AURA) and
@@ -744,10 +766,18 @@ local function learnSpell(id)
 			then
 				STATE.healingSpells[id] = s;
 			end
+		end
+		if((e.id == SPELL_EFFECT_APPLY_AURA) and
+			(e.implicitTargetA == TARGET_CHAIN_DAMAGE))	-- single enemy
+		then
 			-- DoTs
 			if(e.applyAuraName == SPELL_AURA_PERIODIC_DAMAGE) then
 				STATE.attackSpells[id] = s;
 			end
+		end
+		-- taunt
+		if(e.id == SPELL_EFFECT_ATTACK_ME) then
+			STATE.tauntSpell = s;
 		end
 		-- direct heals
 		if(e.id == SPELL_EFFECT_HEAL and
@@ -797,16 +827,26 @@ function hSMSG_LEARNED_SPELL(p)
 	partyChat("Learned spell "..s.name.." "..s.rank.." ("..p.spellId..")");
 end
 
+local function setLocalSpellCooldown(realTime, s)
+	if(s.RecoveryTime > 0) then
+		STATE.spellCooldowns[s.id] = realTime + s.RecoveryTime / 1000;
+	elseif(s.CategoryRecoveryTime > 0) then
+		STATE.spellCategoryCooldowns[s.Category] = realTime + s.CategoryRecoveryTime / 1000;
+	end
+end
+
 local function setSpellCooldown(spellId)
-	local s = STATE.knownSpells[spellId]
-	local recovery = math.max(s.RecoveryTime,
-		s.CategoryRecoveryTime,
-		s.StartRecoveryTime);
-	local castTime = cSpellCastTime(s.CastingTimeIndex).base;
-	-- add 100 ms lag, otherwise our cooldown will expire before the server's.
-	local cooldown = math.max(recovery, castTime) + 100;
-	--print("recovery: "..recovery.." castTime: "..castTime.." cooldown: "..cooldown);
-	STATE.spellCooldown = getRealTime() + cooldown / 1000;
+	assert(not STATE.casting);
+	local s = STATE.knownSpells[spellId];
+	local realTime = getRealTime();
+	if(s.StartRecoveryTime > 0) then
+		STATE.spellGlobalCooldowns[s.StartRecoveryCategory] = realTime + s.StartRecoveryTime / 1000;
+	end
+	--local castTime = cSpellCastTime(s.CastingTimeIndex).base;
+	castingOn()
+	if(STATE.moving) then
+		print("WARNING! Casting while moving!");
+	end
 end
 
 function castSpellAtUnit(spellId, target)
@@ -815,12 +855,13 @@ function castSpellAtUnit(spellId, target)
 		targetFlags = TARGET_FLAG_UNIT,
 		unitTarget = target.guid,
 	}
-	print("castSpellAtUnit "..spellId.." @"..target.guid:hex());
+	print("castSpellAtUnit "..spellId.." @"..target.guid:hex().." dist "..distanceToObject(target));
 	setSpellCooldown(spellId);
 	send(CMSG_CAST_SPELL, data);
 end
 
 function castSpellAtGO(spellId, target)
+	assert(not STATE.casting);
 	local data = {
 		spellId = spellId,
 		targetFlags = bit32.bor(TARGET_FLAG_OBJECT, TARGET_FLAG_OBJECT_UNK),
@@ -871,17 +912,59 @@ end
 function hSMSG_CAST_FAILED(p)
 	local hex;
 	if(p.result) then
-		STATE.spellCooldown = getRealTime() + 1;
 		hex = string.format("0x%02X", p.result);
 		print("SMSG_CAST_FAILED", tostring(hex), dump(p));
+
+		-- custom cooldown to avoid too much spam
+		STATE.spellCooldowns[p.spellId] = getRealTime() + 1;
 	end
 	STATE.skinning = false;
 	STATE.looting = false;
+	STATE.casting = false;	-- correct?
 	decision();
+end
+
+function castingOn()
+	STATE.casting = getRealTime();
+	print("castingOn "..STATE.casting);
+end
+
+-- sent when a timed spell cast starts.
+function hSMSG_SPELL_START(p)
+	if(p.casterGuid == STATE.myGuid) then
+		castingOn()
+	end
+end
+
+-- sent when a spell cast finishes and the spell is actually cast.
+-- if a cast fails, SMSG_CAST_FAILED is sent instead.
+-- sent even for spells with zero casting time.
+function hSMSG_SPELL_GO(p)
+	--print("SMSG_SPELL_GO", dump(p));
+	local s = STATE.knownSpells[p.spellId]
+	if(p.casterGuid == STATE.myGuid and s) then
+		setLocalSpellCooldown(getRealTime(), s)
+		STATE.casting = false;
+		print("SMSG_SPELL_GO "..p.spellId);
+	end
+	decision();
+end
+
+function hSMSG_SPELL_FAILURE(p)
+	if(p.casterGuid == STATE.myGuid) then
+		STATE.casting = false;
+		print("SMSG_SPELL_FAILURE: spell "..p.spellId..", result "..p.result);
+	end
+	decision();
+end
+
+-- currently only sent together with SMSG_SPELL_FAILURE.
+function hSMSG_SPELL_FAILED_OTHER(p)
 end
 
 local function handleAttackCanceled()
 	STATE.meleeing = false;
+	STATE.casting = false;
 	decision();
 end
 

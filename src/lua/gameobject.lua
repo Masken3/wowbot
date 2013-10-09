@@ -124,7 +124,7 @@ end
 function haveSkillToOpen(o)
 	local e = goLockSkillEntry(o);
 	if(not e) then return false; end
-	local spellId = STATE.openLockSpells[e.index];
+	local spellId = STATE.openLockSpells[e.index].id;
 	if(not spellId) then return false; end
 	local mySkillLevel = spellSkillLevel(spellId);
 	if(not mySkillLevel) then return false; end

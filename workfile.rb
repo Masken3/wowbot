@@ -43,6 +43,7 @@ work = ExeWork.new do
 				'LockKeyType', 'LockType',
 				'ItemQualities',
 				'Stats',
+				'CreatureEliteType',
 				'TradeStatus', 'Language', 'ChatMsg']}),
 		GenLuaFromHeaderTask.new('Unit', 'server-code/Unit.h',
 			{:includedEnums=>['UnitFlags', 'NPCFlags']}),

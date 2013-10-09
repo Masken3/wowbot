@@ -26,6 +26,22 @@ or combat has started for some other reason.
 If Diamond is not set, Moon will still not take effect until combat has started.
 Setting Skull will cause tank to Charge to that target, gaining initial aggro and starting combat.
 
+Tank should also, if possible, do Battle Stance, Bloodrage, Charge & Thunder Stomp before
+switching back to Defensive Stance and Shield Block.
+One might also pop Berserker Stance, Demoralizing Shout & Berserker Rage.
+
+Some spells can only be cast in reaction to parries or dodges.
+Watch UNIT_FIELD_AURASTATE and compare spell.CasterAuraState.
+bool HasAuraState(AuraState flag) const { return HasFlag(UNIT_FIELD_AURASTATE, 1 << (flag - 1)); }
+
+Warrior's Overpower is special. It actually requires a combo point on the target, even though warriors
+don't have visible combo points. Turns out the server sends a combo point anyway.
+Watch PLAYER_FIELD_COMBO_TARGET and PLAYER_FIELD_BYTES.
+
+DPS shouldn't attack elites until they have at least one Sunder Armor on them, to avoid pulling aggro.
+Non-elites are still fair game, tho.
+
+
 Attack choices:
 * Cast the most useful spell that you have enough power for.
 * If you have no useful spells, start melee.
@@ -196,3 +212,31 @@ Each enchantment has an ID, a key to SpellItemEnchantment.dbc.
 See ApplyEnchantment.
 ItemRandomPropertiesEntry
 SpellItemEnchantmentEntry
+
+08:54 2013-10-08
+On spell cooldown:
+Called "recovery" in dbc.
+Two independent settings: local/category and global.
+If RecoveryTime != 0, then that is the spell's local cooldown, affecting only that spell.
+If RecoveryTime == 0, then CategoryRecoveryTime is the category cooldown, affecting all spells in that Category.
+StartRecoveryTime is the global cooldown. It affects all spells in the StartRecoveryCategory.
+StartRecoveryCategory only has two values in the dbc: 133 and 0.
+All player spells with a non-zero StartRecoveryTime use 133.
+Therefore, StartRecoveryCategory can be safely ignored?
+No. Server doesn't ignore it, and neither should we. Future updates may introduce more categories.
+
+RecoveryTime/CategoryRecoveryTime is measured and compared in whole seconds.
+StartRecoveryTime is measured in milliseconds.
+
+StartRecoveryTime starts when the casting starts.
+RecoveryTime starts when the casting succeeds, which may be later if the spell has non-zero casting time,
+or not at all if the spell fails.
+
+SMSG_FORCE_DISPLAY_UPDATE	# never sent.
+SMSG_CLIENT_CONTROL_UPDATE	# sent when you lose control over your character (possession, charm)
+
+22:45 2013-10-08
+Todo:
+* Tank pre-combat rotation.
+** Stance dance?
+* Pull-back.

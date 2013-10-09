@@ -2,6 +2,15 @@
 -- implementation of the decision tree from notes.txt
 function decision(realTime)
 	realTime = realTime or getRealTime();
+	-- if we're currently casting a spell, don't try anything else until it's complete.
+	if(STATE.casting) then
+		setAction("casting...");
+		if(STATE.casting > realTime + 3) then
+			print("casting overdue "..(realTime - STATE.casting));
+		end
+		return;
+	end
+
 	updateEnemyPositions(realTime);
 	updateMyPosition(realTime);
 	updateLeaderPosition(realTime);
@@ -30,11 +39,19 @@ function decision(realTime)
 
 	-- if anyone needs healing, do that.
 	if(doHeal(realTime)) then
+		setAction("healing...");
 		return;
 	end
 
 	-- if we can buff anyone, do that.
 	if(doBuff(realTime)) then
+		setAction("buffing...");
+		return;
+	end
+
+	-- if we're the tank and an enemy targets another party member, taunt them.
+	if(STATE.amTank and doTanking(realTime)) then
+		setAction("tanking...");
 		return;
 	end
 
@@ -54,9 +71,9 @@ function decision(realTime)
 
 	-- continue repeated spell casting.
 	if(STATE.repeatSpellCast.count > 0) then
-		if(STATE.spellCooldown > realTime) then return; end
-		STATE.repeatSpellCast.count = STATE.repeatSpellCast.count - 1;
 		local s = STATE.knownSpells[STATE.repeatSpellCast.id];
+		if(spellIsOnCooldown(realTime, s)) then return; end
+		STATE.repeatSpellCast.count = STATE.repeatSpellCast.count - 1;
 		setAction("Casting "..s.name..", "..STATE.repeatSpellCast.count.." remain");
 		castSpellWithoutTarget(STATE.repeatSpellCast.id);
 		return;
@@ -120,6 +137,7 @@ function decision(realTime)
 	if(trainer and (bit32.band(STATE.myLevel, bit32.bnot(1)) >
 		PERMASTATE.classTrainingCompleteForLevel))
 	then
+		setAction("training...");
 		goTrain(trainer);
 		return;
 	end
@@ -143,6 +161,7 @@ function decision(realTime)
 	end
 
 	if(STATE.fishing) then
+		setAction("fishing...");
 		doFish(realTime);
 		return;
 	end
@@ -167,7 +186,8 @@ function decision(realTime)
 	end
 
 	if(STATE.disenchantItems) then
-		if(STATE.spellCooldown > realTime) then return; end
+		local s = STATE.knownSpells[STATE.disenchantSpell];
+		if(spellIsOnCooldown(realTime, s)) then return; end
 		local found = false;
 		investigateInventory(function(o, bagSlot, slot)
 			local itemId = o.values[OBJECT_FIELD_ENTRY];
@@ -192,7 +212,7 @@ function decision(realTime)
 			--" / "..tostring(myValues[PLAYER_NEXT_LEVEL_XP]));
 		return;
 	end
-	--print("Nothing to do.");
+	setAction("Noting to do...");
 end
 
 -- returns the id of the spell (with the lowest skillValue) (we have reagents for).
@@ -232,20 +252,25 @@ end
 
 function goFocusObject(realTime, o, s)
 	if(doMoveToTarget(realTime, o, MELEE_DIST)) then
-		if(STATE.spellCooldown > realTime) then return; end
+		if(spellIsOnCooldown(realTime, s)) then return; end
 		castSpellWithoutTarget(s.id);
 	end
 end
 
+function unitTarget(o)
+	return guidFromValues(o, UNIT_FIELD_TARGET);
+end
+
 function leaderTarget()
 	if(not STATE.leader) then return nil; end
-	return guidFromValues(STATE.leader, UNIT_FIELD_TARGET);
+	return unitTarget(STATE.leader);
 end
 
 function doFish(realTime)
 	setAction("Fishing...");
 	if(not STATE.fishingBobber) then
-		if(STATE.spellCooldown > realTime) then return; end
+		local s = STATE.knownSpells[STATE.fishingSpell];
+		if(spellIsOnCooldown(realTime, s)) then return; end
 		castSpellWithoutTarget(STATE.fishingSpell);
 		return;
 	end
@@ -256,7 +281,7 @@ function pickpocket(target)
 	local stealthDist = (MELEE_DIST*2 + aggroRadius(target));
 	doMoveToTarget(getRealTime(), target, stealthDist);
 	if((dist <= stealthDist) and not STATE.stealthed) then
-		if(STATE.spellCooldown > realTime) then return; end
+		if(spellIsOnCooldown(realTime, STATE.stealthSpell)) then return; end
 		castSpellAtUnit(STATE.stealthSpell.id, STATE.me);
 		--todo: make sure to set this to false on spell fail or aura removed.
 		--also: on stealth fail, remove all pickpocketing targets, because we'll be stuck in combat.
@@ -357,10 +382,10 @@ end
 
 function goOpen(realTime, o)
 	if(doMoveToTarget(realTime, o, MELEE_DIST) and (not STATE.looting)) then
-		if(STATE.spellCooldown > realTime) then return; end
 		local lockIndex = goLockIndex(o);
-		local spell = STATE.openLockSpells[lockIndex];
-		castSpellAtGO(spell, o);
+		local s = STATE.openLockSpells[lockIndex];
+		if(spellIsOnCooldown(realTime, s)) then return; end
+		castSpellAtGO(s.id, o);
 		STATE.looting = true;
 	end
 end

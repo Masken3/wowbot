@@ -9,6 +9,7 @@ extern "C" {
 #include "dbcSkillLineAbility/SkillLineAbility.index.h"
 #include "dbcTalent/dbcTalent.h"
 #include "dbcTalentTab/dbcTalentTab.h"
+#include "dbcSpell/dbcSpell.h"
 #include "log.h"
 #include "icon/icon.h"
 
@@ -18,10 +19,12 @@ extern "C" {
 	}
 
 static void dumpTalents();
+static void dumpSpellCooldowns();
 
 void loadAuxDBC() {
 	SkillLineAbilityIndex::load();
 	dumpTalents();
+	dumpSpellCooldowns();
 }
 
 static int l_skillLineAbilityBySpell(lua_State* L) {
@@ -52,6 +55,27 @@ static void dumpTalents() {
 			itr->first,
 			t.tabId, t.row, t.col, t.spellId[0], t.spellId[1], t.spellId[2],
 			t.spellId[3], t.spellId[4], t.prereq, t.prereqRank);
+	}
+	exit(0);
+#endif
+}
+
+static void dumpSpellCooldowns() {
+#if 0
+	for(auto itr = gSpells.begin(); itr != gSpells.end(); ++itr) {
+		const Spell& s(itr->second);
+#if 0
+		if(s.StartRecoveryCategory != 133 and s.StartRecoveryTime != 0) {
+			LOG("%i: src %i, srt %i. (%s)\n",
+				s.id, s.StartRecoveryCategory, s.StartRecoveryTime, s.name);
+		}
+#endif
+#if 0
+		if(s.CasterAuraState != 0) {
+			LOG("%i: cas %i. (%s)\n",
+				s.id, s.CasterAuraState, s.name);
+		}
+#endif
 	}
 	exit(0);
 #endif

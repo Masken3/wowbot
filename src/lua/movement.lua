@@ -137,8 +137,11 @@ function hMSG_MOVE_TELEPORT_ACK(p)
 
 	-- assume all party members moved with you
 	for i,m in ipairs(STATE.groupMembers) do
-		STATE.knownObjects[m.guid].location = STATE.knownObjects[m.guid].location or Location.new();
-		STATE.knownObjects[m.guid].location.position = Position.new(p.pos);
+		local o = STATE.knownObjects[m.guid];
+		if(o) then
+			o.location = o.location or Location.new();
+			o.location.position = Position.new(p.pos);
+		end
 	end
 
 	send(MSG_MOVE_TELEPORT_ACK, p);
@@ -147,7 +150,7 @@ function hMSG_MOVE_TELEPORT_ACK(p)
 end
 
 function hMovement(opcode, p)
-	--print("hMovement", fg(p.guid), opcode, p.flags)
+	--print("hMovement ", p.guid:hex(), opcode, p.flags)
 	local o = STATE.knownObjects[p.guid];
 
 	--print("p,l:", fg(p.guid), fg(STATE.leaderGuid));
@@ -216,10 +219,17 @@ function hMovement(opcode, p)
 		o.movement.startTime = realTime;
 
 		-- todo: handle the case of being on different maps.
-		--print("leaderMovement", realTime);
+
 		if(STATE.leader and p.guid == STATE.leader.guid) then
+			print("leaderMovement", realTime, distanceToObject(STATE.leader), dump(p.pos));
+			assert(o == STATE.leader);
 			decision(realTime);
 		end
+		if(p.guid == STATE.myGuid) then
+			print("WTF: got own movement?");
+		end
+	elseif(p.guid == STATE.leaderGuid) then
+		print("WARNING: lost track of leader!");
 	end
 end
 

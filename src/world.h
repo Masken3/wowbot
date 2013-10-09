@@ -16,6 +16,8 @@ typedef struct WorldSession {
 	int _class;
 	int race;
 	int gender;
+	int amTank;
+	int amHealer;
 
 	Socket authSock;
 	Socket sock;

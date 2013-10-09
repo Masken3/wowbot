@@ -1165,3 +1165,44 @@ void pSMSG_LOOT_START_ROLL(pLUA_ARGS) {
 	M(uint32, randomPropId);
 	M(uint32, countDown);
 }
+
+void pSMSG_SPELL_START(pLUA_ARGS) {
+	PL_START;
+	MV(PackedGuid, casterItemGuid);
+	MV(PackedGuid, casterGuid);
+	M(uint32, spellId);
+	M(uint16, castFlags);
+	M(uint32, timer);
+	// todo: targets et.al
+}
+
+void pSMSG_SPELL_GO(pLUA_ARGS) {
+	PL_START;
+	// this one, however:
+	MV(PackedGuid, casterItemGuid);
+	MV(PackedGuid, casterGuid);
+	M(uint32, spellId);
+	M(uint16, castFlags);
+
+#if 0
+	WriteSpellGoTargets(&data);
+
+	data << m_targets;
+
+	if (castFlags & CAST_FLAG_AMMO)
+		WriteAmmoToPacket(&data);
+#endif
+}
+
+void pSMSG_SPELL_FAILURE(pLUA_ARGS) {
+	PL_START;
+	MV(PackedGuid, casterGuid);
+	M(uint32, spellId);
+	M(byte, result);
+}
+
+void pSMSG_SPELL_FAILED_OTHER(pLUA_ARGS) {
+	PL_START;
+	M(Guid, casterGuid);
+	M(uint32, spellId);
+}
