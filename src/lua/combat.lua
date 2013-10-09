@@ -400,7 +400,7 @@ local function doBuffSingle(o, realTime)
 	-- check all auras. if there's one aura of ours they DON'T have, give it.
 	for buffName, s in pairs(STATE.buffSpells) do
 		local h = hasAura(o, s.id);
-		sLog = true;
+		--sLog = true;
 		local c = canCast(s, realTime);
 		sLog = false;
 		if(not h and c) then

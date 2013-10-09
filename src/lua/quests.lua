@@ -71,14 +71,17 @@ function hSMSG_QUESTGIVER_OFFER_REWARD(p)
 		return;
 	end
 
+	-- if there are multiple items to wear,
+	-- choose the one that would give the biggest difference in value.
 	for i, item in ipairs(p.rewChoiceItems) do
 		print("Item "..i..": "..item.itemId);
 		local v = valueOfItem(item.itemId) * item.count;
 		print("Value: "..v);
-		local w = wantToWear(item.itemId);
+		local w, diff = wantToWear(item.itemId);
 		print("Wear: "..tostring(w));
 		local better = false;
 		if(w) then
+			v = diff;
 			if(not wear) then
 				better = true;
 			end

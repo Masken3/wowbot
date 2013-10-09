@@ -178,6 +178,7 @@ function wantToWear(id, guid, verbose)
 	local chosenSlot = false;
 	local chosenValue = nil;
 	local newValue = valueOfItem(id, guid, verbose);
+	local valueDiff = nil;
 	for i, slot in ipairs(slots) do
 		local equippedGuid = equipmentInSlot(slot);
 		if(not equippedGuid) then
@@ -201,6 +202,7 @@ function wantToWear(id, guid, verbose)
 			if((not chosenValue) or (equippedValue < chosenValue)) then
 				chosenSlot = slot;
 				chosenValue = newValue;
+				valueDiff = newValue - equippedValue;
 			end
 		else
 			if(verbose) then
@@ -208,7 +210,7 @@ function wantToWear(id, guid, verbose)
 			end
 		end
 	end
-	return chosenSlot;
+	return chosenSlot, valueDiff;
 end
 
 function avgItemDamage(proto)
@@ -482,15 +484,18 @@ function hSMSG_ITEM_PUSH_RESULT(p)
 	--print("SMSG_ITEM_PUSH_RESULT", dump(p));
 	-- we've got a new item. if we want to wear it, then wear it.
 
+	-- make sure to get protos for all new items.
+	itemProtoFromId(p.itemId);
+
 	-- if it wasn't us who got the item, we don't care.
 	if(p.playerGuid ~= STATE.myGuid) then
 		--print("got SMSG_ITEM_PUSH_RESULT for another player.");
 		return;
 	end
 
-	-- if items stacks, it's not equipment.
+	-- if the item stacks, it's not equipment.
 	if(p.itemSlot == 0xFFFFFFFF) then
-		print("itemSlot -1.");
+		--print("itemSlot -1.");
 		return;
 	end
 

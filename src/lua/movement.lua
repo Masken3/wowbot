@@ -221,8 +221,9 @@ function hMovement(opcode, p)
 		-- todo: handle the case of being on different maps.
 
 		if(STATE.leader and p.guid == STATE.leader.guid) then
-			print("leaderMovement", realTime, distanceToObject(STATE.leader), dump(p.pos));
-			assert(o == STATE.leader);
+			--print("leaderMovement", realTime, distanceToObject(STATE.leader), dump(p.pos));
+			--assert(o == STATE.leader);
+			STATE.leader = o;
 			decision(realTime);
 		end
 		if(p.guid == STATE.myGuid) then

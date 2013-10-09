@@ -347,7 +347,13 @@ local function useItem(p)
 	investigateInventory(function(o, bagSlot, slot)
 		if(itemId == o.values[OBJECT_FIELD_ENTRY] and not done) then
 			msg = msg..' '..o.guid:hex()
-			send(CMSG_USE_ITEM, {slot = slot, bag = bagSlot, spellCount = 0, targetFlags = 0})
+			local proto = itemProtoFromId(itemId)
+			if(proto.StartQuest ~= 0) then
+				-- callbacks will start the quest.
+				send(CMSG_QUESTGIVER_QUERY_QUEST, {guid=o.guid, questId=proto.StartQuest})
+			else
+				send(CMSG_USE_ITEM, {slot = slot, bag = bagSlot, spellCount = 0, targetFlags = 0})
+			end
 			done = true
 		end
 	end)
@@ -359,6 +365,19 @@ local function disenchant(p)
 	local itemId = tonumber(p.text:sub(5))
 	STATE.disenchantItems = STATE.disenchantItems or {}
 	STATE.disenchantItems[itemId] = true
+	decision()
+end
+
+local function disenchantAll(p)
+	if(not STATE.disenchantSpell) then return end
+	STATE.disenchantItems = STATE.disenchantItems or {}
+	investigateInventory(function(o, bagSlot, slot)
+		local itemId = o.values[OBJECT_FIELD_ENTRY]
+		local proto = itemProtoFromId(itemId)
+		if(proto.Quality >= ITEM_QUALITY_UNCOMMON) then
+			STATE.disenchantItems[itemId] = true
+		end
+	end)
 	decision()
 end
 
@@ -477,9 +496,11 @@ local function gq(p)
 	local target = STATE.knownObjects[targetGuid];
 	if(not target) then
 		reply(p, "No valid target!");
+		STATE.questFinishers = {};
 		return;
 	end
-	getQuests(target);
+	--getQuests(target);
+	STATE.questFinishers[targetGuid] = target;
 end
 
 local function listBags(p)
@@ -550,6 +571,8 @@ function handleChatMessage(p)
 		useItem(p)
 	elseif(p.text:startWith('dis ')) then
 		disenchant(p)
+	elseif(p.text == 'dis') then
+		disenchantAll(p)
 	elseif(p.text:startWith('store ')) then
 		store(p)
 	elseif(p.text:startWith('fetch ')) then

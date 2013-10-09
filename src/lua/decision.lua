@@ -191,8 +191,12 @@ function decision(realTime)
 		local found = false;
 		investigateInventory(function(o, bagSlot, slot)
 			local itemId = o.values[OBJECT_FIELD_ENTRY];
-			if(STATE.disenchantItems[itemId]) then
+			if(STATE.disenchantItems[itemId] and
+				(not PERMASTATE.undisenchantable[itemId]))
+			then
 				partyChat("Dis: "..o.guid:hex());
+				-- if disenchant fails, remember that.
+				STATE.currentDisenchant = itemId;
 				castSpellAtItem(STATE.disenchantSpell, o);
 				found = true
 				return false;

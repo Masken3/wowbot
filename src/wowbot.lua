@@ -109,6 +109,7 @@ if(rawget(_G, 'STATE') == nil) then
 
 		disenchantSpell = false,	-- spellId.
 		disenchantItems = false,	-- or itemId:true.
+		currentDisenchant = false,	-- itemId.
 
 		openLockSpells = {},	--miscValue:spellTable.
 
@@ -193,6 +194,9 @@ if(rawget(_G, 'STATE') == nil) then
 		invitee = false,
 
 		autoQuestGet = true,
+
+		-- set of itemIds.
+		undisenchantable = {},
 	}
 
 	-- type-securing STATE is too much work, but at least we can prevent unregistered members.
@@ -230,7 +234,7 @@ function saveState()
 	local file = io.open(stateFileName(), "w");
 	file:write("-- "..STATE.myClassName.."\n");
 	for k,v in pairs(PERMASTATE) do
-		local vs = tostring(v);
+		local vs = dump(v);
 		if(type(v) == 'string') then
 			vs = '"'..vs..'"';
 		end
@@ -915,8 +919,15 @@ function hSMSG_CAST_FAILED(p)
 		hex = string.format("0x%02X", p.result);
 		print("SMSG_CAST_FAILED", tostring(hex), dump(p));
 
+		if(p.result == 0x0C) then --SPELL_FAILED_CANT_BE_DISENCHANTED
+			PERMASTATE.undisenchantable[STATE.currentDisenchant] = true;
+			saveState();
+		end
+
 		-- custom cooldown to avoid too much spam
 		STATE.spellCooldowns[p.spellId] = getRealTime() + 1;
+
+		send(CMSG_CANCEL_CAST, p);
 	end
 	STATE.skinning = false;
 	STATE.looting = false;
