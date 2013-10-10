@@ -99,7 +99,7 @@ local function avgMainhandDamage()
 	return avg;
 end
 
-local function spellLevel(s)
+function spellLevel(s)
 	local level = STATE.myLevel;
 	--print("myLevel: "..level.." maxLevel: "..s.maxLevel);
 

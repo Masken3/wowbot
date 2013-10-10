@@ -302,20 +302,25 @@ local function addDumpIf(a, b, name, verbose)
 	return a+b;
 end
 
-local function addDamageValue(v, dps, p, ci, verbose)
+local function addDamageValueRaw(v, dps, isRangedDamage, ci, verbose)
 	-- damage is worthless on melee weapons for ranged characters.
 	-- likewise, damage is worthless on ranged weapons for melee characters.
 	-- there are some non-weapon items with damage on them,
 	-- but they're too rare to bother with now.
-	if(p._class == ITEM_CLASS_WEAPON and rangedSubclass[p.subClass] and ci.ranged)
+	if(isRangedDamage and ci.ranged)
 	then
-		v = addDumpIf(v, avgItemDps(p) * 100, "DPS ranged", verbose);
+		v = addDumpIf(v, dps * 100, "DPS ranged", verbose);
 	elseif(not ci.ranged) then
-		v = addDumpIf(v, avgItemDps(p) * 100, "DPS melee", verbose);
+		v = addDumpIf(v, dps * 100, "DPS melee", verbose);
 	else
-		v = addDumpIf(v, avgItemDps(p), "DPS useless", verbose);
+		v = addDumpIf(v, dps, "DPS useless", verbose);
 	end
 	return v;
+end
+
+local function addDamageValueFromItem(v, dps, p, ci, verbose)
+	return addDamageValueRaw(v, dps,
+		(p._class == ITEM_CLASS_WEAPON and rangedSubclass[p.subClass]), ci, verbose);
 end
 
 local function addModValues(v, mods, p, ci, verbose)
@@ -348,7 +353,7 @@ local function enchValue(enchId, proto, ci, verbose)
 		end
 		if(e.type == ITEM_ENCHANTMENT_TYPE_DAMAGE) then
 			if(proto.Delay > 0) then
-				v = addDamageValue(v, e.amount / (proto.Delay / 1000), proto, ci, verbose)
+				v = addDamageValueFromItem(v, e.amount / (proto.Delay / 1000), proto, ci, verbose)
 			else
 				-- such an enchantment would affect all equipped weapons?
 				-- todo: find out. low prio.
@@ -356,6 +361,7 @@ local function enchValue(enchId, proto, ci, verbose)
 		end
 		if(e.type == ITEM_ENCHANTMENT_TYPE_EQUIP_SPELL) then
 			local s = cSpell(e.spellId);
+			local level = spellLevel(s);
 			for j,se in ipairs(s.effect) do
 				if(se.id == SPELL_EFFECT_APPLY_AURA) then
 					if(se.applyAuraName == SPELL_AURA_MOD_STAT) then
@@ -363,11 +369,28 @@ local function enchValue(enchId, proto, ci, verbose)
 						local m = itemModStat[se.miscValue];
 						-- assuming level 0 here. may need modification.
 						mods[m] = (mods[m] or 0) + calcAvgEffectPoints(0, se);
+					elseif(se.applyAuraName == SPELL_AURA_MOD_DAMAGE_DONE) then
+						-- se.miscValue is schoolMask (1 << enum SpellSchools)
+						--local points = calcAvgEffectPoints(level, se);
+
+						-- it's really hard to assign a reasonable value to this effect;
+						-- you have to know if you would more damage with it than without.
+						-- that requires you to know if you have any spells in this school
+						-- that you're actually using.
+						-- for now, we'll just ignore it.
+					elseif(se.applyAuraName == SPELL_AURA_MOD_ATTACK_POWER) then
+						local points = calcAvgEffectPoints(level, se);
+						v = addDamageValueRaw(v, points / (proto.Delay / 1000), false, ci, verbose)
+					elseif(se.applyAuraName == SPELL_AURA_MOD_RANGED_ATTACK_POWER) then
+						local points = calcAvgEffectPoints(level, se);
+						v = addDamageValueRaw(v, points / (proto.Delay / 1000), true, ci, verbose)
 					else
-						print("WARN: unhandled aura "..se.applyAuraName);
+						print("WARN: unhandled aura "..se.applyAuraName..
+							" on spell="..e.spellId.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
 					end
 				elseif(se.id ~= 0) then
-					print("WARN: unhandled effect "..se.id);
+					print("WARN: unhandled effect "..se.id..
+						" on spell="..e.spellId.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
 				end
 			end
 		end
@@ -414,7 +437,7 @@ function valueOfItem(id, guid, verbose)
 
 	v = addModValues(v, mods, p, ci, verbose);
 
-	v = addDamageValue(v, avgItemDps(p), p, ci, verbose);
+	v = addDamageValueFromItem(v, avgItemDps(p), p, ci, verbose);
 
 	if(guid) then
 		local o = STATE.knownObjects[guid];
