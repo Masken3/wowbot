@@ -199,6 +199,10 @@ if(rawget(_G, 'STATE') == nil) then
 
 		autoQuestGet = true,
 
+		-- set of creature template entries, npcs that should not be visited automatically.
+		-- they may still be visited manually.
+		avoidQuestGivers = {},
+
 		-- set of itemIds.
 		undisenchantable = {},
 		shouldLoot = {},
@@ -279,7 +283,7 @@ function hSMSG_GROUP_DESTROYED(p)
 	STATE.inGroup = false;
 end
 function hSMSG_GROUP_LIST(p)
-	--print("SMSG_GROUP_LIST", dump(p));
+	print("SMSG_GROUP_LIST", dump(p));
 	STATE.leader = STATE.knownObjects[p.leaderGuid] or false;
 	STATE.leaderGuid = p.leaderGuid;
 	if(p.memberCount == 0) then
@@ -604,7 +608,7 @@ function hSMSG_UPDATE_OBJECT(p)
 	for i,b in ipairs(p.blocks) do
 		if(b.type == UPDATETYPE_OUT_OF_RANGE_OBJECTS) then
 			for j,guid in ipairs(b.guids) do
-				STATE.knownObjects[guid] = nil;
+				--STATE.knownObjects[guid] = nil;
 			end
 		elseif(b.type == UPDATETYPE_CREATE_OBJECT or b.type == UPDATETYPE_CREATE_OBJECT2) then
 			local o = STATE.knownObjects[b.guid] or
@@ -648,7 +652,7 @@ function hSMSG_UPDATE_OBJECT(p)
 				send(CMSG_NAME_QUERY, o);
 			end
 
-			STATE.leader = STATE.knownObjects[p.leaderGuid] or false;
+			--STATE.leader = STATE.knownObjects[p.leaderGuid] or false;
 
 			--print("CREATE_OBJECT", b.guid:hex(), hex(o.values[OBJECT_FIELD_TYPE]), dump(b.pos));
 			--, dump(o.movement), dump(o.values));
@@ -683,9 +687,9 @@ end
 function hSMSG_DESTROY_OBJECT(p)
 	--print("SMSG_DESTROY_OBJECT", dump(p));
 	for i, koh in pairs(STATE.knownObjectHolders) do
-		koh[p.guid] = nil;
+		--koh[p.guid] = nil;
 	end
-	STATE.knownObjects[p.guid] = nil;
+	--STATE.knownObjects[p.guid] = nil;
 	if(STATE.fishingBobber and p.guid == STATE.fishingBobber.guid) then
 		print("fishingBobber destroyed.");
 		STATE.fishingBobber = false;
@@ -936,15 +940,18 @@ function hSMSG_CAST_FAILED(p)
 		STATE.spellCooldowns[p.spellId] = getRealTime() + 1;
 
 		send(CMSG_CANCEL_CAST, p);
+
+		STATE.casting = false;	-- correct?
+		setAction("not casting. SMSG_CAST_FAILED");
 	end
 	STATE.skinning = false;
 	STATE.looting = false;
-	STATE.casting = false;	-- correct?
 	decision();
 end
 
 function castingOn()
 	STATE.casting = getRealTime();
+	setAction("casting...");
 	--print("castingOn "..STATE.casting);
 end
 
@@ -964,6 +971,7 @@ function hSMSG_SPELL_GO(p)
 	if(p.casterGuid == STATE.myGuid and s) then
 		setLocalSpellCooldown(getRealTime(), s)
 		STATE.casting = false;
+		setAction("not casting. SMSG_SPELL_GO");
 		print("SMSG_SPELL_GO "..p.spellId);
 	end
 	decision();
@@ -972,6 +980,7 @@ end
 function hSMSG_SPELL_FAILURE(p)
 	if(p.casterGuid == STATE.myGuid) then
 		STATE.casting = false;
+		setAction("not casting. SMSG_SPELL_FAILURE");
 		print("SMSG_SPELL_FAILURE: spell "..p.spellId..", result "..p.result);
 	end
 	decision();
@@ -984,6 +993,7 @@ end
 local function handleAttackCanceled()
 	STATE.meleeing = false;
 	STATE.casting = false;
+	setAction("not casting. handleAttackCanceled");
 	decision();
 end
 

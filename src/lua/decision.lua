@@ -4,7 +4,6 @@ function decision(realTime)
 	realTime = realTime or getRealTime();
 	-- if we're currently casting a spell, don't try anything else until it's complete.
 	if(STATE.casting) then
-		setAction("casting...");
 		if(STATE.casting > realTime + 3) then
 			print("casting overdue "..(realTime - STATE.casting));
 		end

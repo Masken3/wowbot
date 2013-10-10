@@ -49,6 +49,13 @@ function hSMSG_QUESTGIVER_OFFER_REWARD(p)
 	if(not p._quiet) then
 		print("SMSG_QUESTGIVER_OFFER_REWARD", dump(p));
 	end
+	if(p.title:find('Donation')) then
+		local npcId = STATE.knownObjects[p.guid].values[OBJECT_FIELD_ENTRY];
+		partyChat("Avoiding npc="..npcId);
+		PERMASTATE.avoidQuestGivers[npcId] = true;
+		saveState();
+		return;
+	end
 	local rewardIndex = nil;
 	-- pick the most valuable item that I want to wear.
 	-- if I don't want to wear any of them, just pick the most valuable.
@@ -176,15 +183,17 @@ end
 
 function hSMSG_QUESTGIVER_STATUS(p)
 	--print("SMSG_QUESTGIVER_STATUS", dump(p));
+	local o = STATE.knownObjects[p.guid];
+	if(PERMASTATE.avoidQuestGivers[o.values[OBJECT_FIELD_ENTRY]]) then return; end
 	if((p.status == DIALOG_STATUS_AVAILABLE) or
 		(p.status == DIALOG_STATUS_CHAT)) then
 		print("Added quest giver "..p.guid:hex());
-		STATE.questGivers[p.guid] = STATE.knownObjects[p.guid];
+		STATE.questGivers[p.guid] = o;
 	end
 	if(--(p.status == DIALOG_STATUS_REWARD_REP) or
 		(p.status == DIALOG_STATUS_REWARD2)) then
 		print("Added quest finisher "..p.guid:hex());
-		STATE.questFinishers[p.guid] = STATE.knownObjects[p.guid];
+		STATE.questFinishers[p.guid] = o;
 	end
 end
 
