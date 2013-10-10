@@ -30,7 +30,7 @@ local results = {
 function doTalentWindow()
 	mainForm = VCL.Form{
 	name="mainForm",
-	caption = "Talents",
+	caption = STATE.myName.."'s Talents",
 	position="podesktopcenter",
 	height=tabHeight + iconSize*(1+marginFraction*2),
 	width=tabWidth*3,
@@ -477,7 +477,7 @@ function talentClick(sender, button, shift, x, y)
 		t.tab.spentPoints = t.tab.spentPoints + 1
 		gAvailablePoints = gAvailablePoints - 1
 		updateTalent(t)
-		results.newTalents[t.talent] = t.spentPoints
+		results.newTalents[t.talent] = t.spentPoints-1
 		print("set "..t.talent.id.." "..t.spentPoints)
 	end
 	if(button == "mbRight" and canRemovePoint(t)) then

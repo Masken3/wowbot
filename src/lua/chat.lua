@@ -91,6 +91,7 @@ local function giveItem(p)
 end
 
 function hSMSG_TRADE_STATUS(p)
+	STATE.tradeStatus = p.status
 	if((p.status == TRADE_STATUS_OPEN_WINDOW) and STATE.tradeGiveAll) then
 		STATE.tradeGiveAll = false
 		print("TRADE_STATUS_OPEN_WINDOW")
@@ -340,8 +341,7 @@ local function stop(p)
 	end
 end
 
-local function useItem(p)
-	local itemId = tonumber(p.text:sub(5))
+function gUseItem(itemId)
 	local msg = 'Using item:'
 	local done = false
 	investigateInventory(function(o, bagSlot, slot)
@@ -357,7 +357,12 @@ local function useItem(p)
 			done = true
 		end
 	end)
-	reply(p, msg)
+	return msg
+end
+
+local function useItem(p)
+	local itemId = tonumber(p.text:sub(5))
+	reply(p, gUseItem(itemId))
 end
 
 local function disenchant(p)
@@ -475,6 +480,11 @@ end
 local function talents(p)
 	reply(p, "Opening talent window...")
 	doTalentWindow()
+end
+
+local function inventory(p)
+	reply(p, "Opening inventory window...")
+	doInventoryWindow()
 end
 
 local function autoQuestGet(p)
@@ -599,6 +609,8 @@ function handleChatMessage(p)
 		listBankBags(p)
 	elseif(p.text == 'report') then
 		report(p)
+	elseif(p.text == 'i') then
+		inventory(p)
 	else
 		return
 	end

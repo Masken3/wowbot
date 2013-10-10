@@ -69,6 +69,7 @@ DBCs = [
 	'dbcTalent',
 	'dbcTalentTab',
 	'dbcSpellIcon',
+	'dbcItemDisplayInfo',
 ]
 
 DBC_WORKS = DBCs.collect do |d| DbcWork.new(d) end

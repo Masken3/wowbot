@@ -466,6 +466,7 @@ end
 function itemLoginComplete()
 	-- fetch item info for all equipped items.
 	--print("Equipped items:");
+	--STATE.itemDataCallbacks["temp"] = doInventoryWindow;
 	for i = EQUIPMENT_SLOT_START, EQUIPMENT_SLOT_END-1 do
 		local equippedGuid = equipmentInSlot(i);
 		if(equippedGuid) then
@@ -614,10 +615,12 @@ local function baseInvestigate(directField1, directFieldLast,
 		local guid = guidFromValues(STATE.me, i);
 		if(isValidGuid(guid)) then
 			local o = STATE.knownObjects[guid];
-			local bagSlot = directBagSlot;
-			local slot = directItemSlotStart + ((i - directField1) / 2);
-			local res = f(o, bagSlot, slot);
-			if(res == false) then return; end
+			if(o) then
+				local bagSlot = directBagSlot;
+				local slot = directItemSlotStart + ((i - directField1) / 2);
+				local res = f(o, bagSlot, slot);
+				if(res == false) then return; end
+			end
 		else
 			freeSlotCount = freeSlotCount + 1;
 		end
@@ -629,9 +632,11 @@ local function baseInvestigate(directField1, directFieldLast,
 			local guid = guidFromValues(bag, CONTAINER_FIELD_SLOT_1 + (j*2))
 			if(isValidGuid(guid)) then
 				local o = STATE.knownObjects[guid];
-				local slot = j;
-				local res = f(o, bagSlot, slot);
-				if(res == false) then return; end
+				if(o) then
+					local slot = j;
+					local res = f(o, bagSlot, slot);
+					if(res == false) then return; end
+				end
 			else
 				freeSlotCount = freeSlotCount + 1;
 			end

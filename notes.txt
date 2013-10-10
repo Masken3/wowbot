@@ -243,5 +243,13 @@ Todo:
 
 23:55 2013-10-09
 For inventory UI:
-* Mark item "bot loots this".
-* sell, give, use, equip.
+* Mark item "bot loots this". (alt-left)
+* sell (ctrl-right)
+* give (shift-right)
+* use (plain right)
+* equip (alt-right)
+
+19:16 2013-10-10
+Todo:
+* setAction quiet, except for gathering?
+* timeout and automatic retry for connect and auth.

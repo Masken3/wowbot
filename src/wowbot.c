@@ -141,6 +141,7 @@ int main(void) {
 		fprintf(sqlFile, "INSERT INTO account (username, sha_pass_hash) VALUES\n");
 		for(uint i=0; i<toonCount; i++) {
 			lua_rawgeti(L, 1, i+1);
+			sessions[i].authAddress = authAddress;
 			sessions[i].accountName = luaT_strdup(L, "accountName");
 			sessions[i].password = luaT_strdup(L, "password");
 			sessions[i].toonName = luaT_strdup(L, "toonName");

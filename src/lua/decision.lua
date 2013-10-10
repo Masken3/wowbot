@@ -414,6 +414,7 @@ function goLoot(o)
 end
 
 local function wantToLoot(itemId)
+	if(PERMASTATE.shouldLoot[itemId]) then return true; end
 	return hasQuestForItem(itemId);
 end
 

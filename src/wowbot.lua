@@ -15,6 +15,7 @@ SUBFILES = {
 	--'gui/test.lua',
 	'gui/talents.lua',
 	'spell_threat.lua',
+	'gui/inventory.lua',
 }
 for i,f in ipairs(SUBFILES) do
 	dofile('src/lua/'..f)
@@ -66,9 +67,11 @@ if(rawget(_G, 'STATE') == nil) then
 		-- set by C function enterWorld.
 		myGuid = '',
 		myLevel = 0,
+		myName = '',
 		myClassName = '',
 		amTank = false,
 		amHealer = false,
+		authAddress = '',
 
 		myMoney = false,	-- in coppers. used to determine money changes.
 
@@ -141,6 +144,7 @@ if(rawget(_G, 'STATE') == nil) then
 		-- will go to vendor and sell all inventory items with that id.
 		itemsToSell = {},
 
+		tradeStatus = false,	-- set by hSMSG_TRADE_STATUS.
 		tradeGiveAll = false,
 		tradeGiveItems = {},	-- itemId:true.
 		recreate = false,
@@ -197,6 +201,7 @@ if(rawget(_G, 'STATE') == nil) then
 
 		-- set of itemIds.
 		undisenchantable = {},
+		shouldLoot = {},
 	}
 
 	-- type-securing STATE is too much work, but at least we can prevent unregistered members.
@@ -251,7 +256,8 @@ end
 function setAction(a)
 	if(STATE.currentAction ~= a) then
 		STATE.currentAction = a;
-		partyChat(a);
+		--partyChat(a);
+		print("setAction("..a..")");
 	end
 end
 
@@ -642,6 +648,8 @@ function hSMSG_UPDATE_OBJECT(p)
 				send(CMSG_NAME_QUERY, o);
 			end
 
+			STATE.leader = STATE.knownObjects[p.leaderGuid] or false;
+
 			--print("CREATE_OBJECT", b.guid:hex(), hex(o.values[OBJECT_FIELD_TYPE]), dump(b.pos));
 			--, dump(o.movement), dump(o.values));
 
@@ -673,11 +681,11 @@ function newUnit(k)
 end
 
 function hSMSG_DESTROY_OBJECT(p)
-	print("SMSG_DESTROY_OBJECT", dump(p));
+	--print("SMSG_DESTROY_OBJECT", dump(p));
 	for i, koh in pairs(STATE.knownObjectHolders) do
-		--koh[p.guid] = nil;
+		koh[p.guid] = nil;
 	end
-	--STATE.knownObjects[p.guid] = nil;
+	STATE.knownObjects[p.guid] = nil;
 	if(STATE.fishingBobber and p.guid == STATE.fishingBobber.guid) then
 		print("fishingBobber destroyed.");
 		STATE.fishingBobber = false;
@@ -823,7 +831,7 @@ function hSMSG_INITIAL_SPELLS(p)
 	for i,id in ipairs(p.spells) do
 		learnSpell(id);
 	end
-	print("Found "..dumpKeys(STATE.attackSpells).." attack spells.");
+	--print("Found "..dumpKeys(STATE.attackSpells).." attack spells.");
 end
 
 function hSMSG_LEARNED_SPELL(p)
@@ -937,7 +945,7 @@ end
 
 function castingOn()
 	STATE.casting = getRealTime();
-	print("castingOn "..STATE.casting);
+	--print("castingOn "..STATE.casting);
 end
 
 -- sent when a timed spell cast starts.

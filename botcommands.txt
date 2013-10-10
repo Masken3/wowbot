@@ -42,6 +42,9 @@ These are chat commands that bots will respond to:
 * n		Open talents window.
 	This window freezes all bot activity while open. Use it only in safe places.
 
+* i		Open inventory window.
+	Window does not freeze, but it must be reopened to update the list of items.
+
 * aggro type	Become aggressive against all creatures of the type of commander's target.
 	If not doing anything else, attack the nearest one.
 	Error if commander is not targeting a neutral or hostile creature.

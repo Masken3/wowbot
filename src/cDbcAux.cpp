@@ -127,11 +127,18 @@ static int l_iconRaw(lua_State* L) {
 	return 1;
 }
 
+static int l_icon(lua_State* L) {
+	NARG_CHECK(1);
+	lua_pushstring(L, getIcon(luaL_checkstring(L, 1)).c_str());
+	return 1;
+}
+
 void registerLuaAuxDBC(lua_State* L) {
 	lua_register(L, "cSkillLineAbilityBySpell", l_skillLineAbilityBySpell);
 
 	lua_register(L, "cTalents", l_talents);
 	lua_register(L, "cTalentTabs", l_talentTabs);
 
+	lua_register(L, "cIcon", l_icon);
 	lua_register(L, "cIconRaw", l_iconRaw);
 }

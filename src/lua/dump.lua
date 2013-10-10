@@ -12,15 +12,28 @@ function countTable(tab)
 	return c;
 end
 
-function dump(o)
+local dumpedTables
+function dump(o, level)
+	if(not level) then
+		dumpedTables = {
+			[_G]=true,
+		}
+		level = 0
+	end
 	if type(o) == 'table' then
+		if(dumpedTables[o]) then
+			return tostring(o);
+		end
+		dumpedTables[o] = true;
 		local s = '{'
 		for k,v in pairs(o) do
 			local vs;
-			if(type(k) == 'string' and (k == "guid" or k:endWith('Guid'))) then
+			if(type(v) == 'string' and type(k) == 'string' and (k == "guid" or k:endWith('Guid'))) then
 				vs = v:hex();
+			elseif(k == 'loaded') then
+				vs = tostring(v);
 			else
-				vs = dump(v);
+				vs = dump(v, level + 1);
 			end
 			s = s..' ['..k..']'..'='..vs..','
 		end

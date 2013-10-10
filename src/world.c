@@ -160,6 +160,10 @@ void enterWorld(WorldSession* session, uint64 guid, uint8 level) {
 	lua_pushnumber(L, level);
 	lua_settable(L, -3);
 
+	lua_pushstring(L, "myName");
+	lua_pushstring(L, session->toonName);
+	lua_settable(L, -3);
+
 	lua_pushstring(L, "myClassName");
 	lua_pushstring(L, className(session->_class));
 	lua_settable(L, -3);
@@ -170,6 +174,10 @@ void enterWorld(WorldSession* session, uint64 guid, uint8 level) {
 
 	lua_pushstring(L, "amHealer");
 	lua_pushboolean(L, session->amHealer);
+	lua_settable(L, -3);
+
+	lua_pushstring(L, "authAddress");
+	lua_pushstring(L, session->authAddress);
 	lua_settable(L, -3);
 
 	lua_pop(L, 1);
@@ -467,6 +475,10 @@ static int l_intAsFloat(lua_State* L) {
 	return 1;
 }
 
+static int l_exit(lua_State* L) {
+	exit(luaL_checkint(L, 1));
+}
+
 void initLua(WorldSession* session) {
 	lua_State* L = session->L;
 
@@ -480,6 +492,7 @@ void initLua(WorldSession* session) {
 	lua_register(L, "cSpellEffectName", l_spellEffectName);
 	lua_register(L, "cTraceback", l_traceback);
 	lua_register(L, "cIntAsFloat", l_intAsFloat);
+	lua_register(L, "cExit", l_exit);
 
 	registerLuaDBC(L);
 	registerLuaAuxDBC(L);
