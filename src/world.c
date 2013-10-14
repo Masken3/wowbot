@@ -18,6 +18,7 @@
 
 #include <lua.h>
 #include <lauxlib.h>
+#include "lua_version.h"
 #include <assert.h>
 #include <sys/stat.h>
 #include <stdlib.h>
@@ -359,7 +360,7 @@ static int l_send(lua_State* L) {
 	uint32 size = 0;
 	int narg = lua_gettop(L);
 
-	opcode = luaL_checkunsigned(L, 1);
+	opcode = luaL_checkinteger(L, 1);
 	s = opcodeString(opcode);
 	if(!s) {
 		lua_pushfstring(L, "send error: unknown opcode %i!", opcode);
@@ -470,7 +471,7 @@ static int l_intAsFloat(lua_State* L) {
 		uint32 i;
 		float f;
 	} u;
-	u.i = luaL_checkunsigned(L, 1);
+	u.i = luaL_checkinteger(L, 1);
 	lua_pushnumber(L, u.f);
 	return 1;
 }

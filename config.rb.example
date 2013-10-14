@@ -1,2 +1,3 @@
 CONFIG_WOWFOOT_DIR = 'c:/code/wowfoot'
 CONFIG_WOW_VERSION = 11200
+CONFIG_LUAJIT_INCLUDE_DIR = '/MinGW/msys/1.0/local/include/luajit-2.0'

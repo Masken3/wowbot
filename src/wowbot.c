@@ -14,6 +14,7 @@
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
+#include "lua_version.h"
 
 #include "ConfigLua.h"
 
@@ -131,7 +132,7 @@ int main(void) {
 
 		// TOONS is an array of tables.
 		lua_getglobal(L, "TOONS");
-		toonCount = luaL_len(L, -1);
+		toonCount = lua_len(L, -1);
 
 		LOG("toonCount: %i\n", toonCount);
 

@@ -8,8 +8,10 @@ require "#{CONFIG_WOWFOOT_DIR}/wowfoot-ex/config.rb"
 require "#{CONFIG_WOWFOOT_DIR}/wowfoot-ex/libs.rb"
 
 if(HOST == :linux)
-	LUA_CFLAGS = ' '+open('|pkg-config --cflags lua5.2').read.strip
-	LUA_LINKFLAGS = ' '+open('|pkg-config --libs lua5.2').read.strip
+	LUA_CFLAGS = ' '+open('|pkg-config --cflags luajit').read.strip
+	LUA_LINKFLAGS = ' '+open('|pkg-config --libs luajit').read.strip
+elsif(HOST == :win32)
+	LUA_CFLAGS = " -I#{CONFIG_LUAJIT_INCLUDE_DIR}"
 end
 
 DBC = DllWork.new do
@@ -45,10 +47,10 @@ class DbcWork < DllWork
 			@SOURCE_TASKS ||= []
 			@SOURCE_TASKS << DbcCppTask.new(name, {:criticalSection=>false, :lua=>true, :logging=>false})
 			@EXTRA_OBJECTS = [DBC]
+			@EXTRA_CPPFLAGS = LUA_CFLAGS
 			if(HOST == :win32)
-				@LIBRARIES = ['lua']
+				@LIBRARIES = ['lua51']
 			elsif(HOST == :linux)
-				@EXTRA_CPPFLAGS = LUA_CFLAGS
 				@EXTRA_LINKFLAGS = LUA_LINKFLAGS
 			end
 			@NAME = name

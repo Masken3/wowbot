@@ -95,15 +95,15 @@ work = ExeWork.new do
 	]
 	@EXTRA_OBJECTS = DBC_WORKS + [ICON]
 	@LIBRARIES = ['crypto', 'z']
+	@EXTRA_CFLAGS = LUA_CFLAGS
+	@EXTRA_CPPFLAGS = LUA_CFLAGS
 	if(HOST == :win32)
 		@SOURCES << "#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/util/win32"
 		@SOURCES << "#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/util/win32/sym_engine"
-		@LIBRARIES += ['lua', 'wsock32', 'gdi32', 'imagehlp']
+		@LIBRARIES += ['lua51', 'wsock32', 'gdi32', 'imagehlp']
 	elsif(HOST == :linux)
 		@SOURCES << "#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/util/unix"
 		@SOURCE_FILES << "#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/util/process.cpp"
-		@EXTRA_CFLAGS = LUA_CFLAGS
-		@EXTRA_CPPFLAGS = LUA_CFLAGS
 		@EXTRA_LINKFLAGS = LUA_LINKFLAGS
 		@LIBRARIES += ['rt']
 		#@LIBRARIES = ['dl']

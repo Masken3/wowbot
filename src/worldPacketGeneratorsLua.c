@@ -6,6 +6,7 @@
 #include "log.h"
 #include <lua.h>
 #include <lauxlib.h>
+#include "lua_version.h"
 #include <string.h>
 #include <assert.h>
 
@@ -18,12 +19,12 @@ static void lua_gen_uint32(lua_State* L, const char* name, byte** pp) {
 	if(!lua_isnumber(L, -1)) {
 		luaL_error(L, "gen error: %s is not a number!", name);
 	}
-	*(uint32*)(*pp) = lua_tounsigned(L, -1);
+	*(uint32*)(*pp) = lua_tointeger(L, -1);
 	(*pp) += 4;
 }
 
 static void lua_gen_uint16(lua_State* L, const char* name, byte** pp) {
-	uint32 num = lua_tounsigned(L, -1);
+	uint32 num = lua_tointeger(L, -1);
 	if(!lua_isnumber(L, -1)) {
 		luaL_error(L, "gen error: %s is not a number!", name);
 	}
@@ -35,7 +36,7 @@ static void lua_gen_uint16(lua_State* L, const char* name, byte** pp) {
 }
 
 static void lua_gen_byte(lua_State* L, const char* name, byte** pp) {
-	uint32 num = lua_tounsigned(L, -1);
+	uint32 num = lua_tointeger(L, -1);
 	if(!lua_isnumber(L, -1)) {
 		luaL_error(L, "gen error: %s is not a number!", name);
 	}
