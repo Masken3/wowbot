@@ -19,6 +19,20 @@ class GenTask < MultiFileTask
 	end
 end
 
+class GenFfiSdlTask < FileTask
+	def initialize
+		super('build/ffi_SDL.h')
+	end
+	def fileExecute
+		open('build/stub.c', 'w') do |file|
+			file.puts '#include <SDL2/SDL.h>'
+			file.puts '#include <SDL2/SDL_ttf.h>'
+			file.puts '#include <SDL2/SDL_image.h>'
+		end
+		sh "gcc -E build/stub.c | grep -v '^#' > build/ffi_SDL.h"
+	end
+end
+
 work = ExeWork.new do
 	@SOURCES = ['src', 'src/worldMsgHandlers', 'server-code/Auth']
 	@SOURCE_FILES = [
@@ -77,6 +91,7 @@ work = ExeWork.new do
 		GenLuaFromHeaderTask.new('Item', 'server-code/Item.h',
 			{:includedEnums=>['EnchantmentSlot', 'EnchantmentOffset']}),
 	]
+	@REQUIREMENTS << GenFfiSdlTask.new()
 	@SPECIFIC_CFLAGS = {
 		'worldPacketParsersLua.c' => ' -Wno-vla',
 		'cDbc.cpp' => " -I#{CONFIG_WOWFOOT_DIR}/wowfoot-cpp/handlers"+

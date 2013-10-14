@@ -12,7 +12,7 @@ SUBFILES = {
 	'gameobject.lua',
 	'skill.lua',
 	'combat.lua',
-	--'gui/test.lua',
+	'gui/test.lua',
 	'gui/talents.lua',
 	'spell_threat.lua',
 	'gui/inventory.lua',
