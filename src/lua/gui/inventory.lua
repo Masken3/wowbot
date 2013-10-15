@@ -1,3 +1,4 @@
+-- todo: popup should show what mouse-clicks will do (left/right, modified by shift-keys).
 
 local iconSize = 40
 local marginFraction = 0.2

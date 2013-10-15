@@ -1,5 +1,6 @@
 SUBFILES = {
 	'globalLockdown.lua',
+	'bit.lua',	-- needed in LuaJIT(5.1).
 	'dump.lua',
 	'timers.lua',
 	'struct.lua',
@@ -12,12 +13,14 @@ SUBFILES = {
 	'gameobject.lua',
 	'skill.lua',
 	'combat.lua',
-	'gui/test.lua',
+	--'gui/test.lua',
+	'gui/common-sdl.lua',
 	'gui/talents.lua',
 	'spell_threat.lua',
 	'gui/inventory.lua',
 }
 for i,f in ipairs(SUBFILES) do
+	--print(i, f)
 	dofile('src/lua/'..f)
 end
 
@@ -311,6 +314,7 @@ end
 function loginComplete()
 	itemLoginComplete();
 	auraLoginComplete();
+	doTalentWindow();
 end
 
 -- may need reversing.
@@ -631,7 +635,9 @@ function hSMSG_UPDATE_OBJECT(p)
 				if(high == string.rep(string.char(0), 2)) then
 					o.values[OBJECT_FIELD_TYPE] = bit32.bor(TYPEMASK_PLAYER, TYPEMASK_UNIT);
 				else
-					error("Unknown highGuid");
+					print(dump(o));
+					print(dump(b));
+					error("Unknown highGuid "..b.guid:hex());
 				end
 			end
 

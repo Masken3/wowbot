@@ -80,9 +80,7 @@ static void lua_check_Guid(lua_State* L, const char* name) {
 		lua_pushfstring(L, "gen error: %s is not a string!", name);
 		lua_error(L);
 	}
-	lua_len(L, -1);
-	len = lua_tonumber(L, -1);
-	lua_pop(L, 1);
+	len = luaL_getn(L, -1);
 	if(len != 8) {
 		lua_pushfstring(L, "gen error: %s does not have the correct length!", name);
 		lua_error(L);

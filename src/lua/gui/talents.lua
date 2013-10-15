@@ -1,14 +1,8 @@
-require "vcl"
-
-VCL.clBrightGreen = 0x00ff00
 
 local gAvailablePoints
 
 -- internalName:tab
 local tabs = {}
-
--- when this is empty, all images have been resized.
-local resizingImages = {}
 
 local talentIcons = {}
 
@@ -18,30 +12,30 @@ local marginFraction = 0.25
 local tabWidth = iconSize*4 + (iconSize*marginFraction*6)
 local tabHeight = iconSize*8 + (iconSize*marginFraction*10)
 
-local mainForm
+-- functions
 local initializeForm
 local handleResults
+local showModal
+
+local gWindow
+gSurface = false
+local gInitialized
 
 local results = {
 	ok = false,
-	newTalents = {},	-- talent:maxRequestedRank
+	newTalents = {},	-- t:maxRequestedRank
 }
 
 function doTalentWindow()
-	mainForm = VCL.Form{
-	name="mainForm",
-	caption = STATE.myName.."'s Talents",
-	position="podesktopcenter",
-	height=tabHeight + iconSize*(1+marginFraction*2),
-	width=tabWidth*3,
-	color=VCL.clBlack,
-	onclosequery = "onCloseQueryEventHandler",
-	onMouseMove='disablePopup',
-	}
+	if(gWindow) then
+		return false
+	end
+	gWindow = SDL.SDL_CreateWindow(STATE.myName.."'s Talents", 32, 32,
+		tabWidth*3, tabHeight + iconSize*(1+marginFraction*2), SDL.SDL_WINDOW_SHOWN)
+	gSurface = SDL.SDL_GetWindowSurface(gWindow)
 	gAvailablePoints = STATE.my.values[PLAYER_CHARACTER_POINTS1] or 0
 	initializeForm()
-	mainForm:ShowModal()
-	mainForm:Free()
+	showModal()
 	handleResults()
 end
 
@@ -60,40 +54,10 @@ end
 
 function handleResults()
 	if(not results.ok) then return; end
-	for talent, maxRank in pairs(results.newTalents) do
-		print("CMSG_LEARN_TALENT "..talent.id.." "..maxRank)
-		send(CMSG_LEARN_TALENT, {talentId=talent.id, requestedRank=maxRank})
+	for t, maxRank in pairs(results.newTalents) do
+		print("CMSG_LEARN_TALENT "..t.talent.id.." "..maxRank)
+		send(CMSG_LEARN_TALENT, {talentId=t.talent.id, requestedRank=maxRank})
 	end
-end
-
-local gAvailablePointsLabel
-local gOkButton
-local gCancelButton
-local function createGlobals()
-gAvailablePointsLabel = VCL.Label{
-	top = tabHeight + iconSize/2,
-	left = iconSize/2,
-}
-
-gOkButton = VCL.Button{
-	caption = "OK",
-	default = true,
-	top = tabHeight + iconSize/2,
-	left = tabWidth*2,
-	onClick = 'onOK',
-}
-
-gCancelButton = VCL.Button{
-	caption = "Cancel",
-	cancel = true,
-	top = tabHeight + iconSize/2,
-	left = tabWidth*2.5,
-	onClick = 'onCancel',
-}
-end
-
-function onCloseQueryEventHandler(Sender)
-	return true -- the form can be closed
 end
 
 local function setTalentIconPos(i, tab, talent)
@@ -101,18 +65,6 @@ local function setTalentIconPos(i, tab, talent)
 		talent.col * iconSize * (1+marginFraction) +
 		iconSize * marginFraction
 	i.Top = (talent.row+1) * iconSize * (1+marginFraction) + iconSize * marginFraction
-end
-
-local function talentIconFromPos(x, y)
-	for n,t in pairs(talentIcons) do
-		local i = t.i
-		if(x >= i.Left and x < i.Left + i.Width and
-			y >= i.Top and y < i.Top + i.Height)
-		then
-			return t
-		end
-	end
-	return nil
 end
 
 local function setBackgroundPosition(t)
@@ -160,10 +112,10 @@ function myRaceMask()
 end
 
 function initializeForm()
-createGlobals()
-gAvailablePointsLabel.font.name = "Verdana"
-gAvailablePointsLabel.font.color = VCL.clWhite
-
+if(gInitialized) then
+	return
+end
+gInitialized = true
 for tab in cTalentTabs() do
 	--print(dump(tt))
 	if(tab.spellIcon == 11) then tab.tabPage = 1; end	-- patch MageFire
@@ -171,20 +123,16 @@ for tab in cTalentTabs() do
 		tab.spentPoints = 0
 		tab.rankCount = 0
 		tab.rows = {}	-- row:{col:t}
+		tab.backgroundParts = {}	--name:t
+		tabs[tab.internalName] = tab
 
 		-- gotta wait until onResize before AutoSize takes effect.
 		-- tab background
 		for i,p in ipairs(backgroundParts) do
-			local n = tab.internalName..p
-			local i = VCL.Image{Name=n, onMouseMove='disablePopup'}
-			local t = {tab=tab, part=p, i=i}
-			--images[n] = t
-			--resizingImages[n] = true
-			i.AutoSize = false
-			i.Stretch = true
-			i.Proportional = false
+			local t = {tab=tab, part=p, i={}}
 			setBackgroundPosition(t)
-			i:LoadFromFile(cIconRaw("Interface\\TalentFrame\\"..tab.internalName.."-"..p))
+			t.img = SDLimage.IMG_Load(cIconRaw("Interface\\TalentFrame\\"..tab.internalName.."-"..p))
+			tab.backgroundParts[p] = t
 		end
 		-- talent icons
 		for talent in cTalents() do
@@ -196,264 +144,33 @@ for tab in cTalentTabs() do
 				end
 				--print("talent "..n..": "..spell.name)
 
-				local shape
-				do
-					local s = VCL.Shape{Name=n.."b",
-						shape=VCL.stRoundRect,
-						brush={color=VCL.clBrightGreen},--VCL.clGreen},
-						width=iconSize+4,
-						height=iconSize+4,
-						onMouseMove='talentPopup',
-						onMouseDown='talentClick',
-					}
-					setTalentIconPos(s, tab, talent)
-					s.Left = s.Left - 2
-					s.Top = s.Top - 2
-					s.Visible = false
-					shape = s
-				end
-
-				local i = VCL.Image{Name=n,
-					onMouseMove='talentPopup',
-					onMouseDown='talentClick',
-				}
-				--resizingImages[n] = true
 				local rankCount=0
 				for i,sid in ipairs(talent.spellId) do
 					if(sid ~= 0) then rankCount = i; end
 				end
 				tab.rankCount = tab.rankCount + rankCount
-				--i.AutoSize = true
-				i.Width = iconSize
-				i.Height = iconSize
-				i.Hint = spell.name
-				i.ShowHint = false
-				i.Stretch = true
-				i.Proportional = true
-				--i.Transparent = true
-				setTalentIconPos(i, tab, talent)
-				i:LoadFromFile(cIconRaw(cSpellIcon(spell.spellIconID).icon))
 
-				if(shape) then
-					local s = shape
-					--[[
-					local rb = VCL.Image{Name=n.."rb",
-						Left = i.Left+i.Width /2,
-						Top = i.Top+i.Height /1.5,
-						onMouseMove='disablePopup',
-						Visible = false,
-						autosize=false,
-						width=iconSize,
-						height=iconSize,
-						stretch=true,
-						proportional=false,
-					}
-					rb:LoadFromFile(cIconRaw("Interface\\TalentFrame\\TalentFrame-RankBorder"))
-					--]]
-					local spentPoints = talentRank(talent)
-					tab.spentPoints = tab.spentPoints + spentPoints
-					local l = VCL.Label{Name=n.."rb",
-						transparent=false,
-						color=VCL.clBlack,
-						visible=false,
-						caption=spentPoints.."/"..rankCount,
-						Left = i.Left+i.Width /2,
-						Top = i.Top+i.Height /1.5,
-					}
-					l.font.name="Verdana"
-					l.font.color=VCL.clBrightGreen
-					if(tab.spentPoints >= talent.row * 5) then
-						s.visible = true
-						--rb.visible = true
-						l.visible = true
-					end
-					local t = {tab=tab, spell=spell, i=i, talent=talent,
-						rankCount=rankCount, spentPoints=spentPoints,
-						border = shape, --rankBorder = rb,
-						rankLabel = l,
-					}
-					talentIcons[n] = t
-					talentIcons[n.."rb"] = t
-					talentIcons[n.."b"] = t
-					tab.rows[talent.row] = tab.rows[talent.row] or {}
-					tab.rows[talent.row][talent.col] = t
-				end
+				local spentPoints = talentRank(talent)
+				tab.spentPoints = tab.spentPoints + spentPoints
+
+				local t = {
+					img=SDLimage.IMG_Load(cIconRaw(cSpellIcon(spell.spellIconID).icon)),
+					tab=tab,
+					rankCount=rankCount,
+					spentPoints=spentPoints,
+					spell=spell,
+					talent=talent,
+				}
+				setTalentIconPos(t, tab, talent)
+				t.r = SDL_Rect(t.Left, t.Top, iconSize, iconSize)
+				talentIcons[talent] = t
 			end
 		end
 		-- tab icon
-		do
-			local i = VCL.Image{onMouseMove='disablePopup'}
-			i.Width = iconSize
-			i.Height = iconSize
-			i.Top = iconSize * marginFraction/2
-			i.Left = tabWidth * tab.tabPage + (iconSize*(marginFraction))
-			i.Hint = tab.name
-			i.ShowHint = true
-			i.Stretch = true
-			i.Proportional = true
-			i:LoadFromFile(cIconRaw(cSpellIcon(tab.spellIcon).icon))
-			local l = VCL.Label{
-				caption = tabLabelCaption(tab),
-				top = iconSize * marginFraction/2,
-				left = i.left + iconSize*(1+marginFraction),
-			}
-			l.font.color = VCL.clWhite
-			l.font.name = "Verdana"
-			tab.label = l
-		end
+		tab.icon = SDLimage.IMG_Load(cIconRaw(cSpellIcon(tab.spellIcon).icon))
 	end
 end
-createPopup()
-disablePopup()
-updateAvail()
 end	--initializeForm
-
-local popup
-function createPopup()
-popup = {
-	border = VCL.Shape{
-		shape=VCL.stRoundRect,
-		brush={color=VCL.clWhite},
-		width=tabWidth*2+6,
-		height=iconSize*3.5+6,
-	},
-	inner = VCL.Shape{
-		shape=VCL.stRoundRect,
-		brush={color=VCL.clBlack},
-		width=tabWidth*2+2,
-		height=iconSize*3.5+2,
-		left=2,
-		top=2,
-	},
-	name = VCL.Label{
-		left=4,
-		top=4,
-	},
-	rank = VCL.Label{
-		left=4,
-	},
-	requirements = VCL.Label{
-		left=4,
-	},
-	description = VCL.Label{
-		WordWrap=true,
-		left=4,
-	},
-}
-end
-
-function disablePopup(sender, shift, x, y)
-	for n,c in pairs(popup) do
-		c.visible = false
-	end
-end
-
-local function popupRankCaption(t)
-	return "Rank "..t.spentPoints.."/"..t.rankCount
-end
-
-function talentPopup(sender, shift, x, y)
-	--print("talentPopup "..sender.name, x, y)
-	local t = talentIcons[sender.name]
-	--if(not t) then return; end
-	x = x + sender.left + iconSize
-	y = y + sender.top + iconSize
-
-	if(mainForm.width < x + popup.border.width) then
-		x = mainForm.width - popup.border.width
-	end
-	if(mainForm.height < y + popup.border.height) then
-		y = y - (popup.border.height + iconSize*2)
-	end
-
-	popup.border.left = x
-	popup.border.top = y
-	popup.inner.left = x+2
-	popup.inner.top = y+2
-
-	popup.name.top = y+4
-	popup.rank.top = popup.name.top + popup.name.height
-	popup.requirements.top = popup.rank.top + popup.rank.height
-	popup.description.top = popup.requirements.top + popup.requirements.height
-
-	local up
-	for n,c in pairs(popup) do
-		up = c.visible
-		c.visible = true
-		c.transparent = true
-		if(c.font) then
-			c.font.name = "Verdana"
-
-			-- causes crash.
-			--c.Constraints.MaxWidth = popup.inner.width
-			--c.Constraints.MinWidth = 0
-			--c.Constraints.maxHeight = 1000
-			--c.Constraints.minHeight = 0
-			--c.OnChange = "onChange"
-
-			-- but this works.
-			c.constraints = {MaxWidth = popup.inner.width-4}
-
-			c.autosize = true
-			c.width = popup.inner.width-2
-			c.height = iconSize /2
-			c.left = x+4
-		end
-		c.onMouseMove = "disablePopup"
-	end
-	popup.description.height = iconSize * 2
-	--if(up) then return; end
-
-	popup.name.font.size = popup.rank.font.size * 1.5
-	popup.name.font.color = VCL.clWhite
-	popup.name.caption = t.spell.name
-
-	popup.rank.font.color = VCL.clWhite
-	popup.rank.caption = popupRankCaption(t)
-
-	popup.requirements.font.color = VCL.clRed
-	--popup.requirements.caption =
-
-	popup.description.font.color = VCL.clYellow
-	popup.description.caption = t.spell.description
-end
-
-function updateAvail()
-	gAvailablePointsLabel.caption = "Available points: "..gAvailablePoints
-end
-
-local function updateTalent(t)
-	-- update labels and shapes
-	popup.rank.caption = popupRankCaption(t)
-	t.rankLabel.caption = t.spentPoints.."/"..t.rankCount
-	t.tab.label.caption = tabLabelCaption(t.tab)
-
-	if(t.spentPoints == t.rankCount) then
-		t.rankLabel.font.color = VCL.clYellow
-		-- attempting to set brush.color directly causes crash.
-		t.border.brush = {color=VCL.clYellow}
-	else
-		t.rankLabel.font.color = VCL.clBrightGreen
-		t.border.brush = {color=VCL.clBrightGreen}
-	end
-
-	if(t.tab.spentPoints % 5 == 0) then
-		local row = t.tab.spentPoints / 5
-		local r = t.tab.rows[row]
-		if(r) then for col,t in pairs(r) do
-			t.border.visible = true
-			t.rankLabel.visible = true
-		end end
-	else
-		local row = math.floor(t.tab.spentPoints / 5)
-		local r = t.tab.rows[row+1]
-		if(r) then for col,t in pairs(r) do
-			t.border.visible = false
-			t.rankLabel.visible = false
-		end end
-	end
-	updateAvail()
-end
 
 local function canAddPoint(t)
 	if(t.spentPoints >= t.rankCount) then return false; end
@@ -469,34 +186,195 @@ local function canRemovePoint(t)
 	return true
 end
 
-function talentClick(sender, button, shift, x, y)
-	local t = talentIcons[sender.name]
+function talentClick(t, button)
 	--print(button)
-	if(button == "mbLeft" and canAddPoint(t)) then
+	if(button == SDL_BUTTON_LEFT and canAddPoint(t)) then
 		t.spentPoints = t.spentPoints + 1
 		t.tab.spentPoints = t.tab.spentPoints + 1
 		gAvailablePoints = gAvailablePoints - 1
-		updateTalent(t)
-		results.newTalents[t.talent] = t.spentPoints-1
+		results.newTalents[t] = t.spentPoints-1
 		print("set "..t.talent.id.." "..t.spentPoints)
 	end
-	if(button == "mbRight" and canRemovePoint(t)) then
-		t.spentPoints = t.spentPoints - 1
+	if(button == SDL_BUTTON_RIGHT and canRemovePoint(t)) then
+		local sm1 = t.spentPoints - 1
+		t.spentPoints = sm1
 		t.tab.spentPoints = t.tab.spentPoints - 1
 		gAvailablePoints = gAvailablePoints + 1
-		updateTalent(t)
+		if(sm1 == 0) then
+			results.newTalents[t] = nil
+		else
+			results.newTalents[t] = sm1
+		end
 	end
 end
 
-function onCancel(sender)
+local gOkButton = {
+	caption = "OK",
+	r = SDL_Rect(tabWidth*2, tabHeight + iconSize/2, iconSize*2, iconSize*0.75),
+}
+
+local gCancelButton = {
+	caption = "Cancel",
+	r = SDL_Rect(tabWidth*2.5, tabHeight + iconSize/2, iconSize*2, iconSize*0.75),
+}
+
+local function drawTalentWindow()
+	--print("drawTalentWindow")
+	-- the black
+	SDL.SDL_FillRect(gSurface, SDL_Rect(0, 0, gSurface.w, gSurface.h), 0)
+	-- tabs
+	for internalName, tab in pairs(tabs) do
+		--print(internalName, tab)
+		-- background
+		for name,t in pairs(tab.backgroundParts) do
+			local r = SDL_Rect(t.i.Left, t.i.Top, t.i.Width, t.i.Height)
+			--print(t.img, r)
+			SDL.SDL_UpperBlitScaled(t.img, nil, gSurface, r)
+		end
+		-- icon
+		local iconRect = SDL_Rect(
+			tabWidth * tab.tabPage + (iconSize*(marginFraction)),
+			iconSize * marginFraction/2,
+			iconSize, iconSize)
+		SDL.SDL_UpperBlitScaled(tab.icon, nil, gSurface, iconRect)
+		-- label
+		local t = tabLabelCaption(tab)
+		--print(t)
+		drawText(t, SDL_white, iconRect.x + iconSize*(1+marginFraction), iconRect.y)
+	end
+
+	-- talent icons
+	local mouseOverTalent
+	for talent, t in pairs(talentIcons) do
+		local topRow = math.floor(t.tab.spentPoints / 5)
+		local rankColor
+		local borderColor
+
+		if(pointIsInRect(gMouseX, gMouseY, t.r)) then
+			assert(mouseOverTalent == nil)
+			mouseOverTalent = t
+		end
+
+		-- border
+		if(talent.row <= topRow) then
+			if(t.spentPoints == t.rankCount) then
+				rankColor = SDL_yellow
+				borderColor = 0xffff00
+			else
+				rankColor = SDL_brightGreen
+				borderColor = 0x00ff00
+			end
+			local r = SDL_Rect(t.r.x-2, t.r.y-2, t.r.w+4, t.r.h+4)
+			SDL.SDL_FillRect(gSurface, r, borderColor)
+		end
+
+		-- icon
+		SDL.SDL_UpperBlitScaled(t.img, nil, gSurface, t.r)
+
+		-- rank label
+		if(talent.row <= topRow) then
+			drawText(t.spentPoints.."/"..t.rankCount, rankColor, t.r.x+t.r.w/2, t.r.y+t.r.h/1.5)
+		end
+	end
+
+	-- "available points" label
+	drawText("Available points: "..gAvailablePoints, SDL_white, iconSize/2, tabHeight + iconSize/2)
+
+	-- buttons
+	drawButton(gOkButton)
+	drawButton(gCancelButton)
+
+	-- popup
+	if(mouseOverTalent) then
+		local t = mouseOverTalent
+		-- calculate position
+		local x = t.Left + iconSize
+		local y = t.Top + iconSize*1.5
+		local w = tabWidth*2
+		local h = iconSize*3.5
+
+		if(gSurface.w < x + w) then
+			x = gSurface.w - (w + iconSize)
+		end
+		if(gSurface.h < y + h) then
+			y = y - (h + iconSize*2)
+		end
+
+		-- border
+		SDL.SDL_FillRect(gSurface, SDL_Rect(x-3, y-3, w+6, h+6), 0xffffffff)
+		-- inner
+		SDL.SDL_FillRect(gSurface, SDL_Rect(x-2, y-2, w+4, h+4), 0)
+
+		y = y + drawText(t.spell.name, SDL_white, x+2, y+2).h
+		y = y + drawText("Rank "..t.spentPoints.."/"..t.rankCount, SDL_white, x+2, y+2).h
+		drawTextWrap(t.spell.description, SDL_yellow, x+2, y+2, w-4)
+	end
+end
+
+-- Set up our event loop
+local gameover
+
+local function onCancel(sender)
 	print("Cancel")
-	results.ok = false
-	mainForm:Close()
+	gameover = true
 end
 
-function onOK(sender)
+local function onOK(sender)
 	print("OK")
+	gameover = true
 	results.ok = true
-	mainForm:Close()
 end
 
+local function handleEvent(event)
+	local etype=event.type
+	if etype == SDL.SDL_QUIT then
+		-- close button clicked
+		gameover = true
+		return
+	end
+
+	if etype == SDL.SDL_MOUSEMOTION then
+		gMouseX = event.motion.x
+		gMouseY = event.motion.y
+	end
+
+	if etype == SDL.SDL_MOUSEBUTTONDOWN then
+		for tal,t in pairs(talentIcons) do
+			if(pointIsInRect(event.button.x, event.button.y, t.r)) then
+				talentClick(t, event.button.button)
+			end
+		end
+		if(pointIsInRect(event.button.x, event.button.y, gOkButton.r)) then
+			onOK()
+		end
+		if(pointIsInRect(event.button.x, event.button.y, gCancelButton.r)) then
+			onCancel()
+		end
+	end
+
+	if etype == SDL.SDL_KEYDOWN then
+		local sym = event.key.keysym.sym
+		if sym == SDL.SDLK_ESCAPE then
+			-- Escape is pressed
+			gameover = true
+			return
+		end
+	end
+end
+
+function showModal()
+	gameover = false
+	local event = ffi.new("SDL_Event")
+	while not gameover do
+		drawTalentWindow()
+
+		-- Flush the output
+		SDL.SDL_UpdateWindowSurface(gWindow)
+
+		-- Check for escape keydown or quit events to stop the loop
+		if (SDL.SDL_WaitEvent(event)) then
+			handleEvent(event)
+		end
+	end
+	SDL.SDL_DestroyWindow(gWindow)
+end

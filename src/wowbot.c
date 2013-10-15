@@ -132,7 +132,7 @@ int main(void) {
 
 		// TOONS is an array of tables.
 		lua_getglobal(L, "TOONS");
-		toonCount = lua_len(L, -1);
+		toonCount = luaL_getn(L, -1);
 
 		LOG("toonCount: %i\n", toonCount);
 
