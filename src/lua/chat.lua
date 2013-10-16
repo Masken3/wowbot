@@ -35,6 +35,22 @@ local function dropAllQuests(p)
 	reply(p, msg)
 end
 
+local function dropQuest(p)
+	local quests = {}
+	for questId in p.text:sub(4):gmatch("%w+") do
+		quests[tonumber(questId)] = true
+	end
+	local msg = 'Dropped quests:'
+	for i=0,19 do
+		local id = STATE.my.values[PLAYER_QUEST_LOG_1_1 + i*3]
+		if(id ~= nil and quests[id]) then
+			msg = msg..' '..id
+			send(CMSG_QUESTLOG_REMOVE_QUEST, {slot=i})
+		end
+	end
+	reply(p, msg)
+end
+
 -- destroys all items in bags, but not equipped items.
 -- does destroy unequipped bags.
 local function dropAllItems(p)
@@ -541,8 +557,10 @@ function handleChatMessage(p)
 	if(not p.text) then return end
 	if(p.text == 'lq') then
 		listQuests(p)
-	elseif(p.text == 'daq') then
-		dropAllQuests(p)
+	--elseif(p.text == 'daq') then
+		--dropAllQuests(p)
+	elseif(p.text:startWith('dq ')) then
+		dropQuest(p)
 	elseif(p.text == 'li') then
 		listItems(p)
 	elseif(p.text == 'dai') then
