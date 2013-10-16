@@ -3,14 +3,23 @@
 local iconSize = 40
 local marginFraction = 0.2
 
-local mainForm
+-- functions
 local initializeItemForm
 local updateIcons
+local drawInvWindow
+local onCloseInvWindow
+local invHandleClickEvent
 
-local itemIcons = {}
+local itemIcons = {}	-- o:t
 local slotSquare
 
+local iconImages = {}	-- name:SDL_Surface
+
 function doInventoryWindow()
+	if(gWindow) then
+		return false
+	end
+
 	local totalSlotCount = 16	-- backpack
 	local freeSlotCount = investigateBags(function(bag, bagSlot, slotCount)
 		totalSlotCount = totalSlotCount + slotCount
@@ -18,19 +27,14 @@ function doInventoryWindow()
 
 	slotSquare = math.ceil(totalSlotCount ^ 0.5)
 
-	mainForm = VCL.Form{
-		name="mainForm",
-		caption = STATE.myName.."'s Inventory",
-		position="podesktopcenter",
-		height=slotSquare*iconSize*(1+marginFraction*2),
-		width=slotSquare*iconSize*(1+marginFraction*2),
-		color=VCL.clBlack,
-		onclosequery = "onCloseQueryEventHandler",
-		onMouseMove='invDisablePopup',
-	}
+	local size = slotSquare*iconSize*(1+marginFraction*2)
+	gWindow = SDL.SDL_CreateWindow(STATE.myName.."'s Inventory", 32, 32,
+		size, size, SDL.SDL_WINDOW_SHOWN)
+	gSurface = SDL.SDL_GetWindowSurface(gWindow)
+	itemIcons = {}
 	initializeItemForm()
-	mainForm:ShowModal()
-	mainForm:Free()
+	showNonModal(drawInvWindow, onCloseInvWindow, invHandleClickEvent)
+	return true
 end
 
 function initializeItemForm()
@@ -44,54 +48,21 @@ function initializeItemForm()
 		local itemId = o.values[OBJECT_FIELD_ENTRY]
 		local proto = itemProtoFromId(itemId)
 		assert(proto);
-		-- name must be unique, or weird things will happen.
-		local n = 'i'..tostring(itemId)..x..y
 
-		local border = VCL.Shape{Name=n.."b",
-			shape=VCL.stRoundRect,
-			brush={color=VCL.clBrightGreen},
-			width=iconSize+4,
-			height=iconSize+4,
-			top=top-2,
-			left=left-2,
-			visible=false,
-			onMouseMove='itemPopup',
-			onMouseDown='itemClick',
-		}
-
-		local icon = VCL.Image{Name=n,
-			onMouseMove='itemPopup',
-			onMouseDown='itemClick',
-			width=iconSize,
-			height=iconSize,
-			top=top,
-			left=left,
-			visible=true,
-			stretch=true,
-			proportional=true,
-		}
-		icon:LoadFromFile(cIcon(cItemDisplayInfo(proto.DisplayInfoID).icon))
+		-- save and reuse known images.
+		local iconName = cIcon(cItemDisplayInfo(proto.DisplayInfoID).icon)
+		local icon = iconImages[iconName]
+		if(not icon) then
+			icon = SDLimage.IMG_Load(iconName)
+			iconImages[iconName] = icon
+		end
 
 		local stackCount = o.values[ITEM_FIELD_STACK_COUNT]
-		local stackLabel
-		if(stackCount > 1) then
-			stackLabel = VCL.Label{Name=n.."rb",
-				onMouseMove='itemPopup',
-				onMouseDown='itemClick',
-				transparent=false,
-				color=VCL.clBlack,
-				visible=true,
-				caption=stackCount,
-				left = icon.left + icon.width /1.5,
-				top = icon.top + icon.height /1.5,
-			}
-			stackLabel.font.name="Verdana"
-			stackLabel.font.color=VCL.clBrightGreen
-		end
-		local t = {o=o, proto=proto, icon=icon, border=border, stackLabel=stackLabel }
-		itemIcons[n] = t
-		itemIcons[n.."rb"] = t
-		itemIcons[n.."b"] = t
+
+		local r = SDL_Rect(left, top, iconSize, iconSize)
+		local t = {o=o, proto=proto, icon=icon, r=r, stackCount=stackCount }
+
+		itemIcons[o] = t
 
 		x = x + 1
 		if(x >= slotSquare) then
@@ -99,154 +70,172 @@ function initializeItemForm()
 			y = y + 1
 		end
 	end)
-
-	-- creating this after the icons causes the popup to appear above them.
-	createItemPopup()
-	invDisablePopup()
-
-	updateIcons()
 end	--initializeForm
 
-local popup
-function createItemPopup()
-popup = {
-	border = VCL.Shape{
-		shape=VCL.stRoundRect,
-		brush={color=VCL.clWhite},
-		width=iconSize*8+6,
-		height=iconSize*3.5+6,
-	},
-	inner = VCL.Shape{
-		shape=VCL.stRoundRect,
-		brush={color=VCL.clBlack},
-		width=iconSize*8+2,
-		height=iconSize*3.5+2,
-		left=2,
-		top=2,
-	},
-	name = VCL.Label{
-		left=4,
-		top=4,
-	},
-	requirements = VCL.Label{
-		left=4,
-	},
-	description = VCL.Label{
-		WordWrap=true,
-		left=4,
-	},
-}
-end
-
-function invDisablePopup(sender, shift, x, y)
-	for n,c in pairs(popup) do
-		c.visible = false
-	end
-end
-
-function itemPopup(sender, shift, x, y)
-	--print("itemPopup "..sender.name, x, y, dump(sender))
-	local t = itemIcons[sender.name]
-	if(not t) then
-		print("itemPopup "..tostring(sender.name), x, y)
-	end
-	assert(t);
-	--if(not t) then return; end
-	x = sender.left + iconSize*1.5
-	y = sender.top + iconSize*1.5
-
-	if(mainForm.width < x + popup.border.width) then
-		x = mainForm.width - popup.border.width
-	end
-	if(mainForm.height < y + popup.border.height) then
-		y = y - (popup.border.height + iconSize*2)
-	end
-
-	popup.border.left = x
-	popup.border.top = y
-	popup.inner.left = x+2
-	popup.inner.top = y+2
-
-	popup.name.top = y+4
-	popup.requirements.top = popup.name.top + popup.name.height
-	popup.description.top = popup.requirements.top + popup.requirements.height
-
-	local up
-	for n,c in pairs(popup) do
-		up = c.visible
-		c.visible = true
-		c.transparent = true
-		if(c.font) then
-			c.font.name = "Verdana"
-			c.constraints = {MaxWidth = popup.inner.width-4}
-			c.autosize = true
-			c.width = popup.inner.width-4
-			c.height = iconSize /2
-			c.left = x+4
-		end
-		c.onMouseMove = "invDisablePopup"
-	end
-	popup.description.height = iconSize * 2
-	--if(up) then return; end
-
-	popup.name.font.color = VCL.clWhite
-	popup.name.caption = t.proto.name
-
-	popup.requirements.font.color = VCL.clRed
-	--popup.requirements.caption =
-
-	popup.description.font.color = VCL.clYellow
-	popup.description.caption = t.proto.description
-end
-
-function updateIcons(itemId)
-	for name,t in pairs(itemIcons) do
-		local itemId = t.proto.itemId
-		if(PERMASTATE.shouldLoot[itemId]) then
-			t.border.visible = true
-			t.border.brush = {color=VCL.clYellow}
-		elseif(STATE.itemsToSell[itemId]) then
-			t.border.visible = true
-			t.border.brush = {color=VCL.clGreen}
-		else
-			t.border.visible = false
-		end
-	end
-end
-
-function itemClick(sender, button, shift, x, y)
+-- returns table {description=string, f=function} or nil
+local function getClickInfo(t, button)
 	--print(dump(package))
-	local t = itemIcons[sender.name]
 	local itemId = t.proto.itemId
-	local ssShift = shift:find('ssShift')
-	local ssAlt = shift:find('ssAlt')
-	local ssCtrl = shift:find('ssCtrl')
+	local shift = tonumber(SDL.SDL_GetModState())
+	--print("shift:", shift)
+	local ssShift = bit32.btest(shift, SDL.KMOD_LSHIFT) or bit32.btest(shift, SDL.KMOD_RSHIFT)
+	local ssAlt = bit32.btest(shift, SDL.KMOD_LALT) or bit32.btest(shift, SDL.KMOD_RALT)
+	local ssCtrl = bit32.btest(shift, SDL.KMOD_LCTRL) or bit32.btest(shift, SDL.KMOD_RCTRL)
 	local plain = (not ssShift) and (not ssAlt) and (not ssCtrl)
-	if(button == "mbLeft") then
+	if(button == SDL_BUTTON_LEFT) then
 		if(plain) then
-			-- assumes wowfoot is running on your auth server.
-			os.execute("start http://"..STATE.authAddress..":3002/item="..itemId)
+			return {description="Open link...", f=function()
+				-- assumes wowfoot is running on your auth server.
+				os.execute("start http://"..STATE.authAddress..":3002/item="..itemId)
+			end}
 		end
 		if(ssAlt and (not ssShift) and (not ssCtrl)) then
-			PERMASTATE.shouldLoot[itemId] = (not PERMASTATE.shouldLoot[itemId]) or nil
-			saveState()
-			updateIcons()
+			return {description="Toggle 'shouldLoot'", f=function()
+				PERMASTATE.shouldLoot[itemId] = (not PERMASTATE.shouldLoot[itemId]) or nil
+				saveState()
+			end}
 		end
-	elseif(button == "mbRight") then
+	elseif(button == SDL_BUTTON_RIGHT) then
 		if(plain) then
-			print(gUseItem(itemId))
+			return {description="Use", f=function()
+				print(gUseItem(itemId))
+			end}
 		elseif(ssAlt and (not ssShift) and (not ssCtrl)) then
-			maybeEquip(t.o.guid, true)
+			return {description="maybeEquip", f=function()
+				maybeEquip(t.o.guid, true)
+			end}
 		elseif(ssCtrl and (not ssShift) and (not ssAlt)) then
-			STATE.itemsToSell[itemId] = true
+			return {description="Sell", f=function()
+				STATE.itemsToSell[itemId] = true
+			end}
 		elseif(ssShift and (not ssAlt) and (not ssCtrl)) then
-			STATE.tradeGiveItems[itemId] = true
-			if(STATE.tradeStatus == TRADE_STATUS_OPEN_WINDOW) then
-				-- should cause bot to add the item to the trade window.
-				hSMSG_TRADE_STATUS({status=TRADE_STATUS_OPEN_WINDOW})
-			else
-				send(CMSG_INITIATE_TRADE, {guid=STATE.leader.guid})
-			end
+			return {description="Give", f=function()
+				STATE.tradeGiveItems[itemId] = true
+				if(STATE.tradeStatus == TRADE_STATUS_OPEN_WINDOW) then
+					-- should cause bot to add the item to the trade window.
+					hSMSG_TRADE_STATUS({status=TRADE_STATUS_OPEN_WINDOW})
+				else
+					send(CMSG_INITIATE_TRADE, {guid=STATE.leader.guid})
+				end
+			end}
 		end
 	end
+	return nil
+end
+
+local function itemClick(t, button)
+	--print(dump(package))
+	local info = getClickInfo(t, button)
+	if(info) then
+		info.f()
+	end
+end
+
+function invHandleClickEvent(event)
+	for tal,t in pairs(itemIcons) do
+		if(pointIsInRect(event.button.x, event.button.y, t.r)) then
+			itemClick(t, event.button.button)
+		end
+	end
+end
+
+local function hexSub(s, a)
+	return tonumber('0x'..s:sub(a,a+1))
+end
+
+local function h(s)	-- hexStringToSDL_Color
+	return SDL_Color(hexSub(s,1), hexSub(s,3), hexSub(s,5), 0xff)
+end
+
+local ITEM_QUALITY = {
+	[0] = { color = h("9d9d9d"), name = "Poor" },
+	[1] = { color = h("ffffff"), name = "Common" },
+	[2] = { color = h("1eff00"), name = "Uncommon" },
+	[3] = { color = h("0080ff"), name = "Rare" },
+	[4] = { color = h("a335ee"), name = "Epic" },
+	[5] = { color = h("ff8000"), name = "Legendary" },
+	[6] = { color = h("ff0000"), name = "Artifact" },
+	[7] = { color = h("e6cc80"), name = "Bind to Account" },
+}
+
+function drawInvWindow()
+	--print("drawInvWindow")
+	-- the black
+	SDL.SDL_FillRect(gSurface, SDL_Rect(0, 0, gSurface.w, gSurface.h), 0)
+
+	-- icon icons
+	local mouseOverItem = nil
+	for o, t in pairs(itemIcons) do
+
+		if(pointIsInRect(gMouseX, gMouseY, t.r)) then
+			assert(mouseOverItem == nil)	-- seems to fail for no reason, not really critical.
+			mouseOverItem = t
+		end
+
+		-- border
+		local itemId = t.proto.itemId
+		local borderColor
+		if(PERMASTATE.shouldLoot[itemId]) then
+			borderColor = 0xffff00	-- yellow
+		elseif(STATE.itemsToSell[itemId]) then
+			borderColor = 0x00ff00	-- bright green
+		end
+		if(borderColor) then
+			local r = SDL_Rect(t.r.x-2, t.r.y-2, t.r.w+4, t.r.h+4)
+			SDL.SDL_FillRect(gSurface, r, borderColor)
+		end
+
+		-- icon
+		SDL.SDL_UpperBlitScaled(t.icon, nil, gSurface, t.r)
+
+		-- count label
+		if(t.stackCount > 1) then
+			drawText(tostring(t.stackCount), SDL_brightGreen, t.r.x+t.r.w/1.5, t.r.y+t.r.h/1.5)
+		end
+	end
+
+	-- popup
+	if(mouseOverItem) then
+		local t = mouseOverItem
+		-- calculate position
+		local x = t.r.x + iconSize
+		local y = t.r.y + iconSize*1.5
+		local w = iconSize*8
+		local h = iconSize*3.5
+
+		if(gSurface.w < x + w) then
+			x = gSurface.w - (w + iconSize)
+		end
+		if(gSurface.h < y + h) then
+			y = y - (h + iconSize*2)
+		end
+
+		-- border
+		SDL.SDL_FillRect(gSurface, SDL_Rect(x-3, y-3, w+6, h+6), 0xffffffff)
+		-- inner
+		SDL.SDL_FillRect(gSurface, SDL_Rect(x-2, y-2, w+4, h+4), 0)
+
+		local itemQualityColor = ITEM_QUALITY[t.proto.Quality].color
+
+		local buttonText = ''
+		local l = getClickInfo(t, SDL_BUTTON_LEFT)
+		if(l) then
+			buttonText = buttonText..l.description
+		end
+		buttonText = buttonText.." | "
+		l = getClickInfo(t, SDL_BUTTON_RIGHT)
+		if(l) then
+			buttonText = buttonText..l.description
+		end
+		y = y + drawText(buttonText, SDL_white, x+2, y+2).h
+
+		y = y + drawText(t.proto.name, itemQualityColor, x+2, y+2).h
+		-- TODO: requirements
+		if(#t.proto.description > 0) then
+			drawTextWrap(t.proto.description, SDL_yellow, x+2, y+2, w-4)
+		end
+	end
+end
+
+function onCloseInvWindow()
 end

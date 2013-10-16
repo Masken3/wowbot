@@ -508,6 +508,12 @@ static uint16 genCMSG_QUESTGIVER_QUERY_QUEST(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+static uint16 genCMSG_CANCEL_CHANNELLING(lua_State* L, byte* buf) {
+	GL_START;
+	M(uint32, spellId);
+	GL_END;
+}
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -554,6 +560,7 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_LEARN_TALENT);
 		GEN_CASE(CMSG_LOOT_ROLL);
 		GEN_CASE(CMSG_QUESTGIVER_QUERY_QUEST);
+		GEN_CASE(CMSG_CANCEL_CHANNELLING);
 		default: return NULL;
 	}
 }

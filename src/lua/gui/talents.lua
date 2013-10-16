@@ -15,10 +15,10 @@ local tabHeight = iconSize*8 + (iconSize*marginFraction*10)
 -- functions
 local initializeForm
 local handleResults
+local talentHandleClickEvent
+local drawTalentWindow
 local showModal
 
-local gWindow
-gSurface = false
 local gInitialized
 
 local results = {
@@ -35,7 +35,7 @@ function doTalentWindow()
 	gSurface = SDL.SDL_GetWindowSurface(gWindow)
 	gAvailablePoints = STATE.my.values[PLAYER_CHARACTER_POINTS1] or 0
 	initializeForm()
-	showNonModal()
+	showNonModal(drawTalentWindow, handleResults, talentHandleClickEvent)
 	return true
 end
 
@@ -218,7 +218,7 @@ local gCancelButton = {
 	r = SDL_Rect(tabWidth*2.5, tabHeight + iconSize/2, iconSize*2, iconSize*0.75),
 }
 
-local function drawTalentWindow()
+function drawTalentWindow()
 	--print("drawTalentWindow")
 	-- the black
 	SDL.SDL_FillRect(gSurface, SDL_Rect(0, 0, gSurface.w, gSurface.h), 0)
@@ -312,8 +312,6 @@ local function drawTalentWindow()
 end
 
 -- Set up our event loop
-local gameover
-
 local function onCancel(sender)
 	print("Cancel")
 	gameover = true
@@ -325,64 +323,18 @@ local function onOK(sender)
 	results.ok = true
 end
 
-local function handleEvent(event)
-	local etype=event.type
-	if etype == SDL.SDL_QUIT then
-		-- close button clicked
-		gameover = true
-		return
-	end
-
-	if etype == SDL.SDL_MOUSEMOTION then
-		gMouseX = event.motion.x
-		gMouseY = event.motion.y
-	end
-
-	if etype == SDL.SDL_MOUSEBUTTONDOWN then
-		for tal,t in pairs(talentIcons) do
-			if(pointIsInRect(event.button.x, event.button.y, t.r)) then
-				talentClick(t, event.button.button)
-			end
-		end
-		if(pointIsInRect(event.button.x, event.button.y, gOkButton.r)) then
-			onOK()
-		end
-		if(pointIsInRect(event.button.x, event.button.y, gCancelButton.r)) then
-			onCancel()
+function talentHandleClickEvent(event)
+	for tal,t in pairs(talentIcons) do
+		if(pointIsInRect(event.button.x, event.button.y, t.r)) then
+			talentClick(t, event.button.button)
 		end
 	end
-
-	if etype == SDL.SDL_KEYDOWN then
-		local sym = event.key.keysym.sym
-		if sym == SDL.SDLK_ESCAPE then
-			-- Escape is pressed
-			gameover = true
-			return
-		end
+	if(pointIsInRect(event.button.x, event.button.y, gOkButton.r)) then
+		onOK()
 	end
-end
-
-local function checkEvents(realTime)
-	--print("checkEvents", realTime)
-	local event = ffi.new("SDL_Event")
-	while((not gameover) and (SDL.SDL_PollEvent(event) == 1)) do
-		handleEvent(event)
-		drawTalentWindow()
-		SDL.SDL_UpdateWindowSurface(gWindow)
+	if(pointIsInRect(event.button.x, event.button.y, gCancelButton.r)) then
+		onCancel()
 	end
-	if(gameover) then
-		SDL.SDL_DestroyWindow(gWindow)
-		gWindow = false
-		handleResults()
-	else
-		setTimer(checkEvents, getRealTime() + 0.1)
-	end
-end
-
-function showNonModal()
-	gameover = false
-	local event = ffi.new("SDL_Event")
-	setTimer(checkEvents, getRealTime() + 0.1)
 end
 
 function showModal()

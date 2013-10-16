@@ -107,7 +107,7 @@ function hSMSG_TRADE_STATUS(p)
 		end)
 		print("giving "..tradeSlot.." items...")
 		send(CMSG_ACCEPT_TRADE, {padding=0})
-	elseif((p.status == TRADE_STATUS_OPEN_WINDOW) and STATE.tradeGiveItems) then
+	elseif((p.status == TRADE_STATUS_OPEN_WINDOW) and next(STATE.tradeGiveItems)) then
 		local tradeSlot = 0
 		investigateInventory(function(o, bagSlot, slot)
 			local itemId = o.values[OBJECT_FIELD_ENTRY]
@@ -121,7 +121,7 @@ function hSMSG_TRADE_STATUS(p)
 			end
 		end)
 		print("giving "..tradeSlot.." items...")
-		STATE.tradeGiveItems = false
+		STATE.tradeGiveItems = {}
 		send(CMSG_ACCEPT_TRADE, {padding=0})
 	elseif(p.status == TRADE_STATUS_TRADE_CANCELED) then
 		print("Trade cancelled!")

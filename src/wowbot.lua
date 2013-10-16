@@ -286,7 +286,7 @@ function hSMSG_GROUP_DESTROYED(p)
 	STATE.inGroup = false;
 end
 function hSMSG_GROUP_LIST(p)
-	print("SMSG_GROUP_LIST", dump(p));
+	--print("SMSG_GROUP_LIST", dump(p));
 	STATE.leader = STATE.knownObjects[p.leaderGuid] or false;
 	STATE.leaderGuid = p.leaderGuid;
 	if(p.memberCount == 0) then
@@ -308,13 +308,17 @@ end
 
 function hSMSG_LOGIN_VERIFY_WORLD(p)
 	print("SMSG_LOGIN_VERIFY_WORLD", dump(p));
-	STATE.myLocation = p;
+	p.position = Position.new(p.position);
+	STATE.myLocation = Location.new(p);
 end
 
 function loginComplete()
 	itemLoginComplete();
 	auraLoginComplete();
-	doTalentWindow();
+
+	-- tests
+	--doTalentWindow();
+	--doInventoryWindow() can't be called yet. see itemLoginComplete().
 end
 
 -- may need reversing.
@@ -624,6 +628,9 @@ function hSMSG_UPDATE_OBJECT(p)
 			if(b.guid == STATE.myGuid) then
 				STATE.my = o;
 				STATE.me = o;
+				if(STATE.myLocation) then
+					o.location = STATE.myLocation;
+				end
 				print("CreateObject me!");
 				questLogin();
 			end

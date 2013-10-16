@@ -208,6 +208,11 @@ function decision(realTime)
 
 	-- don't try following the leader if we don't know where he is.
 	if(STATE.inGroup and STATE.leader and STATE.leader.location.position.x) then
+		if(STATE.currentAction ~= "Following leader") then
+			-- doesn't work for Disenchant effect.
+			print("Cancel channeling...");
+			send(CMSG_CANCEL_CHANNELLING, {spellId=0});
+		end
 		setAction("Following leader");
 		follow(STATE.leader);
 		--local myValues = STATE.my.values;

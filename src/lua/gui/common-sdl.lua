@@ -1,3 +1,12 @@
+
+gMouseX = 0
+gMouseY = 0
+
+-- can only have one window per Lua state (for now)
+gWindow = false
+gSurface = false
+gameover = false
+
 local function initSDL()
 	SDL = rawget(_G, 'SDL') or false
 	if(SDL) then
@@ -35,9 +44,6 @@ local function initSDL()
 end
 initSDL()
 
-gMouseX = 0
-gMouseY = 0
-
 function drawText(text, color, left, top)
 	local s = SDLttf.TTF_RenderText_Solid(gFont, text, color)
 	local r = SDL_Rect(left, top, s.w, s.h)
@@ -69,4 +75,59 @@ end
 function pointIsInRect(x, y, r)
 	return (x >= r.x and x <= r.x+r.w and
 		y >= r.y and y <= r.y+r.h)
+end
+
+
+local drawFunction
+local onCloseFunction
+local handleClickEvent
+
+local function handleEvent(event)
+	local etype=event.type
+	if etype == SDL.SDL_QUIT then
+		-- close button clicked
+		gameover = true
+		return
+	end
+
+	if etype == SDL.SDL_MOUSEMOTION then
+		gMouseX = event.motion.x
+		gMouseY = event.motion.y
+	end
+
+	if etype == SDL.SDL_MOUSEBUTTONDOWN then
+		handleClickEvent(event)
+	end
+
+	if etype == SDL.SDL_KEYDOWN then
+		local sym = event.key.keysym.sym
+		if sym == SDL.SDLK_ESCAPE then
+			-- Escape is pressed
+			gameover = true
+			return
+		end
+	end
+end
+
+local function checkEvents(realTime)
+	--print("checkEvents", realTime)
+	local event = ffi.new("SDL_Event")
+	while((not gameover) and (SDL.SDL_PollEvent(event) == 1)) do
+		handleEvent(event)
+		drawFunction()
+		SDL.SDL_UpdateWindowSurface(gWindow)
+	end
+	if(gameover) then
+		SDL.SDL_DestroyWindow(gWindow)
+		gWindow = false
+		onCloseFunction()
+	else
+		setTimer(checkEvents, getRealTime() + 0.1)
+	end
+end
+
+function showNonModal(d, c, h)
+	drawFunction, onCloseFunction, handleClickEvent = d, c, h
+	gameover = false
+	setTimer(checkEvents, getRealTime() + 0.1)
 end

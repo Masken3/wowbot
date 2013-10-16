@@ -136,6 +136,8 @@ function wantToWear(id, guid, verbose)
 		partyChat("Testing weariness of item "..proto.name.." ("..id..")...");
 	end
 
+	-- TODO: tanks shouldn't wear 2-handers or off-hand items that aren't shields.
+
 	-- if it's not equipment, we can't wear it.
 	local slots = itemEquipSlot(proto);
 	if(not slots) then
