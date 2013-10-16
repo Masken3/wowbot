@@ -1,4 +1,6 @@
 
+-- callback(realTime)
+-- targetTime is in seconds, comparable to getRealTime().
 function setTimer(callback, targetTime)
 	--print("setTimer", debug.getinfo(callback).name, targetTime)
 	if(STATE.inTimerCallback) then

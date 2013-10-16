@@ -35,8 +35,8 @@ function doTalentWindow()
 	gSurface = SDL.SDL_GetWindowSurface(gWindow)
 	gAvailablePoints = STATE.my.values[PLAYER_CHARACTER_POINTS1] or 0
 	initializeForm()
-	showModal()
-	handleResults()
+	showNonModal()
+	return true
 end
 
 local function talentRank(talent)
@@ -362,6 +362,29 @@ local function handleEvent(event)
 	end
 end
 
+local function checkEvents(realTime)
+	--print("checkEvents", realTime)
+	local event = ffi.new("SDL_Event")
+	while((not gameover) and (SDL.SDL_PollEvent(event) == 1)) do
+		handleEvent(event)
+		drawTalentWindow()
+		SDL.SDL_UpdateWindowSurface(gWindow)
+	end
+	if(gameover) then
+		SDL.SDL_DestroyWindow(gWindow)
+		gWindow = false
+		handleResults()
+	else
+		setTimer(checkEvents, getRealTime() + 0.1)
+	end
+end
+
+function showNonModal()
+	gameover = false
+	local event = ffi.new("SDL_Event")
+	setTimer(checkEvents, getRealTime() + 0.1)
+end
+
 function showModal()
 	gameover = false
 	local event = ffi.new("SDL_Event")
@@ -377,4 +400,5 @@ function showModal()
 		end
 	end
 	SDL.SDL_DestroyWindow(gWindow)
+	gWindow = false
 end
