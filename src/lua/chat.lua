@@ -63,16 +63,18 @@ local function dropAllItems(p)
 	reply(p, msg)
 end
 
-local function baseListItems(p, name, investigateFunction)
+local function baseListItems(p, name, investigateFunction, testFunction)
 	local msg = name..': '
 	local items = {}
 	local freeSlotCount = investigateFunction(function(o)
 		local id = o.values[OBJECT_FIELD_ENTRY]
-		local count = o.values[ITEM_FIELD_STACK_COUNT]
-		if(count > 1) then
-			items[id] = (items[id] or 0) + count
-		else
-			msg = msg..itemLink(o).." ("..id..")\n"
+		if((not testFunction) or testFunction(id)) then
+			local count = o.values[ITEM_FIELD_STACK_COUNT]
+			if(count > 1) then
+				items[id] = (items[id] or 0) + count
+			else
+				msg = msg..itemLink(o).." ("..id..")\n"
+			end
 		end
 	end)
 	for id,count in pairs(items) do
@@ -88,6 +90,12 @@ end
 
 local function listBankItems(p)
 	baseListItems(p, 'Bank', investigateBank)
+end
+
+local function listQuestItems(p)
+	baseListItems(p, 'Inventory', investigateInventory, function(id)
+		return hasQuestForItem(id)
+	end)
 end
 
 local function listMoney(p)
@@ -568,8 +576,10 @@ function handleChatMessage(p)
 		dropQuest(p)
 	elseif(p.text == 'li') then
 		listItems(p)
-	elseif(p.text == 'dai') then
-		dropAllItems(p)
+	elseif(p.text == 'lqi') then
+		listQuestItems(p)
+	--elseif(p.text == 'dai') then
+		--dropAllItems(p)
 	elseif(p.text:startWith('drop ')) then
 		dropItem(p)
 	elseif(p.text == 'lm') then

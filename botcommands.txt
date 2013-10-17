@@ -5,6 +5,7 @@ These are chat commands that bots will respond to:
 * aqg <off|on>	AutoQuestGet off or on. Default is on.
 * gq	Get Quests, from commander's target. Only useful when agq off.
 * li	List Items
+* lqi	List Quest Items.
 * dai	Drop All Items. (except equipped items). Use only for debugging.
 * drop <itemId>	Drop items with the specified id.
 * lm	List Money

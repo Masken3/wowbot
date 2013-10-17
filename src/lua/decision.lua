@@ -419,7 +419,7 @@ end
 
 local function wantToLoot(itemId)
 	if(PERMASTATE.shouldLoot[itemId]) then return true; end
-	return hasQuestForItem(itemId);
+	return needsItemForQuest(itemId);
 end
 
 function hSMSG_LOOT_RESPONSE(p)

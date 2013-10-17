@@ -197,7 +197,7 @@ function hSMSG_QUESTGIVER_STATUS(p)
 	end
 end
 
-function hasQuestForItem(itemId)
+function questItemCheck(itemId, objectiveTestFunction)
 	-- check every quest
 	--print("finding quests for item "..itemId.."...");
 	for i=PLAYER_QUEST_LOG_1_1,PLAYER_QUEST_LOG_LAST_1,3 do
@@ -206,7 +206,7 @@ function hasQuestForItem(itemId)
 		if(questId and (questId > 0) and ((not state) or (bit32.band(state, 0xFF) == QUEST_STATE_NONE))) then
 			--print("checking active quest "..questId..": ", dump(STATE.knownQuests[questId].objectives));
 			for j, o in ipairs(STATE.knownQuests[questId].objectives) do
-				if((o.itemId == itemId) and itemInventoryCountById(itemId)) then
+				if((o.itemId == itemId) and objectiveTestFunction(o)) then
 					print("found quest "..questId);
 					return true;
 				end
@@ -215,4 +215,16 @@ function hasQuestForItem(itemId)
 	end
 	--print("none found.");
 	return false;
+end
+
+function needsItemForQuest(itemId)
+	return questItemCheck(itemId, function(o)
+		return itemInventoryCountById(itemId) < o.itemCount;
+	end);
+end
+
+function hasQuestForItem(itemId)
+	return questItemCheck(itemId, function(o)
+		return true;
+	end);
 end
