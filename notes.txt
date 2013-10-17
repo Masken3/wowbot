@@ -99,6 +99,7 @@ If not in combat:
 
 * Looting
 ** Loot whatever is useful for your professions and quests.
+** Loot quest-starter items.
 ** In round-robin styles, be sure to at least open every corpse, to make it FFA for the others.
 ** Loot class-specific items for your class.
 ** Other items (trash, whites, greens+) should be left for the leader.

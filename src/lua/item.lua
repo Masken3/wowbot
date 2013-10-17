@@ -713,6 +713,13 @@ function itemLink(o)
 	return link;
 end
 
+function itemLinkFromId(id)
+	--|cffffffff|Hitem:2886:0:0:0|h[Crag Boar Rib]|h|r
+	local proto = itemProtoFromId(id);
+	local link = "|cff"..itemColors[proto.Quality].."|H"..id..":0:0:0|h["..proto.name.."]|h|r";
+	return link;
+end
+
 function isFishingPole(o)
 	local proto = itemProtoFromId(o.values[OBJECT_FIELD_ENTRY]);
 	return (proto.itemClass == ITEM_CLASS_WEAPON and

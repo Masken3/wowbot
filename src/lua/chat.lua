@@ -63,26 +63,31 @@ local function dropAllItems(p)
 	reply(p, msg)
 end
 
-local function listItems(p)
-	local msg = 'Inventory: '
-	local freeSlotCount = investigateInventory(function(o)
+local function baseListItems(p, name, investigateFunction)
+	local msg = name..': '
+	local items = {}
+	local freeSlotCount = investigateFunction(function(o)
 		local id = o.values[OBJECT_FIELD_ENTRY]
-		local proto = itemProtoFromId(id)
-		msg = msg..itemLink(o).." ("..id..') x'..o.values[ITEM_FIELD_STACK_COUNT].."\n"
+		local count = o.values[ITEM_FIELD_STACK_COUNT]
+		if(count > 1) then
+			items[id] = (items[id] or 0) + count
+		else
+			msg = msg..itemLink(o).." ("..id..")\n"
+		end
 	end)
+	for id,count in pairs(items) do
+		msg = msg..itemLinkFromId(id).." ("..id..") x"..count.."\n"
+	end
 	msg = msg..freeSlotCount.." slots free."
 	reply(p, msg)
 end
 
+local function listItems(p)
+	baseListItems(p, 'Inventory', investigateInventory)
+end
+
 local function listBankItems(p)
-	local msg = 'Bank: '
-	local freeSlotCount = investigateBank(function(o)
-		local id = o.values[OBJECT_FIELD_ENTRY]
-		local proto = itemProtoFromId(id)
-		msg = msg..itemLink(o).." ("..id..') x'..o.values[ITEM_FIELD_STACK_COUNT].."\n"
-	end)
-	msg = msg..freeSlotCount.." slots free."
-	reply(p, msg)
+	baseListItems(p, 'Bank', investigateBank)
 end
 
 local function listMoney(p)
@@ -449,7 +454,7 @@ local function skills(p)
 		local skillLine = cSkillLine(skillId)
 		if(skillLine) then
 			local val, max = skillLevelByIndex(idx)
-			msg = msg..skillLine.name..": "..tostring(val).."/"..tostring(max).."\n"
+			msg = msg..skillId..", "..skillLine.name..": "..tostring(val).."/"..tostring(max).."\n"
 		end
 	end
 	reply(p, msg)
