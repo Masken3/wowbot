@@ -201,9 +201,15 @@ function decision(realTime)
 				return false;
 			end
 		end)
-		if(not found) then
+		if(found) then
+			return;
+		else
 			STATE.disenchantItems = false;
 		end
+	end
+
+	if(doBags()) then
+		return;
 	end
 
 	-- don't try following the leader if we don't know where he is.
@@ -221,6 +227,81 @@ function decision(realTime)
 		return;
 	end
 	setAction("Noting to do...");
+end
+
+function doBags()
+	if(not STATE.doBags) then
+		return false;
+	end
+	-- equip bigger bags.
+	-- find the smallest equipped bag, if we have 4 equipped already.
+	-- then look for bigger unequipped bags. if we find one,
+	-- move all items out of the smaller bag (give error if impossible),
+	-- and replace it.
+	-- TODO: do the same for bank bags.
+	local smallestBag = nil;
+	local bagCount = 0;
+	investigateBags(function(bag, bagSlot, slotCount)
+		bagCount = bagCount + 1;
+		if(not smallestBag or smallestBag.count > slotCount) then
+			smallestBag = {count=slotCount, o=bag, bagSlot=bagSlot};
+		end
+	end);
+	if(bagCount < 4) then
+		return;
+	end
+	local itemsInSmallestBag = {}	-- o:slot
+	local biggestBag = nil;
+	local freeSlots = {} -- array:{bagSlot,slot}
+	local freeSlotCount = 0;
+	local itemsInSmallestBagCount = 0;
+	investigateInventory(function(o, bagSlot, slot)
+		if(bagSlot == smallestBag.bagSlot) then
+			itemsInSmallestBagCount = itemsInSmallestBagCount + 1;
+			itemsInSmallestBag[o] = slot;
+		end
+		local proto = itemProtoFromId(o.values[OBJECT_FIELD_ENTRY]);
+		if(not proto) then
+			return false;
+		end
+		if(proto.itemClass == ITEM_CLASS_CONTAINER and proto.subClass == ITEM_SUBCLASS_CONTAINER) then
+			local count = o.values[CONTAINER_FIELD_NUM_SLOTS];
+			if(count > smallestBag.count and ((not biggestBag) or (biggestBag.count < count))) then
+				biggestBag = {o=o, bagSlot=bagSlot, slot=slot, count=count};
+			end
+		end
+	end, function(bagSlot, slot)
+		if(bagSlot == smallestBag.bagSlot) then
+			return;
+		end
+		freeSlotCount = freeSlotCount + 1
+		freeSlots[freeSlotCount] = {bagSlot=bagSlot, slot=slot};
+	end);
+	if(not biggestBag) then
+		return false;
+	end
+	if(itemsInSmallestBagCount > freeSlotCount) then
+		print("ERR: Can't swap bags; not enough free space: "..itemsInSmallestBagCount.." > "..freeSlotCount);
+		-- this should encourage user to remedy the problem.
+		return true;
+	end
+	local i = 0;
+	for o,slot in pairs(itemsInSmallestBag) do
+		i = i + 1;
+		send(CMSG_SWAP_ITEM, {dstbag=freeSlots[i].bagSlot, dstslot=freeSlots[i].slot,
+			srcbag=smallestBag.bagSlot, srcslot=slot});
+	end
+	print(biggestBag.o.guid:hex()..", "..smallestBag.bagSlot);
+	send(CMSG_AUTOEQUIP_ITEM_SLOT, {itemGuid=biggestBag.o.guid, dstSlot=smallestBag.bagSlot});
+
+	-- avoid spam repeats
+	STATE.doBags = false;
+	STATE.my.updateValuesCallbacks["doBags"] = function()
+		STATE.doBags = true;
+	end
+
+	partyChat(itemLink(biggestBag.o)..">"..itemLink(smallestBag.o));
+	return true;
 end
 
 -- returns the id of the spell (with the lowest skillValue) (we have reagents for).

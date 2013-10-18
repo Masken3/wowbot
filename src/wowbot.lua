@@ -84,6 +84,8 @@ if(rawget(_G, 'STATE') == nil) then
 
 		currentAction = false,
 
+		doBags = true,
+
 		myLocation = Location.new(),	-- set by hSMSG_LOGIN_VERIFY_WORLD.
 		my = false,	-- KnownObject.
 		me = false,	-- == my.

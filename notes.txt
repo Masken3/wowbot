@@ -254,3 +254,4 @@ For inventory UI:
 Todo:
 * setAction quiet, except for gathering?
 * timeout and automatic retry for connect and auth.
+* Rearrange items to equip bigger bags.

@@ -568,8 +568,14 @@ function handleItemPush(p)
 end
 
 function maybeEquip(itemGuid, verbose)
-	if(not itemGuid) then return false; end
-	if(not STATE.knownObjects[itemGuid]) then return false; end
+	if(not itemGuid) then
+		print("WARN: maybeEquip(nil)");
+		return false;
+	end
+	if(not STATE.knownObjects[itemGuid]) then
+		print("WARN: maybeEquip(unknown["..itemGuid:hex().."])");
+		return false;
+	end
 	local id = itemIdOfGuid(itemGuid);
 	if(not itemProtoFromId(id)) then
 		STATE.itemDataCallbacks[itemGuid] = maybeEquip;
@@ -610,20 +616,23 @@ end
 
 local function baseInvestigate(directField1, directFieldLast,
 	directBagSlot, directItemSlotStart,
-	bagField1, bagFieldLast, bagSlotStart, f)
+	bagField1, bagFieldLast, bagSlotStart, f, emptySlotFunction)
 	local freeSlotCount = 0;
 	-- backpack
 	for i = directField1, directFieldLast, 2 do
 		local guid = guidFromValues(STATE.me, i);
+		local bagSlot = directBagSlot;
+		local slot = directItemSlotStart + ((i - directField1) / 2);
 		if(isValidGuid(guid)) then
 			local o = STATE.knownObjects[guid];
 			if(o) then
-				local bagSlot = directBagSlot;
-				local slot = directItemSlotStart + ((i - directField1) / 2);
 				local res = f(o, bagSlot, slot);
 				if(res == false) then return; end
 			end
 		else
+			if(emptySlotFunction) then
+				emptySlotFunction(bagSlot, slot);
+			end
 			freeSlotCount = freeSlotCount + 1;
 		end
 	end
@@ -632,14 +641,17 @@ local function baseInvestigate(directField1, directFieldLast,
 		--print(slotCount);
 		for j = 0, slotCount, 1 do
 			local guid = guidFromValues(bag, CONTAINER_FIELD_SLOT_1 + (j*2))
+			local slot = j;
 			if(isValidGuid(guid)) then
 				local o = STATE.knownObjects[guid];
 				if(o) then
-					local slot = j;
 					local res = f(o, bagSlot, slot);
 					if(res == false) then return; end
 				end
 			else
+				if(emptySlotFunction) then
+					emptySlotFunction(bagSlot, slot);
+				end
 				freeSlotCount = freeSlotCount + 1;
 			end
 		end
@@ -652,26 +664,26 @@ function countFreeSlots()
 end
 
 function countFreeBankSlots()
-	return investigateInventory(function()end)
+	return investigateBank(function()end)
 end
 
-function investigateInventory(f)
+function investigateInventory(f, emptySlotFunction)
 	return baseInvestigate(PLAYER_FIELD_PACK_SLOT_1, PLAYER_FIELD_PACK_SLOT_LAST,
 		INVENTORY_SLOT_BAG_0, INVENTORY_SLOT_ITEM_START,
 		PLAYER_FIELD_BAG_SLOT_1, PLAYER_FIELD_BAG_SLOT_LAST,
-		INVENTORY_SLOT_BAG_START, f)
+		INVENTORY_SLOT_BAG_START, f, emptySlotFunction)
 end
 
-function investigateBank(f)
+function investigateBank(f, emptySlotFunction)
 	return baseInvestigate(PLAYER_FIELD_BANK_SLOT_1, PLAYER_FIELD_BANK_SLOT_LAST,
 		INVENTORY_SLOT_BAG_0, BANK_SLOT_ITEM_START,
 		PLAYER_FIELD_BANKBAG_SLOT_1, PLAYER_FIELD_BANKBAG_SLOT_LAST,
-		BANK_SLOT_BAG_START, f)
+		BANK_SLOT_BAG_START, f, emptySlotFunction)
 end
 
 function investigateBags(f)
 	baseInvestigateBags(PLAYER_FIELD_BAG_SLOT_1, PLAYER_FIELD_BAG_SLOT_LAST,
-		BANK_SLOT_BAG_START, f)
+		INVENTORY_SLOT_BAG_START, f)
 end
 
 function investigateBankBags(f)
