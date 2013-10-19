@@ -30,7 +30,9 @@ function hSMSG_QUESTGIVER_QUEST_LIST(p)
 	for i,q in ipairs(p.quests) do
 		if((q.icon == DIALOG_STATUS_AVAILABLE) or
 			(q.icon == DIALOG_STATUS_CHAT)) then
-			if(not wantQuest(p)) then
+			if(not wantQuest(q)) then
+				STATE.questGivers[p.guid] = nil;
+				STATE.questFinishers[p.guid] = nil;
 				return;
 			end
 			print("Accpeting quest "..q.title.." ("..q.questId..")...");

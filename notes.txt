@@ -252,6 +252,5 @@ For inventory UI:
 
 19:16 2013-10-10
 Todo:
-* setAction quiet, except for gathering?
 * timeout and automatic retry for connect and auth.
-* Rearrange items to equip bigger bags.
+* Level Enchanting. Needs item targets.

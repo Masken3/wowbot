@@ -131,7 +131,7 @@ for tab in cTalentTabs() do
 		for i,p in ipairs(backgroundParts) do
 			local t = {tab=tab, part=p, i={}}
 			setBackgroundPosition(t)
-			t.img = SDLimage.IMG_Load(cIconRaw("Interface\\TalentFrame\\"..tab.internalName.."-"..p))
+			t.img = getImageFromFile(cIconRaw("Interface\\TalentFrame\\"..tab.internalName.."-"..p))
 			tab.backgroundParts[p] = t
 		end
 		-- talent icons
@@ -154,7 +154,7 @@ for tab in cTalentTabs() do
 				tab.spentPoints = tab.spentPoints + spentPoints
 
 				local t = {
-					img=SDLimage.IMG_Load(cIconRaw(cSpellIcon(spell.spellIconID).icon)),
+					img=getSpellIcon(spell.spellIconID),
 					tab=tab,
 					rankCount=rankCount,
 					spentPoints=spentPoints,
@@ -167,7 +167,7 @@ for tab in cTalentTabs() do
 			end
 		end
 		-- tab icon
-		tab.icon = SDLimage.IMG_Load(cIconRaw(cSpellIcon(tab.spellIcon).icon))
+		tab.icon = getSpellIcon(tab.spellIcon)
 	end
 end
 end	--initializeForm

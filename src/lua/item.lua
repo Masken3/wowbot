@@ -52,8 +52,11 @@ function doCallbacks(callbacks)
 	local set = {}
 	local count = 0;
 	for p, f in pairs(callbacks) do
-		set[p] = true;
+		set[p] = f;
+	end
+	for p, f in pairs(set) do
 		count = count + 1;
+		--print("type: ", p, type(f))
 		f(p);
 	end
 	--print(count.." callbacks called.");
@@ -472,7 +475,12 @@ end
 function itemLoginComplete()
 	-- fetch item info for all equipped items.
 	--print("Equipped items:");
+
 	--STATE.itemDataCallbacks["temp"] = doInventoryWindow;
+
+	-- Engineering
+	--STATE.itemDataCallbacks[cSkillLine(202)] = doProfessionWindow;
+
 	for i = EQUIPMENT_SLOT_START, EQUIPMENT_SLOT_END-1 do
 		local equippedGuid = equipmentInSlot(i);
 		if(equippedGuid) then

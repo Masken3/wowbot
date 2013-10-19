@@ -95,6 +95,9 @@ function newGameObject(o, info)
 	if(STATE.fishing and info.type == GAMEOBJECT_TYPE_FISHINGNODE) then
 		print("Found Fishing bobber "..o.guid:hex());
 		STATE.fishingBobber = o;
+		-- TODO: if we're targeting a fishing hole and the bobber is not close enough,
+		-- remove it.
+
 		--[[
 		if(guidFromValues(o, OBJECT_FIELD_CREATED_BY) == STATE.myGuid) then
 			STATE.fishingBobber = o;

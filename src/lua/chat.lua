@@ -520,6 +520,13 @@ local function inventory(p)
 	doInventoryWindow()
 end
 
+local function profession(p)
+	local skillId = tonumber(p.text:sub(3))
+	local skillLine = cSkillLine(skillId)
+	reply(p, "Opening profession window for "..skillLine.name.."...")
+	doProfessionWindow(skillLine)
+end
+
 local function autoQuestGet(p)
 	local state = p.text:sub(5)
 	if(state == "off") then
@@ -648,6 +655,8 @@ function handleChatMessage(p)
 		report(p)
 	elseif(p.text == 'i') then
 		inventory(p)
+	elseif(p.text:startWith('p ')) then
+		profession(p)
 	else
 		return
 	end

@@ -42,10 +42,11 @@ These are chat commands that bots will respond to:
 * equip <itemId>	Equip the item, if it's better. Verbose comparison.
 
 * n		Open talents window.
-	This window freezes all bot activity while open. Use it only in safe places.
 
 * i		Open inventory window.
-	Window does not freeze, but it must be reopened to update the list of items.
+	Window must be reopened to update the list of items.
+
+* p <skillId>		Open profession window.
 
 * aggro type	Become aggressive against all creatures of the type of commander's target.
 	If not doing anything else, attack the nearest one.

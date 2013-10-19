@@ -18,6 +18,7 @@ SUBFILES = {
 	'gui/talents.lua',
 	'spell_threat.lua',
 	'gui/inventory.lua',
+	'gui/profession.lua',
 }
 for i,f in ipairs(SUBFILES) do
 	--print(i, f)

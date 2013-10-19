@@ -160,7 +160,6 @@ function decision(realTime)
 	end
 
 	if(STATE.fishing) then
-		setAction("fishing...");
 		doFish(realTime);
 		return;
 	end
@@ -215,9 +214,9 @@ function decision(realTime)
 	-- don't try following the leader if we don't know where he is.
 	if(STATE.inGroup and STATE.leader and STATE.leader.location.position.x) then
 		if(STATE.currentAction ~= "Following leader") then
-			-- doesn't work for Disenchant effect.
-			print("Cancel channeling...");
-			send(CMSG_CANCEL_CHANNELLING, {spellId=0});
+			print("Cancel cast...");
+			-- ought to cancel any spell currently being cast.
+			send(CMSG_CANCEL_CAST, {spellId=0});
 		end
 		setAction("Following leader");
 		follow(STATE.leader);
@@ -304,6 +303,33 @@ function doBags()
 	return true;
 end
 
+function getItemCounts()
+	local itemCounts = {};
+	investigateInventory(function(o)
+		local itemId = o.values[OBJECT_FIELD_ENTRY];
+		itemCounts[itemId] = (itemCounts[itemId] or 0) + o.values[ITEM_FIELD_STACK_COUNT];
+	end)
+	return itemCounts;
+end
+
+-- return the number of times one could cast the spell, given the available reagents.
+-- or false.
+function haveReagents(itemCounts, s)
+	local haveAllReagents = true;
+	local minMulti = 1000;
+	for i,r in ipairs(s.reagent) do
+		if(r.count > 0) then
+			if((itemCounts[r.id] or 0) < r.count) then
+				haveAllReagents = false;
+			else
+				local multi = math.floor(itemCounts[r.id] / r.count);
+				if(multi < minMulti) then minMulti = multi; end
+			end
+		end
+	end
+	return haveAllReagents and (minMulti ~= 1000) and minMulti;
+end
+
 -- returns the id of the spell (with the lowest skillValue) (we have reagents for).
 function haveReagentsFor(o)
 	local goId = o.values[OBJECT_FIELD_ENTRY];
@@ -314,23 +340,14 @@ function haveReagentsFor(o)
 	local spells = STATE.focusTypes[focusId];
 	assert(spells);
 	-- todo: maintain itemCounts, so we don't have to investigateInventory so often.
-	local itemCounts = {};
-	investigateInventory(function(o)
-		local itemId = o.values[OBJECT_FIELD_ENTRY];
-		itemCounts[itemId] = (itemCounts[itemId] or 0) + o.values[ITEM_FIELD_STACK_COUNT];
-	end)
+	local itemCounts = getItemCounts();
 	local lowSpell;
-	local lowValue;
+	local lowValue = 1000;	-- higher than any skill level.
 	for id,s in pairs(spells) do
-		local haveAllReagents = true;
-		for i,r in ipairs(s.reagent) do
-			if(r.count > 0 and (itemCounts[r.id] or 0) < r.count) then
-				haveAllReagents = false;
-			end
-		end
+		local haveAllReagents = haveReagents(itemCounts, s);
 		if(haveAllReagents) then
 			local val = cSkillLineAbilityBySpell(id).minValue;
-			if(val > (lowValue or 0)) then
+			if(val < lowValue) then
 				lowValue = val;
 				lowSpell = s;
 			end

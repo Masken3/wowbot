@@ -8,6 +8,15 @@ function skillLevel(skillId)
 	return nil;
 end
 
+function skillIndex(skillId)
+	for idx=PLAYER_SKILL_INFO_1_1,(PLAYER_SKILL_INFO_1_1+384),3 do
+		if(STATE.my.values[idx] and bit32.band(STATE.my.values[idx], 0xFFFF) == skillId) then
+			return idx;
+		end
+	end
+	return nil;
+end
+
 function skillLevelByIndex(idx)
 	if(not STATE.my.values[idx+1]) then return nil; end
 	local value = bit32.band(STATE.my.values[idx+1], 0xFFFF);	-- base value

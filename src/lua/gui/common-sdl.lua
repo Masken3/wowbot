@@ -36,6 +36,8 @@ local function initSDL()
 	SDL_yellow = SDL_Color(0xff,0xff,0,0xff)
 	SDL_darkGreen = SDL_Color(0,0x80,0,0xff)
 	SDL_black = SDL_Color(0,0,0,0xff)
+	SDL_orange = SDL_Color(0xff,0x80,0,0xff)
+	SDL_gray = SDL_Color(0x9d,0x9d,0x9d,0xff)
 
 	SDL.SDL_Init(SDL_INIT_VIDEO)
 	SDLttf.TTF_Init()
@@ -44,10 +46,36 @@ local function initSDL()
 end
 initSDL()
 
-function drawText(text, color, left, top)
-	local s = SDLttf.TTF_RenderText_Solid(gFont, text, color)
+local function hexSub(s, a)
+	return tonumber('0x'..s:sub(a,a+1))
+end
+
+local function h(s)	-- hexStringToSDL_Color
+	return SDL_Color(hexSub(s,1), hexSub(s,3), hexSub(s,5), 0xff)
+end
+
+ITEM_QUALITY = {
+	[0] = { color = h("9d9d9d"), name = "Poor" },
+	[1] = { color = h("ffffff"), name = "Common" },
+	[2] = { color = h("1eff00"), name = "Uncommon" },
+	[3] = { color = h("0080ff"), name = "Rare" },
+	[4] = { color = h("a335ee"), name = "Epic" },
+	[5] = { color = h("ff8000"), name = "Legendary" },
+	[6] = { color = h("ff0000"), name = "Artifact" },
+	[7] = { color = h("e6cc80"), name = "Bind to Account" },
+}
+
+function drawText(text, color, left, top, backgroundColor)
+	backgroundColor = backgroundColor or 0
+	local s = SDLttf.TTF_RenderText_Solid(gFont, tostring(text), color)
 	local r = SDL_Rect(left, top, s.w, s.h)
-	SDL.SDL_FillRect(gSurface, r, 0)
+	if(backgroundColor) then
+		if(type(backgroundColor) == "function") then
+			backgroundColor(r)
+		else
+			SDL.SDL_FillRect(gSurface, r, backgroundColor)
+		end
+	end
 	SDL.SDL_UpperBlit(s, nil, gSurface, r)
 	SDL.SDL_FreeSurface(s)
 	return r
@@ -61,7 +89,8 @@ function drawTextWrap(text, color, left, top, w)
 	return r
 end
 
-function drawButton(b)
+function drawButton(b, textColor)
+	textColor = textColor or SDL_brightGreen
 	local r = SDL_Rect(b.r)
 	SDL.SDL_FillRect(gSurface, r, 0x00ff00)
 	r.x=r.x+2
@@ -69,7 +98,7 @@ function drawButton(b)
 	r.w=r.w-4
 	r.h=r.h-4
 	SDL.SDL_FillRect(gSurface, r, 0)
-	drawText(b.caption, SDL_brightGreen, r.x+2, r.y+2)
+	drawText(b.caption, textColor, r.x+2, r.y+2)
 end
 
 function pointIsInRect(x, y, r)
@@ -77,10 +106,29 @@ function pointIsInRect(x, y, r)
 		y >= r.y and y <= r.y+r.h)
 end
 
+-- save and reuse known images.
+local iconImages = {}	-- name:SDL_Surface
+function getImageFromFile(name)
+	local icon = iconImages[name]
+	if(not icon) then
+		icon = SDLimage.IMG_Load(name)
+		iconImages[name] = icon
+	end
+	return icon
+end
+function getItemIcon(proto)
+	return getImageFromFile(cIcon(cItemDisplayInfo(proto.DisplayInfoID).icon))
+end
+function getSpellIcon(spellIconID)
+	return getImageFromFile(cIconRaw(cSpellIcon(spellIconID).icon))
+end
+
 
 local drawFunction
 local onCloseFunction
 local handleClickEvent
+local handleKeyEvent
+local handleMouseUpEvent
 
 local function handleEvent(event)
 	local etype=event.type
@@ -99,12 +147,19 @@ local function handleEvent(event)
 		handleClickEvent(event)
 	end
 
+	if etype == SDL.SDL_MOUSEBUTTONUP and handleMouseUpEvent then
+		handleMouseUpEvent(event)
+	end
+
 	if etype == SDL.SDL_KEYDOWN then
 		local sym = event.key.keysym.sym
 		if sym == SDL.SDLK_ESCAPE then
 			-- Escape is pressed
 			gameover = true
 			return
+		end
+		if(handleKeyEvent) then
+			handleKeyEvent(event, sym)
 		end
 	end
 end
@@ -126,8 +181,24 @@ local function checkEvents(realTime)
 	end
 end
 
-function showNonModal(d, c, h)
-	drawFunction, onCloseFunction, handleClickEvent = d, c, h
+function showNonModal(d, c, h, k, u)
+	drawFunction, onCloseFunction, handleClickEvent,
+		handleKeyEvent, handleMouseUpEvent =
+		d, c, h, k, u
 	gameover = false
 	setTimer(checkEvents, getRealTime() + 0.1)
+end
+
+local sAlphaFillRects = {}	-- string:SDL_surface
+
+-- impossible to alpha-blend rect without SDL_render.
+-- unless you create a temporary surface and blit it.
+-- this function caches surfaces created. color format: RGBA.
+function sdlAlphaFillRect(surface, r, color)
+	local id = tostring(r.w).."x"..r.h.." "..color
+	if(not sAlphaFillRects[id]) then
+		sAlphaFillRects[id] = SDL.SDL_CreateRGBSurface(0,r.w,r.h,32,0,0,0, 0xff)
+		SDL.SDL_FillRect(sAlphaFillRects[id], SDL_Rect(0,0,r.w,r.h), color)
+	end
+	SDL.SDL_UpperBlit(sAlphaFillRects[id], nil, gSurface, r)
 end

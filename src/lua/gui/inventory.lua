@@ -13,8 +13,6 @@ local invHandleClickEvent
 local itemIcons = {}	-- o:t
 local slotSquare
 
-local iconImages = {}	-- name:SDL_Surface
-
 function doInventoryWindow()
 	if(gWindow) then
 		return false
@@ -49,13 +47,7 @@ function initializeItemForm()
 		local proto = itemProtoFromId(itemId)
 		assert(proto);
 
-		-- save and reuse known images.
-		local iconName = cIcon(cItemDisplayInfo(proto.DisplayInfoID).icon)
-		local icon = iconImages[iconName]
-		if(not icon) then
-			icon = SDLimage.IMG_Load(iconName)
-			iconImages[iconName] = icon
-		end
+		local icon = getItemIcon(proto)
 
 		local stackCount = o.values[ITEM_FIELD_STACK_COUNT]
 
@@ -142,25 +134,6 @@ function invHandleClickEvent(event)
 		end
 	end
 end
-
-local function hexSub(s, a)
-	return tonumber('0x'..s:sub(a,a+1))
-end
-
-local function h(s)	-- hexStringToSDL_Color
-	return SDL_Color(hexSub(s,1), hexSub(s,3), hexSub(s,5), 0xff)
-end
-
-local ITEM_QUALITY = {
-	[0] = { color = h("9d9d9d"), name = "Poor" },
-	[1] = { color = h("ffffff"), name = "Common" },
-	[2] = { color = h("1eff00"), name = "Uncommon" },
-	[3] = { color = h("0080ff"), name = "Rare" },
-	[4] = { color = h("a335ee"), name = "Epic" },
-	[5] = { color = h("ff8000"), name = "Legendary" },
-	[6] = { color = h("ff0000"), name = "Artifact" },
-	[7] = { color = h("e6cc80"), name = "Bind to Account" },
-}
 
 function drawInvWindow()
 	--print("drawInvWindow")

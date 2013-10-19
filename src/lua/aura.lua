@@ -61,6 +61,30 @@ function GetMaxPositiveAuraModifier(target, auraType)
 	return modifier;
 end
 
+function GetMaxPositiveAuraModifierWithMisc(target, auraType, miscValue)
+	local modifier = 0;
+	investigateAuraEffects(target, function(e, level)
+		--print(e.applyAuraName, e.miscValue)
+		if(e.applyAuraName == auraType and e.miscValue == miscValue) then
+			modifier = math.max(modifier, calcAvgEffectPoints(level, e));
+		end
+	end)
+	return modifier;
+end
+
+function GetMaxPassiveAuraModifierWithMisc(auraType, miscValue)
+	local modifier = 0;
+	for id, s in pairs(STATE.knownSpells) do
+		local level = spellLevel(s);
+		for i,e in ipairs(s.effect) do
+			if(e.applyAuraName == auraType and e.miscValue == miscValue) then
+				modifier = math.max(modifier, calcAvgEffectPoints(level, e));
+			end
+		end
+	end
+	return modifier;
+end
+
 function hSMSG_SET_EXTRA_AURA_INFO(p)
 	--print("SMSG_SET_EXTRA_AURA_INFO", dump(p));
 	if(STATE.stealthSpell and (p.spellId == STATE.stealthSpell.id)) then
