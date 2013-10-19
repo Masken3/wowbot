@@ -14,11 +14,25 @@ function getQuests(giver)
 	end
 end
 
+local function wantQuest(p)
+	if(p.title:find('Donation')) then
+		local npcId = STATE.knownObjects[p.guid].values[OBJECT_FIELD_ENTRY];
+		partyChat("Avoiding npc="..npcId);
+		PERMASTATE.avoidQuestGivers[npcId] = true;
+		saveState();
+		return false;
+	end
+	return true;
+end
+
 function hSMSG_QUESTGIVER_QUEST_LIST(p)
 	print("SMSG_QUESTGIVER_QUEST_LIST", p.guid:hex(), p.title);
 	for i,q in ipairs(p.quests) do
 		if((q.icon == DIALOG_STATUS_AVAILABLE) or
 			(q.icon == DIALOG_STATUS_CHAT)) then
+			if(not wantQuest(p)) then
+				return;
+			end
 			print("Accpeting quest "..q.title.." ("..q.questId..")...");
 			send(CMSG_QUESTGIVER_ACCEPT_QUEST, {guid=p.guid, questId=q.questId});
 		end
@@ -49,11 +63,7 @@ function hSMSG_QUESTGIVER_OFFER_REWARD(p)
 	if(not p._quiet) then
 		print("SMSG_QUESTGIVER_OFFER_REWARD", dump(p));
 	end
-	if(p.title:find('Donation')) then
-		local npcId = STATE.knownObjects[p.guid].values[OBJECT_FIELD_ENTRY];
-		partyChat("Avoiding npc="..npcId);
-		PERMASTATE.avoidQuestGivers[npcId] = true;
-		saveState();
+	if(not wantQuest(p)) then
 		return;
 	end
 	local rewardIndex = nil;
@@ -145,6 +155,9 @@ end
 
 function hSMSG_QUESTGIVER_QUEST_DETAILS(p)
 	print("SMSG_QUESTGIVER_QUEST_DETAILS", dump(p));
+	if(not wantQuest(p)) then
+		return;
+	end
 	send(CMSG_QUESTGIVER_ACCEPT_QUEST, p);
 	partyChat("Accepted quest "..p.questId.." "..p.title);
 	local o = STATE.knownObjects[p.guid];
@@ -197,7 +210,7 @@ function hSMSG_QUESTGIVER_STATUS(p)
 	end
 end
 
-function questItemCheck(itemId, objectiveTestFunction)
+local function questItemCheck(itemId, objectiveTestFunction)
 	-- check every quest
 	--print("finding quests for item "..itemId.."...");
 	for i=PLAYER_QUEST_LOG_1_1,PLAYER_QUEST_LOG_LAST_1,3 do

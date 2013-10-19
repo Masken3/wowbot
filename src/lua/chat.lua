@@ -415,8 +415,7 @@ local function disenchantAll(p)
 	decision()
 end
 
-local function store(p)
-	local itemId = tonumber(p.text:sub(7))
+function storeItemInBank(itemId)
 	local msg = 'Storing items'
 	local count = 0
 	investigateInventory(function(o, bagSlot, slot)
@@ -427,7 +426,12 @@ local function store(p)
 		end
 	end)
 	msg = msg..', total '..count
-	reply(p, msg)
+	return msg
+end
+
+local function store(p)
+	local itemId = tonumber(p.text:sub(7))
+	reply(p, storeItemInBank(itemId))
 end
 
 local function fetch(p)

@@ -476,10 +476,13 @@ local function valueUpdated(o, idx)
 		local msg = "I have "..o.values[idx].."c";
 		if(STATE.myMoney) then
 			local diff = o.values[idx] - STATE.myMoney;
-			if(diff > 0) then msg=msg.." +";
-			else msg=msg.." "; end
-			msg=msg..diff;
-			partyChat(msg);
+			-- small increases are not interesting.
+			if(diff > STATE.myLevel or diff < 0) then
+				if(diff > 0) then msg=msg.." +";
+				else msg=msg.." "; end
+				msg=msg..diff;
+				partyChat(msg);
+			end
 		end
 		STATE.myMoney = o.values[idx];
 	end

@@ -462,6 +462,10 @@ function valueOfItem(id, guid, verbose)
 		end
 	end
 
+	if(v == 0) then
+		return ip.SellPrice;
+	end
+
 	return v;
 end
 

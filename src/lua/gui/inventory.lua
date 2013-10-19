@@ -94,6 +94,10 @@ local function getClickInfo(t, button)
 				PERMASTATE.shouldLoot[itemId] = (not PERMASTATE.shouldLoot[itemId]) or nil
 				saveState()
 			end}
+		elseif(ssShift and (not ssAlt) and (not ssCtrl)) then
+			return {description="Store in bank", f=function()
+				partyChat(storeItemInBank(itemId))
+			end}
 		end
 	elseif(button == SDL_BUTTON_RIGHT) then
 		if(plain) then
