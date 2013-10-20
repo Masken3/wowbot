@@ -60,12 +60,12 @@ function goPos(o)
 end
 
 local goodLocks = {
-	LOCKTYPE_PICKLOCK=true,
-	LOCKTYPE_HERBALISM=true,
-	LOCKTYPE_MINING=true,
-	LOCKTYPE_CALCIFIED_ELVEN_GEMS=true,
-	LOCKTYPE_GAHZRIDIAN=true,
-	LOCKTYPE_FISHING=true,
+	[LOCKTYPE_PICKLOCK]=true,
+	[LOCKTYPE_HERBALISM]=true,
+	[LOCKTYPE_MINING]=true,
+	[LOCKTYPE_CALCIFIED_ELVEN_GEMS]=true,
+	[LOCKTYPE_GAHZRIDIAN]=true,
+	[LOCKTYPE_FISHING]=true,
 }
 
 function canOpenGO(o)
@@ -135,6 +135,7 @@ function haveSkillToOpen(o)
 end
 
 function hSMSG_GAMEOBJECT_CUSTOM_ANIM(p)
+	--print("SMSG_GAMEOBJECT_CUSTOM_ANIM", dump(p));
 	if(STATE.fishingBobber) then-- and STATE.fishingBobber.guid == p.guid) then
 		print("Opening fishingBobber "..p.guid:hex());
 		send(CMSG_GAMEOBJ_USE, {guid=p.guid});
@@ -142,15 +143,24 @@ function hSMSG_GAMEOBJECT_CUSTOM_ANIM(p)
 end
 
 function hSMSG_GAMEOBJECT_DESPAWN_ANIM(p)
-	STATE.openables[p.guid] = nil;
+	--print("SMSG_GAMEOBJECT_DESPAWN_ANIM", dump(p));
+
+	if(STATE.openables[p.guid]) then
+		-- allow this object to be reported again, if it respawns.
+		STATE.openables[p.guid].bot.reported = false;
+
+		STATE.openables[p.guid] = nil;
+	end
 end
 
 function openGameobject(o)
 	local lockIndex = goLockIndex(o);
+	--print("lockIndex:", lockIndex);
+	--print("goodLocks:", dump(goodLocks));
 	if(goodLocks[lockIndex]) then
 		local spell = STATE.openLockSpells[lockIndex];
 		if(spell) then
-			castSpellAtGO(spell, o);
+			castSpellAtGO(spell.id, o);
 		else
 			--partyChat("Don't know any spell to open that object.");
 			partyChat("Can't open lock index "..lockIndex);

@@ -688,12 +688,14 @@ function hSMSG_UPDATE_OBJECT(p)
 			--, dump(o.movement), dump(o.values));
 
 		elseif(b.type == UPDATETYPE_VALUES) then
+			--print("UPDATE_OBJECT", b.guid:hex());
 			updateValues(STATE.knownObjects[b.guid], b);
 			if(b.guid == STATE.myGuid) then
 				--print("UpdateObject me!");
 			end
 			doCallbacks(STATE.knownObjects[b.guid].updateValuesCallbacks);
 		elseif(b.type == UPDATETYPE_MOVEMENT) then
+			--print("UPDATE_MOVEMENT", b.guid:hex());
 			updateMovement(STATE.knownObjects[b.guid], b);
 			if(b.guid == STATE.myGuid) then
 				print("UpdateMovement me!");
@@ -774,10 +776,18 @@ local function learnSpell(id)
 			STATE.fishingSpell = id;
 		end
 		if(e.id == SPELL_EFFECT_OPEN_LOCK) then
-			if(e.implicitTargetA == TARGET_GAMEOBJECT) then
-				--print("OpenLockSpell "..e.miscValue..": "..id);
-				if(STATE.openLockSpells[e.miscValue]) then print("Override!"); end
-				STATE.openLockSpells[e.miscValue] = s;
+			if(e.implicitTargetA == TARGET_GAMEOBJECT or
+				e.implicitTargetA == TARGET_GAMEOBJECT_ITEM)
+			then
+				print("OpenLockSpell "..e.miscValue..": "..id);
+				-- There are some spells (6461 and 6463) that should have been dummied out.
+				-- Only 1804 can actually pick locks.
+				if(e.miscValue == LOCKTYPE_PICKLOCK and s.id ~= 1804) then
+					print("Ignored.");
+				else
+					if(STATE.openLockSpells[e.miscValue]) then print("Override!"); end
+					STATE.openLockSpells[e.miscValue] = s;
+				end
 			end
 		end
 		if((e.id == SPELL_EFFECT_APPLY_AURA) and
