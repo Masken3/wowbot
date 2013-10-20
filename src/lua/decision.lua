@@ -220,7 +220,7 @@ function decision(realTime)
 			if(STATE.disenchantItems[itemId] and
 				(not PERMASTATE.undisenchantable[itemId]))
 			then
-				partyChat("Dis: "..o.guid:hex());
+				partyChat("Dis: "..itemLink(o));
 				-- if disenchant fails, remember that.
 				STATE.currentDisenchant = itemId;
 				castSpellAtItem(STATE.disenchantSpell, o);
