@@ -184,23 +184,26 @@ function drawProfWindow()
 	local sp = sSpells[sSelectedSpell]
 	local s = sp.s
 	local e = s.effect[1]
-	if(e.id ~= SPELL_EFFECT_CREATE_ITEM) then
-		return
+	local spellTextColor
+	local icon
+	if(e.id == SPELL_EFFECT_CREATE_ITEM) then
+		-- created item
+		local itemId = e.itemType
+		local proto = itemProtoFromId(itemId)
+		if(not proto) then
+			-- at this point, something's gone wrong and we won't be able to display anything useful.
+			-- likely caused by a hidden spell, like 13166 (Battle Chicken)
+			return
+		end
+		spellTextColor = ITEM_QUALITY[proto.Quality].color
+		icon = getItemIcon(proto)
+	else
+		spellTextColor = SDL_white
+		icon = getSpellIcon(s.spellIconID)
 	end
-
-	-- created item
-	local itemId = e.itemType
-	local proto = itemProtoFromId(itemId)
-	if(not proto) then
-		-- at this point, something's gone wrong and we won't be able to display anything useful.
-		-- likely caused by a hidden spell, like 13166 (Battle Chicken)
-		return
-	end
-	local itemQualityColor = ITEM_QUALITY[proto.Quality].color
-	local icon = getItemIcon(proto)
 	local r = SDL_Rect(x, y, icon.w, icon.h)
 	SDL.SDL_UpperBlit(icon, nil, gSurface, r)
-	drawText(s.name, itemQualityColor, x+icon.w+2, y+2)
+	drawText(s.name, SDL_white, x+icon.w+2, y+2)
 
 	-- reagents
 	y = y + icon.h * (1+marginFraction*2)

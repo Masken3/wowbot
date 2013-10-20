@@ -72,9 +72,37 @@ function decision(realTime)
 	if(STATE.repeatSpellCast.count > 0) then
 		local s = STATE.knownSpells[STATE.repeatSpellCast.id];
 		if(spellIsOnCooldown(realTime, s)) then return; end
-		STATE.repeatSpellCast.count = STATE.repeatSpellCast.count - 1;
 		setAction("Casting "..s.name..", "..STATE.repeatSpellCast.count.." remain");
-		castSpellWithoutTarget(STATE.repeatSpellCast.id);
+		STATE.repeatSpellCast.count = STATE.repeatSpellCast.count - 1;
+		if(s.Targets == TARGET_FLAG_ITEM) then
+			local itemTarget
+			local mask = s.EquippedItemInventoryTypeMask
+			if(mask == 0) then
+				-- probably invalid assumption
+				mask = 0x4000	-- shield
+			end
+			local f = function(o)
+				local proto = itemProtoFromId(o.values[OBJECT_FIELD_ENTRY]);
+				--print(string.format("test 0x%x, 0x%x (%i), %s",
+					--mask, (2 ^ proto.InventoryType), proto.InventoryType, proto.name));
+				if(bit32.btest(mask, (2 ^ proto.InventoryType))) then
+					itemTarget = o;
+					--print("Found it.");
+					return false;
+				end
+			end
+			investigateEquipment(f)
+			if(not itemTarget) then
+				investigateInventory(f)
+			end
+			if(not itemTarget) then
+				partyChat("No appropriate target for "..s.name);
+				return;
+			end
+			castSpellAtItem(s.id, itemTarget);
+		else
+			castSpellWithoutTarget(STATE.repeatSpellCast.id);
+		end
 		return;
 	end
 

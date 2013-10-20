@@ -632,14 +632,11 @@ function baseInvestigateBags(bagField1, bagFieldLast, bagSlotStart, f, emptySlot
 	end
 end
 
-local function baseInvestigate(directField1, directFieldLast,
-	directBagSlot, directItemSlotStart,
-	bagField1, bagFieldLast, bagSlotStart, f, emptySlotFunction)
+local function investigateSlots(directField1, directFieldLast,
+	bagSlot, directItemSlotStart, f, emptySlotFunction)
 	local freeSlotCount = 0;
-	-- backpack
 	for i = directField1, directFieldLast, 2 do
 		local guid = guidFromValues(STATE.me, i);
-		local bagSlot = directBagSlot;
 		local slot = directItemSlotStart + ((i - directField1) / 2);
 		if(isValidGuid(guid)) then
 			local o = STATE.knownObjects[guid];
@@ -654,6 +651,17 @@ local function baseInvestigate(directField1, directFieldLast,
 			freeSlotCount = freeSlotCount + 1;
 		end
 	end
+	return freeSlotCount;
+end
+
+local function baseInvestigate(directField1, directFieldLast,
+	directBagSlot, directItemSlotStart,
+	bagField1, bagFieldLast, bagSlotStart, f, emptySlotFunction)
+	local freeSlotCount = 0;
+	-- backpack
+	freeSlotCount = investigateSlots(directField1, directFieldLast,
+		directBagSlot, directItemSlotStart, f, emptySlotFunction);
+	if(not freeSlotCount) then return; end
 	-- bags
 	baseInvestigateBags(bagField1, bagFieldLast, bagSlotStart, function(bag, bagSlot, slotCount)
 		--print(slotCount);
@@ -683,6 +691,11 @@ end
 
 function countFreeBankSlots()
 	return investigateBank(function()end)
+end
+
+function investigateEquipment(f, emptySlotFunction)
+	return investigateSlots(PLAYER_FIELD_INV_SLOT_HEAD, PLAYER_FIELD_BAG_SLOT_1-2,
+		INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_START, f, emptySlotFunction)
 end
 
 function investigateInventory(f, emptySlotFunction)
