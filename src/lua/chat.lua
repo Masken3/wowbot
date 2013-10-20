@@ -380,6 +380,8 @@ function gUseItem(itemId)
 			if(proto.StartQuest ~= 0) then
 				-- callbacks will start the quest.
 				send(CMSG_QUESTGIVER_QUERY_QUEST, {guid=o.guid, questId=proto.StartQuest})
+			elseif(bit32.btest(proto.Flags, ITEM_FLAG_LOOTABLE)) then
+				send(CMSG_OPEN_ITEM, {slot = slot, bagSlot = bagSlot})
 			else
 				send(CMSG_USE_ITEM, {slot = slot, bag = bagSlot, spellCount = 0, targetFlags = 0})
 			end

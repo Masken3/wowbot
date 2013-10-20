@@ -93,7 +93,9 @@ local function getClickInfo(t, button)
 		end
 	elseif(button == SDL_BUTTON_RIGHT) then
 		if(plain) then
-			return {description="Use", f=function()
+			local d = "Use"
+			if(bit32.btest(t.proto.Flags, ITEM_FLAG_LOOTABLE)) then d = "Open" end
+			return {description=d, f=function()
 				print(gUseItem(itemId))
 			end}
 		elseif(ssAlt and (not ssShift) and (not ssCtrl)) then

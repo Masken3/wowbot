@@ -522,6 +522,9 @@ end
 
 function hSMSG_LOOT_RESPONSE(p)
 	print("SMSG_LOOT_RESPONSE");
+	if(p.gold > 0) then
+		send(CMSG_LOOT_MONEY)
+	end
 	for i, item in ipairs(p.items) do
 		print("item "..item.itemId.." x"..item.count);
 		if((p.lootType ~= LOOT_CORPSE) or

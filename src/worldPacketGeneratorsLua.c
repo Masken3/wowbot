@@ -523,6 +523,13 @@ static uint16 genCMSG_SWAP_ITEM(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+static uint16 genCMSG_OPEN_ITEM(lua_State* L, byte* buf) {
+	GL_START;
+	M(byte, bagSlot);
+	M(byte, slot);
+	GL_END;
+}
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -571,6 +578,7 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_QUESTGIVER_QUERY_QUEST);
 		GEN_CASE(CMSG_CANCEL_CHANNELLING);
 		GEN_CASE(CMSG_SWAP_ITEM);
+		GEN_CASE(CMSG_OPEN_ITEM);
 		default: return NULL;
 	}
 }
