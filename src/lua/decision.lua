@@ -348,9 +348,11 @@ end
 
 -- return the number of times one could cast the spell, given the available reagents.
 -- or false.
+-- also returns the maximum for one reagent.
 function haveReagents(itemCounts, s)
 	local haveAllReagents = true;
 	local minMulti = 1000;
+	local maxMulti = 0;
 	for i,r in ipairs(s.reagent) do
 		if(r.count > 0) then
 			if((itemCounts[r.id] or 0) < r.count) then
@@ -358,10 +360,11 @@ function haveReagents(itemCounts, s)
 			else
 				local multi = math.floor(itemCounts[r.id] / r.count);
 				if(multi < minMulti) then minMulti = multi; end
+				if(multi > maxMulti) then maxMulti = multi; end
 			end
 		end
 	end
-	return haveAllReagents and (minMulti ~= 1000) and minMulti;
+	return haveAllReagents and (minMulti ~= 1000) and minMulti, maxMulti;
 end
 
 -- returns the id of the spell (with the lowest skillValue) (we have reagents for).

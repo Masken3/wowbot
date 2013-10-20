@@ -78,11 +78,14 @@ function init(skillLine)
 				local itemId = e.itemType
 				local proto = itemProtoFromId(itemId)
 				if(not proto) then haveAllProtos = false end
-				for i,rea in ipairs(s.reagent) do
-					if(rea.count > 0) then
-						local proto = itemProtoFromId(rea.id)
-						if(not proto) then haveAllProtos = false end
+			end
+			for i,rea in ipairs(s.reagent) do
+				if(rea.count > 0) then
+					local proto = itemProtoFromId(rea.id)
+					if(not proto) then
+						print("WAIT: no proto for item="..rea.id.." spell="..s.id.." ("..s.name..")")
 					end
+					if(not proto) then haveAllProtos = false end
 				end
 			end
 		end
@@ -130,10 +133,13 @@ function drawProfWindow()
 	for i,sp in ipairs(sSpells) do
 		local spellText = sp.s.name
 		local sla = sp.sla
-		local count = haveReagents(itemCounts, sp.s)
+		local count, maxCount = haveReagents(itemCounts, sp.s)
 		if(count) then
 			spellText = spellText.." ["..count.."]"
 			sp.max = count
+		end
+		if(maxCount > 0) then
+			spellText = spellText.." ("..maxCount..")"
 		end
 
 		local spellColor
@@ -217,6 +223,10 @@ function drawProfWindow()
 		local textHeight = iconSize
 		if(rea.count > 0) then
 			local proto = itemProtoFromId(rea.id)
+			if(not proto) then
+				print("ERROR: no proto for item="..rea.id.." spell="..s.id.." ("..s.name..")")
+			end
+			assert(proto)
 			-- icon
 			local rect = SDL_Rect(ax, by, iconSize, iconSize)
 			SDL.SDL_UpperBlitScaled(getItemIcon(proto), nil, gSurface, rect)
