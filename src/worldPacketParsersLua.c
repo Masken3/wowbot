@@ -1206,3 +1206,10 @@ void pSMSG_SPELL_FAILED_OTHER(pLUA_ARGS) {
 	M(Guid, casterGuid);
 	M(uint32, spellId);
 }
+
+void pSMSG_QUEST_CONFIRM_ACCEPT(pLUA_ARGS) {
+	PL_START;
+	M(uint32, questId);
+	MV(string, title);
+	M(Guid, starterGuid);
+}

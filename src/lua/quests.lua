@@ -243,3 +243,8 @@ function hasQuestForItem(itemId)
 		return true;
 	end);
 end
+
+function hSMSG_QUEST_CONFIRM_ACCEPT(p)
+	print("SMSG_QUEST_CONFIRM_ACCEPT", dump(p));
+	send(CMSG_QUEST_CONFIRM_ACCEPT, p);
+end
