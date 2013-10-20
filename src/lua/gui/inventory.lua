@@ -13,6 +13,9 @@ local invHandleClickEvent
 local itemIcons = {}	-- o:t
 local invWidth
 local bankHeight
+local myWindow
+local slotSquare
+local bankSlotSquare
 
 function doInventoryWindow()
 	if(gWindow) then
@@ -24,29 +27,35 @@ function doInventoryWindow()
 		totalSlotCount = totalSlotCount + slotCount
 	end)
 
-	local slotSquare = math.ceil(totalSlotCount ^ 0.5)
+	slotSquare = math.ceil(totalSlotCount ^ 0.5)
 
 	local bankSlotCount = BANK_SLOT_ITEM_END - BANK_SLOT_ITEM_START
 	investigateBankBags(function(bag, bagSlot, slotCount)
 		bankSlotCount = bankSlotCount + slotCount
 	end)
-	local bankSlotSquare = math.ceil(bankSlotCount ^ 0.5)
+	bankSlotSquare = math.ceil(bankSlotCount ^ 0.5)
 
 	local sizePerSlot = iconSize*(1+marginFraction*2)
 	invWidth = slotSquare*sizePerSlot
 	local width = (slotSquare+bankSlotSquare)*sizePerSlot
 	-- +1 for the bank bags.
-	bankHeight = (bankSlotSquare+1)*sizePerSlot
-	local height = math.max(slotSquare*sizePerSlot, bankHeight)
+	bankHeight = bankSlotSquare*sizePerSlot
+	local height = math.max(slotSquare*sizePerSlot, bankHeight+sizePerSlot)
 	gWindow = SDL.SDL_CreateWindow(STATE.myName.."'s Inventory & Bank", 32, 32,
 		width, height, SDL.SDL_WINDOW_SHOWN)
 	gSurface = SDL.SDL_GetWindowSurface(gWindow)
+	myWindow = gWindow
+	updateInventoryScreen()
+	showNonModal(drawInvWindow, onCloseInvWindow, invHandleClickEvent)
+	return true
+end
+
+function updateInventoryScreen()
+	if(gWindow ~= myWindow) then return end
 	itemIcons = {}
 	initializeItemForm(0, 0, slotSquare, investigateInventory)
 	initializeItemForm(slotSquare, 0, bankSlotSquare, investigateBank)
 	initializeItemForm(slotSquare, bankSlotSquare, bankSlotSquare, investigateBankBags)
-	showNonModal(drawInvWindow, onCloseInvWindow, invHandleClickEvent)
-	return true
 end
 
 function initializeItemForm(x, y, w, investigationFunction)

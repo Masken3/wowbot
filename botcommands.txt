@@ -45,7 +45,6 @@ These are chat commands that bots will respond to:
 * n		Open talents window.
 
 * i		Open inventory window.
-	Window must be reopened to update the list of items.
 
 * p <skillId>		Open profession window.
 

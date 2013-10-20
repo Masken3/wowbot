@@ -391,6 +391,11 @@ function isPlayer(o)
 	return bit32.btest(o.values[OBJECT_FIELD_TYPE], TYPEMASK_PLAYER);
 end
 
+function isItem(o)
+	if(not o) then return false; end
+	return bit32.btest(o.values[OBJECT_FIELD_TYPE], TYPEMASK_ITEM);
+end
+
 local function isSummonedByGroupMember(o)
 	if(not o.values[UNIT_FIELD_SUMMONEDBY]) then return false; end
 	local g = guidFromValues(o, UNIT_FIELD_SUMMONEDBY);
@@ -503,6 +508,12 @@ local function valueUpdated(o, idx)
 		if(STATE.checkNewObjectsForQuests) then
 			partyChat("Skill "..((skillLine and skillLine.name) or skillId)..": "..tostring(val).."/"..tostring(max));
 		end
+	end
+	-- items
+	if((o == STATE.me and idx >= PLAYER_FIELD_BAG_SLOT_1 and idx <= PLAYER_FIELD_KEYRING_SLOT_LAST) or
+		(isItem(o) and idx >= CONTAINER_FIELD_SLOT_1 and idx <= CONTAINER_FIELD_SLOT_LAST))
+	then
+		updateInventoryScreen()
 	end
 	--[[
 	if(o == STATE.me and idx == PLAYER_CHARACTER_POINTS1) then
