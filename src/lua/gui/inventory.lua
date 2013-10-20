@@ -11,7 +11,8 @@ local onCloseInvWindow
 local invHandleClickEvent
 
 local itemIcons = {}	-- o:t
-local slotSquare
+local invWidth
+local bankHeight
 
 function doInventoryWindow()
 	if(gWindow) then
@@ -23,22 +24,34 @@ function doInventoryWindow()
 		totalSlotCount = totalSlotCount + slotCount
 	end)
 
-	slotSquare = math.ceil(totalSlotCount ^ 0.5)
+	local slotSquare = math.ceil(totalSlotCount ^ 0.5)
 
-	local size = slotSquare*iconSize*(1+marginFraction*2)
-	gWindow = SDL.SDL_CreateWindow(STATE.myName.."'s Inventory", 32, 32,
-		size, size, SDL.SDL_WINDOW_SHOWN)
+	local bankSlotCount = BANK_SLOT_ITEM_END - BANK_SLOT_ITEM_START
+	investigateBankBags(function(bag, bagSlot, slotCount)
+		bankSlotCount = bankSlotCount + slotCount
+	end)
+	local bankSlotSquare = math.ceil(bankSlotCount ^ 0.5)
+
+	local sizePerSlot = iconSize*(1+marginFraction*2)
+	invWidth = slotSquare*sizePerSlot
+	local width = (slotSquare+bankSlotSquare)*sizePerSlot
+	-- +1 for the bank bags.
+	bankHeight = (bankSlotSquare+1)*sizePerSlot
+	local height = math.max(slotSquare*sizePerSlot, bankHeight)
+	gWindow = SDL.SDL_CreateWindow(STATE.myName.."'s Inventory & Bank", 32, 32,
+		width, height, SDL.SDL_WINDOW_SHOWN)
 	gSurface = SDL.SDL_GetWindowSurface(gWindow)
 	itemIcons = {}
-	initializeItemForm()
+	initializeItemForm(0, 0, slotSquare, investigateInventory)
+	initializeItemForm(slotSquare, 0, bankSlotSquare, investigateBank)
+	initializeItemForm(slotSquare, bankSlotSquare, bankSlotSquare, investigateBankBags)
 	showNonModal(drawInvWindow, onCloseInvWindow, invHandleClickEvent)
 	return true
 end
 
-function initializeItemForm()
-	local x = 0
-	local y = 0
-	investigateInventory(function(o, bagSlot, slot)
+function initializeItemForm(x, y, w, investigationFunction)
+	local origX = x
+	investigationFunction(function(o, bagSlot, slot)
 		local left = x*iconSize*(1+marginFraction*2) + marginFraction*iconSize
 		local top = y*iconSize*(1+marginFraction*2) + marginFraction*iconSize
 		--print(x, y, left, top);
@@ -57,14 +70,15 @@ function initializeItemForm()
 		itemIcons[o] = t
 
 		x = x + 1
-		if(x >= slotSquare) then
-			x = 0
+		if(x >= origX + w) then
+			x = origX
 			y = y + 1
 		end
 	end)
 end	--initializeForm
 
 -- returns table {description=string, f=function} or nil
+-- TODO: vary for bank items
 local function getClickInfo(t, button)
 	--print(dump(package))
 	local itemId = t.proto.itemId
@@ -74,6 +88,9 @@ local function getClickInfo(t, button)
 	local ssAlt = bit32.btest(shift, SDL.KMOD_LALT) or bit32.btest(shift, SDL.KMOD_RALT)
 	local ssCtrl = bit32.btest(shift, SDL.KMOD_LCTRL) or bit32.btest(shift, SDL.KMOD_RCTRL)
 	local plain = (not ssShift) and (not ssAlt) and (not ssCtrl)
+	local isBankItem = (t.r.x >= invWidth) and (t.r.y < bankHeight)
+	local isBankBag = (t.r.x >= invWidth) and (t.r.y >= bankHeight)
+	local isInventoryItem = t.r.x < invWidth
 	if(button == SDL_BUTTON_LEFT) then
 		if(plain) then
 			return {description="Open link...", f=function()
@@ -87,14 +104,22 @@ local function getClickInfo(t, button)
 				saveState()
 			end}
 		elseif(ssShift and (not ssAlt) and (not ssCtrl)) then
-			return {description="Store in bank", f=function()
-				partyChat(storeItemInBank(itemId))
-			end}
+			if(isInventoryItem) then
+				return {description="Store in bank", f=function()
+					partyChat(storeItemInBank(itemId))
+				end}
+			elseif(isBankItem) then
+				return {description="Fetch from bank", f=function()
+					partyChat(fetchItemFromBank(itemId))
+				end}
+			end
 		end
-	elseif(button == SDL_BUTTON_RIGHT) then
+	elseif(button == SDL_BUTTON_RIGHT and isInventoryItem) then
 		if(plain) then
 			local d = "Use"
 			if(bit32.btest(t.proto.Flags, ITEM_FLAG_LOOTABLE)) then d = "Open" end
+			if(t.proto.InventoryType == INVTYPE_BAG) then d = "Put in bank slot" end
+			--if(t.proto.InventoryType == INVTYPE_BAG) then return nil end
 			return {description=d, f=function()
 				print(gUseItem(itemId))
 			end}
@@ -105,6 +130,7 @@ local function getClickInfo(t, button)
 		elseif(ssCtrl and (not ssShift) and (not ssAlt)) then
 			return {description="Sell", f=function()
 				STATE.itemsToSell[itemId] = true
+				decision()
 			end}
 		elseif(ssShift and (not ssAlt) and (not ssCtrl)) then
 			return {description="Give", f=function()
@@ -141,6 +167,12 @@ function drawInvWindow()
 	--print("drawInvWindow")
 	-- the black
 	SDL.SDL_FillRect(gSurface, SDL_Rect(0, 0, gSurface.w, gSurface.h), 0)
+
+	-- divider between inventory and bank
+	SDL.SDL_FillRect(gSurface, SDL_Rect(invWidth, 0, 1, gSurface.h), 0xffffffff)
+
+	-- divider between bank items and bags
+	SDL.SDL_FillRect(gSurface, SDL_Rect(invWidth, bankHeight, gSurface.w-invWidth, 1), 0xffffffff)
 
 	-- icon icons
 	local mouseOverItem = nil

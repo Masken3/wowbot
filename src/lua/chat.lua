@@ -380,6 +380,19 @@ function gUseItem(itemId)
 			if(proto.StartQuest ~= 0) then
 				-- callbacks will start the quest.
 				send(CMSG_QUESTGIVER_QUERY_QUEST, {guid=o.guid, questId=proto.StartQuest})
+			elseif(proto.InventoryType == INVTYPE_BAG) then
+				-- put in bank bag slot
+				local done = false
+				investigateBankBags(function()end, function(bankBagSlot)
+					if(done) then return end
+					done = true
+					--print("CMSG_AUTOEQUIP_ITEM_SLOT "..bankBagSlot);
+					--send(CMSG_AUTOEQUIP_ITEM_SLOT, {itemGuid=o.guid, dstSlot=bankBagSlot});
+					local p = {dstbag=INVENTORY_SLOT_BAG_0, dstslot=bankBagSlot,
+						srcbag=bagSlot, srcslot=slot}
+					print("CMSG_SWAP_ITEM ", dump(p));
+					send(CMSG_SWAP_ITEM, p)
+				end)
 			elseif(bit32.btest(proto.Flags, ITEM_FLAG_LOOTABLE)) then
 				send(CMSG_OPEN_ITEM, {slot = slot, bagSlot = bagSlot})
 			else
@@ -436,8 +449,7 @@ local function store(p)
 	reply(p, storeItemInBank(itemId))
 end
 
-local function fetch(p)
-	local itemId = tonumber(p.text:sub(7))
+function fetchItemFromBank(itemId)
 	local msg = 'Fetching items'
 	local count = 0
 	investigateBank(function(o, bagSlot, slot)
@@ -447,8 +459,12 @@ local function fetch(p)
 			count = count + o.values[ITEM_FIELD_STACK_COUNT];
 		end
 	end)
-	msg = msg..', total '..count
-	reply(p, msg)
+	return msg..', total '..count
+end
+
+local function fetch(p)
+	local itemId = tonumber(p.text:sub(7))
+	reply(p, fetchItemFromBank(itemId))
 end
 
 local function repair(p)

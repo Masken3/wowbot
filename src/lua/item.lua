@@ -610,18 +610,24 @@ function equip(itemGuid, itemId, slot)
 	send(CMSG_AUTOEQUIP_ITEM_SLOT, {itemGuid=itemGuid, dstSlot=slot});
 end
 
-function baseInvestigateBags(bagField1, bagFieldLast, bagSlotStart, f)
+function baseInvestigateBags(bagField1, bagFieldLast, bagSlotStart, f, emptySlotFunction)
 	for i = bagField1, bagFieldLast, 2 do
 		local bagGuid = guidFromValues(STATE.me, i);
+		local bagSlot = bagSlotStart + ((i - bagField1) / 2);
+		if(bagSlot >= 100) then
+			print("bagSlot("..i..", "..bagField1..") = "..bagSlot..", "..((i - bagField1) / 2));
+		end
+		assert(bagSlot < 100);
 		if(isValidGuid(bagGuid)) then
 			local bag = STATE.knownObjects[bagGuid];
 			if(bag) then
 				local slotCount = bag.values[CONTAINER_FIELD_NUM_SLOTS];
 				if(slotCount) then
-					local bagSlot = bagSlotStart + ((i - bagField1) / 2);
 					f(bag, bagSlot, slotCount);
 				end
 			end
+		elseif(emptySlotFunction) then
+			emptySlotFunction(bagSlot);
 		end
 	end
 end
@@ -693,14 +699,14 @@ function investigateBank(f, emptySlotFunction)
 		BANK_SLOT_BAG_START, f, emptySlotFunction)
 end
 
-function investigateBags(f)
+function investigateBags(f, emptySlotFunction)
 	baseInvestigateBags(PLAYER_FIELD_BAG_SLOT_1, PLAYER_FIELD_BAG_SLOT_LAST,
-		INVENTORY_SLOT_BAG_START, f)
+		INVENTORY_SLOT_BAG_START, f, emptySlotFunction)
 end
 
-function investigateBankBags(f)
+function investigateBankBags(f, emptySlotFunction)
 	baseInvestigateBags(PLAYER_FIELD_BANKBAG_SLOT_1, PLAYER_FIELD_BANKBAG_SLOT_LAST,
-		BANK_SLOT_BAG_START, f)
+		BANK_SLOT_BAG_START, f, emptySlotFunction)
 end
 
 function itemInventoryCountById(itemId)

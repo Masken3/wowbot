@@ -254,3 +254,6 @@ For inventory UI:
 Todo:
 * timeout and automatic retry for connect and auth.
 * Level Enchanting. Needs item targets.
+
+14:48 2013-10-20
+uint8 GetBankBagSlotCount() const { return GetByteValue(PLAYER_BYTES_2, 2); }

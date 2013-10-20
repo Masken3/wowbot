@@ -29,7 +29,7 @@ static void lua_gen_uint16(lua_State* L, const char* name, byte** pp) {
 		luaL_error(L, "gen error: %s is not a number!", name);
 	}
 	if(num > 0xFFFF) {
-		luaL_error(L, "gen error: %s is too big to fit in an uint16 (0x%x)!", name, num);
+		luaL_error(L, "gen error: %s is too big to fit in an uint16 (%d)!", name, num);
 	}
 	*(uint16*)(*pp) = (uint16)num;
 	(*pp) += 2;
@@ -41,7 +41,7 @@ static void lua_gen_byte(lua_State* L, const char* name, byte** pp) {
 		luaL_error(L, "gen error: %s is not a number!", name);
 	}
 	if(num > 0xFF) {
-		luaL_error(L, "gen error: %s is too big to fit in a byte (0x%x)!", name, num);
+		luaL_error(L, "gen error: %s is too big to fit in a byte (%d)!", name, num);
 	}
 	**pp = (byte)num;
 	(*pp) += 1;

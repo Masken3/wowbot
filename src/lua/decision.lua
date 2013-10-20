@@ -228,7 +228,7 @@ function decision(realTime)
 	setAction("Noting to do...");
 end
 
-function doBags()
+local function baseDoBags(bif, iif, minBagCount)
 	if(not STATE.doBags) then
 		return false;
 	end
@@ -240,21 +240,22 @@ function doBags()
 	-- TODO: do the same for bank bags.
 	local smallestBag = nil;
 	local bagCount = 0;
-	investigateBags(function(bag, bagSlot, slotCount)
+	bif(function(bag, bagSlot, slotCount)
 		bagCount = bagCount + 1;
 		if(not smallestBag or smallestBag.count > slotCount) then
 			smallestBag = {count=slotCount, o=bag, bagSlot=bagSlot};
 		end
 	end);
-	if(bagCount < 4) then
-		return;
+	if(minBagCount and bagCount < minBagCount) then
+		return false;
 	end
+	if(not smallestBag) then return false; end
 	local itemsInSmallestBag = {}	-- o:slot
 	local biggestBag = nil;
 	local freeSlots = {} -- array:{bagSlot,slot}
 	local freeSlotCount = 0;
 	local itemsInSmallestBagCount = 0;
-	investigateInventory(function(o, bagSlot, slot)
+	iif(function(o, bagSlot, slot)
 		if(bagSlot == smallestBag.bagSlot) then
 			itemsInSmallestBagCount = itemsInSmallestBagCount + 1;
 			itemsInSmallestBag[o] = slot;
@@ -301,6 +302,11 @@ function doBags()
 
 	partyChat(itemLink(biggestBag.o)..">"..itemLink(smallestBag.o));
 	return true;
+end
+
+function doBags()
+	if(baseDoBags(investigateBags, investigateInventory, 4)) then return true; end
+	return baseDoBags(investigateBankBags, investigateBank);
 end
 
 function getItemCounts()
