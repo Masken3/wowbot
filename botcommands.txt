@@ -34,6 +34,7 @@ These are chat commands that bots will respond to:
 * store <itemId>	Move all such items from inventory to bank.
 * fetch <itemId>	Move all such items from bank to inventory.
 * lb	List items in bank.
+* bbs	Buy Bank Slot.
 
 * repair	Repair all items at commander's target.
 
@@ -47,6 +48,7 @@ These are chat commands that bots will respond to:
 	Window must be reopened to update the list of items.
 
 * p <skillId>		Open profession window.
+
 
 * aggro type	Become aggressive against all creatures of the type of commander's target.
 	If not doing anything else, attack the nearest one.

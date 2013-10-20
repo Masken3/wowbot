@@ -579,6 +579,12 @@ local function report(p)
 	reply(p, STATE.currentAction)
 end
 
+local function buyBankSlot(p)
+	local targetGuid = guidFromValues(STATE.knownObjects[p.senderGuid], UNIT_FIELD_TARGET)
+	send(CMSG_BUY_BANK_SLOT, {guid=targetGuid})
+	reply(p, "buyBankSlot @ "..targetGuid:hex());
+end
+
 function handleChatMessage(p)
 	if(not p.text) then return end
 	if(p.text == 'lq') then
@@ -659,6 +665,8 @@ function handleChatMessage(p)
 		inventory(p)
 	elseif(p.text:startWith('p ')) then
 		profession(p)
+	elseif(p.text == 'bbs') then
+		buyBankSlot(p)
 	else
 		return
 	end

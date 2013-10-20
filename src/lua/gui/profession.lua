@@ -62,8 +62,8 @@ function init(skillLine)
 
 	sSkillModifier = GetMaxPassiveAuraModifierWithMisc(
 		SPELL_AURA_MOD_SKILL_TALENT, skillLine.id)
-	print("sSkillModifier: "..sSkillModifier)
-	print(dump(STATE.knownSpells[20593]))
+	--print("sSkillModifier: "..sSkillModifier)
+	--print(dump(STATE.knownSpells[20593]))
 
 	for id, s in pairs(STATE.knownSpells) do
 		local sla = cSkillLineAbilityBySpell(id)

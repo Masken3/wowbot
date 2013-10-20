@@ -10,7 +10,7 @@ gameover = false
 local function initSDL()
 	SDL = rawget(_G, 'SDL') or false
 	if(SDL) then
-		print("SDL already loaded")
+		--print("SDL already loaded")
 		return
 	end
 

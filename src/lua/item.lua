@@ -651,7 +651,7 @@ local function baseInvestigate(directField1, directFieldLast,
 	-- bags
 	baseInvestigateBags(bagField1, bagFieldLast, bagSlotStart, function(bag, bagSlot, slotCount)
 		--print(slotCount);
-		for j = 0, slotCount, 1 do
+		for j = 0, (slotCount-1), 1 do
 			local guid = guidFromValues(bag, CONTAINER_FIELD_SLOT_1 + (j*2))
 			local slot = j;
 			if(isValidGuid(guid)) then
