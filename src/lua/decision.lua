@@ -115,17 +115,8 @@ function decision(realTime)
 		return;
 	end
 
-	-- STATE.pickpocketables is filled only if you have
-	-- STATE.stealthSpell and STATE.pickpocketSpell.
-	local i, p = next(STATE.pickpocketables);
-	if(p) then
-		setAction("Pickpocketing "..p.guid:hex());
-		pickpocket(realTime, p);
+	if(doPickpocket(realTime)) then
 		return;
-	elseif(STATE.stealthed) then
-		partyChat("Canceling stealth...");
-		send(CMSG_CANCEL_AURA, {spellId=STATE.stealthSpell.id});
-		STATE.stealthed = false;
 	end
 
 	-- if there are units that can be looted, go get them.
@@ -439,6 +430,30 @@ function doFish(realTime)
 	end
 end
 
+function doPickpocket(realTime)
+	if(not STATE.pickpocketSpell) then return false; end
+	local minDist = PERMASTATE.gatherRadius;
+	local myPos = STATE.myLocation.position;
+	local tar;
+	for guid, o in pairs(STATE.pickpocketables) do
+		local dist = distance3(myPos, o.location.position);
+		if(dist < minDist) then
+			minDist = dist;
+			tar = o;
+		end
+	end
+	if(tar) then
+		setAction("Pickpocketing "..tar.guid:hex(), true);
+		pickpocket(realTime, tar);
+		return true;
+	elseif(STATE.stealthed) then
+		partyChat("Canceling stealth...");
+		send(CMSG_CANCEL_AURA, {spellId=STATE.stealthSpell.id});
+		STATE.stealthed = false;
+	end
+	return false;
+end
+
 function pickpocket(realTime, target)
 	local dist = distanceToObject(target);
 	local stealthDist = (MELEE_DIST*2 + aggroRadius(target));
@@ -456,6 +471,7 @@ function pickpocket(realTime, target)
 		then
 			castSpellAtUnit(STATE.pickpocketSpell.id, target);
 			target.bot.pickpocketed = true;
+			STATE.pickpocketables[target.guid] = nil;
 		end
 	end
 end

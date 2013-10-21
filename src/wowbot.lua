@@ -396,6 +396,10 @@ function isItem(o)
 	return bit32.btest(o.values[OBJECT_FIELD_TYPE], TYPEMASK_ITEM);
 end
 
+function isCreature(o)
+	return isUnit(o) and (not isPlayer(o));
+end
+
 local function isSummonedByGroupMember(o)
 	if(not o.values[UNIT_FIELD_SUMMONEDBY]) then return false; end
 	local g = guidFromValues(o, UNIT_FIELD_SUMMONEDBY);
@@ -406,6 +410,15 @@ end
 function isAlly(o)
 	if(not isUnit(o)) then return false; end
 	return isGroupMember(o) or isSummonedByGroupMember(o);
+end
+
+function isHostileToPlayers(o)
+	if(not isUnit(o)) then return false; end
+	local factionId = o.values[UNIT_FIELD_FACTIONTEMPLATE];
+	if(not factionId) then return false; end
+	local f = cFactionTemplate(factionId);
+	if(not f) then return false; end
+	return bit32.btest(f.hostileMask, FACTION_MASK_PLAYER);
 end
 
 local function valueUpdated(o, idx)
@@ -540,10 +553,10 @@ function sendCreatureQuery(o, callback)
 	if(not entry) then return; end
 	local known = STATE.knownCreatures[entry];
 	if(known) then
-		callback(known);
+		callback(known, o);
 		return;
 	end
-	STATE.creatureQueryCallbacks[entry] = callback;
+	STATE.creatureQueryCallbacks[entry] = function(k) callback(k, o); end
 	send(CMSG_CREATURE_QUERY, {guid=o.guid, entry=entry});
 end
 
@@ -713,7 +726,19 @@ function hSMSG_UPDATE_OBJECT(p)
 	decision();
 end
 
-function newUnit(k)
+function newUnit(k, o)
+	-- if creature is hostile and (humanoid or undead), we can pickpocket it.
+	-- also, don't try pocketing too high level creatures; large chance of failure.
+	if(STATE.pickpocketSpell and isCreature(o) and isHostileToPlayers(o) and
+		(o.values[UNIT_FIELD_LEVEL] < (STATE.myLevel + 5)) and
+		(k.type == CREATURE_TYPE_HUMANOID or k.type == CREATURE_TYPE_UNDEAD))
+	then
+		local myPos = STATE.myLocation.position;
+		local pos = o.location.position;
+		partyChat(k.name..", "..distance3(myPos, pos).." yards.");
+		send(MSG_MINIMAP_PING, pos);
+		STATE.pickpocketables[o.guid] = o;
+	end
 end
 
 function hSMSG_DESTROY_OBJECT(p)
@@ -1076,7 +1101,7 @@ function hMSG_RAID_TARGET_UPDATE(p)
 	print("MSG_RAID_TARGET_UPDATE", dump(p));
 	if(STATE.stealthSpell and (p.id == RAID_ICON_STAR)) then
 		-- todo: also check STATE.pickpocketSpell
-		STATE.pickpocketables = {};	--hack
+		--STATE.pickpocketables = {};	--hack
 		if(isValidGuid(p.guid)) then
 			STATE.pickpocketables[p.guid] = STATE.knownObjects[p.guid];
 		end
