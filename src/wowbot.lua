@@ -767,6 +767,7 @@ local function learnSpell(id)
 		end
 		if(e.id == SPELL_EFFECT_PICKPOCKET) then
 			assert(not STATE.pickpocketSpell);
+			print("pickpocketSpell: "..id, spacify(s.name, 23));
 			STATE.pickpocketSpell = s;
 		end
 		if(e.id == SPELL_EFFECT_SKINNING) then
@@ -779,7 +780,7 @@ local function learnSpell(id)
 			if(e.implicitTargetA == TARGET_GAMEOBJECT or
 				e.implicitTargetA == TARGET_GAMEOBJECT_ITEM)
 			then
-				print("OpenLockSpell "..e.miscValue..": "..id);
+				--print("OpenLockSpell "..e.miscValue..": "..id);
 				-- There are some spells (6461 and 6463) that should have been dummied out.
 				-- Only 1804 can actually pick locks.
 				if(e.miscValue == LOCKTYPE_PICKLOCK and s.id ~= 1804) then

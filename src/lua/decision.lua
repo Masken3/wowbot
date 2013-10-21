@@ -174,7 +174,7 @@ function decision(realTime)
 	local openable;
 	for guid, o in pairs(STATE.openables) do
 		local dist = distance3(myPos, o.location.position);
-		if((dist < minDist) and haveSkillToOpen(o)) then
+		if((dist < minDist) and haveSkillToOpenGO(o)) then
 			minDist = dist;
 			openable = o;
 		end
@@ -239,6 +239,11 @@ function decision(realTime)
 		return;
 	end
 
+	-- if we can pick locks and have locks to pick, do so.
+	if(doPickLockOnItem()) then
+		return;
+	end
+
 	-- don't try following the leader if we don't know where he is.
 	if(STATE.inGroup and STATE.leader and STATE.leader.location.position.x) then
 		if(STATE.currentAction ~= "Following leader") then
@@ -254,6 +259,21 @@ function decision(realTime)
 		return;
 	end
 	setAction("Noting to do...");
+end
+
+function doPickLockOnItem()
+	local s = STATE.openLockSpells[LOCKTYPE_PICKLOCK];
+	if(not s) then return false; end
+	local done = false;
+	investigateInventory(function(o)
+		if(haveSkillToOpenItem(o)) then
+			partyChat("Unlocking "..itemLink(o).."...");
+			castSpellAtItem(s.id, o);
+			done = true;
+			return false;
+		end
+	end);
+	return done;
 end
 
 local function baseDoBags(bif, iif, minBagCount)
@@ -558,13 +578,15 @@ local function wantToLoot(itemId)
 end
 
 function hSMSG_LOOT_RESPONSE(p)
-	print("SMSG_LOOT_RESPONSE");
+	--print("SMSG_LOOT_RESPONSE");
 	if(p.gold > 0) then
 		send(CMSG_LOOT_MONEY)
 	end
 	for i, item in ipairs(p.items) do
 		print("item "..item.itemId.." x"..item.count);
 		if((p.lootType ~= LOOT_CORPSE) or
+			-- couldn't find a lootType for items, so doing isUnit check.
+			(not isUnit(STATE.knownObjects[p.guid])) or
 			(item.lootSlotType == LOOT_SLOT_NORMAL) and wantToLoot(item.itemId))
 			-- every loot type except corpses are single-user.
 			-- in such cases, if we don't loot every item, the unlooted ones would be lost.

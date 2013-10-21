@@ -768,3 +768,14 @@ function isFishingPole(o)
 	return (proto.itemClass == ITEM_CLASS_WEAPON and
 		proto.subClass == ITEM_SUBCLASS_WEAPON_FISHING_POLE);
 end
+
+function itemLockSkillEntry(o)
+	local proto = itemProtoFromId(o.values[OBJECT_FIELD_ENTRY]);
+	if(not proto) then return nil; end
+	if(proto.LockID == 0) then return nil; end
+	return lockSkillEntry(proto.LockID);
+end
+
+function haveSkillToOpenItem(o)
+	return haveSkillToOpenLockSkillEntry(itemLockSkillEntry(o));
+end

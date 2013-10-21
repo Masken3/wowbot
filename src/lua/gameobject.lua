@@ -26,17 +26,22 @@ function hSMSG_GAMEOBJECT_QUERY_RESPONSE(p)
 	end
 end
 
+function lockSkillEntry(lockId)
+	local lock = cLock(lockId);
+	if(not lock) then return nil; end
+	for i, e in ipairs(lock.e) do
+		if(e.type == LOCK_KEY_SKILL) then
+			return e;
+		end
+	end
+	return nil;
+end
+
 local function goLockSkillEntry(o)
 	local p = STATE.knownGameObjects[o.values[OBJECT_FIELD_ENTRY]];
 	if(p.type == GAMEOBJECT_TYPE_CHEST) then
 		local lockId = p.data[1];
-		local lock = cLock(lockId);
-		if(not lock) then return nil; end
-		for i, e in ipairs(lock.e) do
-			if(e.type == LOCK_KEY_SKILL) then
-				return e;
-			end
-		end
+		return lockSkillEntry(lockId);
 	end
 	return nil;
 end
@@ -123,15 +128,18 @@ function newGameObject(o, info)
 	end
 end
 
--- returns true iff we have sufficient skill to open the lock.
-function haveSkillToOpen(o)
-	local e = goLockSkillEntry(o);
+function haveSkillToOpenLockSkillEntry(e)
 	if(not e) then return false; end
 	local spellId = STATE.openLockSpells[e.index].id;
 	if(not spellId) then return false; end
 	local mySkillLevel = spellSkillLevel(spellId);
 	if(not mySkillLevel) then return false; end
 	return mySkillLevel >= e.skill;
+end
+
+-- returns true iff we have sufficient skill to open the lock.
+function haveSkillToOpenGO(o)
+	return haveSkillToOpenLockSkillEntry(goLockSkillEntry(o));
 end
 
 function hSMSG_GAMEOBJECT_CUSTOM_ANIM(p)
