@@ -120,7 +120,7 @@ function decision(realTime)
 	local i, p = next(STATE.pickpocketables);
 	if(p) then
 		setAction("Pickpocketing "..p.guid:hex());
-		pickpocket(p);
+		pickpocket(realTime, p);
 		return;
 	elseif(STATE.stealthed) then
 		partyChat("Canceling stealth...");
@@ -439,10 +439,10 @@ function doFish(realTime)
 	end
 end
 
-function pickpocket(target)
+function pickpocket(realTime, target)
 	local dist = distanceToObject(target);
 	local stealthDist = (MELEE_DIST*2 + aggroRadius(target));
-	doMoveToTarget(getRealTime(), target, stealthDist);
+	doMoveToTarget(realTime, target, stealthDist);
 	if((dist <= stealthDist) and not STATE.stealthed) then
 		if(spellIsOnCooldown(realTime, STATE.stealthSpell)) then return; end
 		castSpellAtUnit(STATE.stealthSpell.id, STATE.me);
@@ -451,7 +451,7 @@ function pickpocket(target)
 		STATE.stealthed = true;
 	end
 	if(STATE.stealthed) then
-		if(doStealthMoveBehindTarget(getRealTime(), target, MELEE_DIST) and
+		if(doStealthMoveBehindTarget(realTime, target, MELEE_DIST) and
 			not target.bot.pickpocketed)
 		then
 			castSpellAtUnit(STATE.pickpocketSpell.id, target);
