@@ -14,7 +14,7 @@ function decision(realTime)
 	updateMyPosition(realTime);
 	updateLeaderPosition(realTime);
 
-	local myPos = STATE.myLocation.position;
+	local leaderPos = STATE.leader and STATE.leader.location.position;
 
 	--print("decision...");
 	-- if we're already attacking someone, keep at it.
@@ -123,7 +123,7 @@ function decision(realTime)
 	local minDist = PERMASTATE.gatherRadius;
 	local lootable;
 	for guid, o in pairs(STATE.lootables) do
-		local dist = distance3(myPos, o.location.position);
+		local dist = distance3(leaderPos, o.location.position);
 		if((dist < minDist)) then
 			minDist = dist;
 			lootable = o;
@@ -164,7 +164,7 @@ function decision(realTime)
 	local minDist = PERMASTATE.gatherRadius;
 	local openable;
 	for guid, o in pairs(STATE.openables) do
-		local dist = distance3(myPos, o.location.position);
+		local dist = distance3(leaderPos, o.location.position);
 		if((dist < minDist) and haveSkillToOpenGO(o)) then
 			minDist = dist;
 			openable = o;
@@ -188,7 +188,7 @@ function decision(realTime)
 	local focusObject;
 	local focusSpell;
 	for guid, o in pairs(STATE.focusObjects) do
-		local dist = distance3(myPos, o.location.position);
+		local dist = distance3(leaderPos, o.location.position);
 		local spell = haveReagentsFor(o);
 		if((dist < minDist) and spell) then
 			minDist = dist;
@@ -433,17 +433,17 @@ end
 function doPickpocket(realTime)
 	if(not STATE.pickpocketSpell) then return false; end
 	local minDist = PERMASTATE.gatherRadius;
-	local myPos = STATE.myLocation.position;
+	local leaderPos = STATE.leader.location.position;
 	local tar;
 	for guid, o in pairs(STATE.pickpocketables) do
-		local dist = distance3(myPos, o.location.position);
+		local dist = distance3(leaderPos, o.location.position);
 		if(dist < minDist) then
 			minDist = dist;
 			tar = o;
 		end
 	end
 	if(tar) then
-		setAction("Pickpocketing "..tar.guid:hex(), true);
+		setAction("Pickpocketing "..tar.guid:hex());
 		pickpocket(realTime, tar);
 		return true;
 	elseif(STATE.stealthed) then
@@ -469,6 +469,7 @@ function pickpocket(realTime, target)
 		if(doStealthMoveBehindTarget(realTime, target, MELEE_DIST) and
 			not target.bot.pickpocketed)
 		then
+			partyChat("Pickpocketed "..target.guid:hex());
 			castSpellAtUnit(STATE.pickpocketSpell.id, target);
 			target.bot.pickpocketed = true;
 			STATE.pickpocketables[target.guid] = nil;

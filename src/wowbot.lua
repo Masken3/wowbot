@@ -263,11 +263,14 @@ function fileExists(name)
 	if f~=nil then io.close(f) return true else return false end
 end
 
-function setAction(a)
+function setAction(a, verbose)
 	if(STATE.currentAction ~= a) then
 		STATE.currentAction = a;
-		--partyChat(a);
-		print("setAction("..a..")");
+		if(verbose) then
+			partyChat(a);
+		else
+			print("setAction("..a..")");
+		end
 	end
 end
 
@@ -733,10 +736,12 @@ function newUnit(k, o)
 		(o.values[UNIT_FIELD_LEVEL] < (STATE.myLevel + 5)) and
 		(k.type == CREATURE_TYPE_HUMANOID or k.type == CREATURE_TYPE_UNDEAD))
 	then
+		--[[
 		local myPos = STATE.myLocation.position;
 		local pos = o.location.position;
 		partyChat(k.name..", "..distance3(myPos, pos).." yards.");
 		send(MSG_MINIMAP_PING, pos);
+		--]]
 		STATE.pickpocketables[o.guid] = o;
 	end
 end
