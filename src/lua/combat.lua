@@ -183,7 +183,7 @@ end
 function spellIsOnCooldown(realTime, s)
 	if((STATE.spellGlobalCooldowns[s.StartRecoveryCategory] or 0) > realTime) then
 		if(sLog) then
-			print("global cooldown "..s.StartRecoveryCategory.." "..
+			print(s.name..": global cooldown "..s.StartRecoveryCategory.." "..
 				STATE.spellGlobalCooldowns[s.StartRecoveryCategory].." > realTime "..realTime..
 				" diff "..(STATE.spellGlobalCooldowns[s.StartRecoveryCategory] - realTime));
 		end
@@ -191,14 +191,14 @@ function spellIsOnCooldown(realTime, s)
 	end
 	if((STATE.spellCategoryCooldowns[s.Category] or 0) > realTime) then
 		if(sLog) then
-			print("cat cooldown "..s.Category.." "..
+			print(s.name..": cat cooldown "..s.Category.." "..
 				STATE.spellCategoryCooldowns[s.Category].." > realTime "..realTime);
 		end
 		return true;
 	end
 	if((STATE.spellCooldowns[s.id] or 0) > realTime) then
 		if(sLog) then
-			print("spell cooldown "..s.id.." "..
+			print(s.name..": spell cooldown "..s.id.." "..
 				STATE.spellCooldowns[s.id].." > realTime "..realTime);
 		end
 		return true;
@@ -314,10 +314,11 @@ local function spellRange(s, target)
 		return (math.max(MELEE_RANGE,
 			BASE_MELEERANGE_OFFSET +
 			(cIntAsFloat(STATE.my.values[UNIT_FIELD_COMBATREACH]) or 1.5) +
-			(cIntAsFloat(target.values[UNIT_FIELD_COMBATREACH]) or 1.5)) - 1), 0
+			(cIntAsFloat(target.values[UNIT_FIELD_COMBATREACH]) or 1.5)) - 1), nil
 	else
 		local range = cSpellRange(ri);
 		if(range) then
+			if(range.min == 0) then range.min = nil; end
 			return range.max, range.min;
 		end
 	end
@@ -336,6 +337,8 @@ function mostEffectiveSpell(realTime, spells, abortOnLowPower, target)
 	if(target) then
 		dist = distanceToObject(target);
 	end
+	--sLog = true
+	if(sLog and next(spells)) then print("testing...") end
 	for id, s in pairs(spells) do
 		local level, duration, cost, powerIndex, availablePower =
 			canCast(s, realTime, abortOnLowPower);
@@ -348,8 +351,8 @@ function mostEffectiveSpell(realTime, spells, abortOnLowPower, target)
 
 		local points = spellPoints(s, level);
 
-		if(false) then
-			print("availablePower("..powerIndex.."): "..tostring(availablePower)..
+		if(sLog) then
+			print("ap("..powerIndex.."): "..tostring(availablePower)..
 				" cost("..s.powerType.."): "..cost..
 				" points: "..points..
 				" id: "..id..
@@ -361,6 +364,13 @@ function mostEffectiveSpell(realTime, spells, abortOnLowPower, target)
 			bestSpell = s;
 			bestCost = cost;
 			maxPoints = points;
+			if(sLog) then
+				print(
+					" cost("..s.powerType.."): "..cost..
+					" points: "..points..
+					" id: "..id..
+					" name: "..s.name.." "..s.rank);
+			end
 		elseif(maxPointsForFree == 0) then
 			local ppc = points / cost;
 			if(ppc > maxPpc) then
@@ -368,10 +378,19 @@ function mostEffectiveSpell(realTime, spells, abortOnLowPower, target)
 				bestSpell = s;
 				bestCost = cost;
 				maxPoints = points;
+				if(sLog) then
+					print(
+						" cost("..s.powerType.."): "..cost..
+						" points: "..points..
+						" ppc: "..ppc..
+						" id: "..id..
+						" name: "..s.name.." "..s.rank);
+				end
 			end
 		end
 		::continue::
 	end
+	if(sLog and next(spells)) then print("test complete.") end
 	if(bestSpell and (bestCost > availP)) then return nil, 0; end
 	return bestSpell, maxPoints;
 end
