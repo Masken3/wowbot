@@ -113,6 +113,8 @@ function spellLevel(s)
 	return level;
 end
 
+POWER_HEALTH = -2;
+
 local function spellCost(s, level, duration)
 	local myValues = STATE.my.values;
 	local cost = s.manaCost + level * s.manaCostPerLevel +
@@ -124,7 +126,10 @@ local function spellCost(s, level, duration)
 		elseif(s.powerType == POWER_MANA) then
 			cost = cost + s.ManaCostPercentage * myValues[UNIT_FIELD_BASE_MANA] / 100;
 		else
-			cost = cost + s.ManaCostPercentage * myValues[UNIT_FIELD_MAXPOWER1 + s.powerType] / 100;
+			local offset = s.powerType;
+			if(offset == POWER_HEALTH) then offset = -1; end
+			print(cost, s.ManaCostPercentage, offset, myValues[UNIT_FIELD_MAXPOWER1 + offset]);
+			cost = cost + s.ManaCostPercentage * myValues[UNIT_FIELD_MAXPOWER1 + offset] / 100;
 		end
 	end
 
@@ -207,9 +212,25 @@ local function spellRequiresAuraState(s)
 		s.CasterAuraState - 1) == 0;
 end
 
+--ShapeshiftForm(GetByteValue(UNIT_FIELD_BYTES_1, 2));
+--if (!(spellInfo->Stances & (1 << (form - 1))))
+local function shapeshiftForm(o)
+	return bit32.extract(o.values[UNIT_FIELD_BYTES_1] or 0, 16, 8);
+end
+
+local function formIsGoodForStances(s, form)
+	return bit32.btest(s.Stances, 2 ^ (form-1));
+end
+
+local function haveStanceForSpell(s)
+	return s.Stances == 0 or
+		bit32.btest(s.AttributesEx2, SPELL_ATTR_EX2_NOT_NEED_SHAPESHIFT) or
+		formIsGoodForStances(s, shapeshiftForm(STATE.me));
+end
+
 -- returns false or
 -- level, duration, cost, powerIndex, availablePower.
-local function canCast(s, realTime)
+local function canCast(s, realTime, abortOnLowPower)
 	local level, duration, cost, powerIndex, availablePower;
 	-- if spell's cooldown hasn't yet expired, don't try to cast it.
 	if(spellIsOnCooldown(realTime, s)) then return false; end
@@ -217,20 +238,35 @@ local function canCast(s, realTime)
 	-- if the spell requires a special aura that we don't have, skip it.
 	if(spellRequiresAuraState(s)) then
 		if(sLog) then
-			print("Needs CasterAuraState "..s.CasterAuraState);
+			print(s.name.." Needs CasterAuraState "..s.CasterAuraState);
+		end
+		return false;
+	end
+
+	-- if the spell requires that we be in a different form, skip it.
+	local myForm = shapeshiftForm(STATE.me);
+	if(not haveStanceForSpell(s)) then
+		if(sLog) then
+			print(s.name.." Needs form "..hex(s.Stances).." (have "..myForm..")");
 		end
 		return false;
 	end
 
 	-- if the spell requires combo points but we don't have any, skip it.
 	if(bit32.btest(s.AttributesEx, SPELL_ATTR_EX_REQ_TARGET_COMBO_POINTS) and
-		comboPoints() == 0) then return false; end
+		comboPoints() == 0)
+	then
+		if(sLog) then
+			print(s.name.." Needs combo points.");
+		end
+		return false;
+	end
 
 	-- todo: handle these.
 	local inCombat = next(STATE.enemies);
 	if(bit32.btest(s.AttributesEx, SPELL_ATTR_EX_NOT_IN_COMBAT_TARGET) and inCombat) then
 		if(sLog) then
-			print("Must be out of combat.");
+			print(s.name.." Must be out of combat.");
 		end
 		return false;
 	end
@@ -253,9 +289,9 @@ local function canCast(s, realTime)
 	assert(availablePower < 100000);
 
 	-- if we can't cast the spell, ignore it.
-	if(availablePower < cost) then
+	if(availablePower < cost and (not abortOnLowPower)) then
 		if(sLog) then
-			print("Need more power!");
+			print(s.name.." Need more power!");
 		end
 		return false;
 	end
@@ -263,14 +299,52 @@ local function canCast(s, realTime)
 	return level, duration, cost, powerIndex, availablePower;
 end
 
-function mostEffectiveSpell(realTime, spells)
+local BASE_MELEERANGE_OFFSET = 1.333;
+
+-- returns rangeMax, rangeMin, or nil.
+local function spellRange(s, target)
+	local ri = s.rangeIndex;
+	if(ri == SPELL_RANGE_IDX_SELF_ONLY or
+		ri == SPELL_RANGE_IDX_ANYWHERE)
+	then
+		--hack
+		return nil;
+	elseif(ri == SPELL_RANGE_IDX_COMBAT) then
+		-- algo copied from mangos.
+		return (math.max(MELEE_RANGE,
+			BASE_MELEERANGE_OFFSET +
+			(cIntAsFloat(STATE.my.values[UNIT_FIELD_COMBATREACH]) or 1.5) +
+			(cIntAsFloat(target.values[UNIT_FIELD_COMBATREACH]) or 1.5)) - 1), 0
+	else
+		local range = cSpellRange(ri);
+		if(range) then
+			return range.max, range.min;
+		end
+	end
+end
+
+-- if abortOnLowPower, don't ignore spells we don't have enough power for.
+-- instead, if we can't cast the best, don't cast anything.
+function mostEffectiveSpell(realTime, spells, abortOnLowPower, target)
 	local maxPpc = 0;
 	local maxPointsForFree = 0;
 	local maxPoints = 0;
 	local bestSpell = nil;
+	local availP;
+	local bestCost;
+	local dist = 0;
+	if(target) then
+		dist = distanceToObject(target);
+	end
 	for id, s in pairs(spells) do
-		local level, duration, cost, powerIndex, availablePower = canCast(s, realTime);
+		local level, duration, cost, powerIndex, availablePower =
+			canCast(s, realTime, abortOnLowPower);
 		if(not level) then goto continue; end
+		availP = availablePower;
+
+		-- if we're too close, ignore the spell.
+		local rangeMax, rangeMin = spellRange(s, target);
+		if(rangeMin and (dist > rangeMin)) then goto continue; end
 
 		local points = spellPoints(s, level);
 
@@ -285,26 +359,26 @@ function mostEffectiveSpell(realTime, spells)
 		if(cost == 0 and points > maxPointsForFree) then
 			maxPointsForFree = points;
 			bestSpell = s;
+			bestCost = cost;
 			maxPoints = points;
 		elseif(maxPointsForFree == 0) then
 			local ppc = points / cost;
 			if(ppc > maxPpc) then
 				maxPpc = ppc;
 				bestSpell = s;
+				bestCost = cost;
 				maxPoints = points;
 			end
 		end
 		::continue::
 	end
+	if(bestSpell and (bestCost > availP)) then return nil, 0; end
 	return bestSpell, maxPoints;
 end
-
-local BASE_MELEERANGE_OFFSET = 1.333;
 
 function doSpell(dist, realTime, target, s)
 	assert(s);
 	-- calculate distance.
-	local requiredDistance = MELEE_DIST;
 	local behindTarget = false;
 	--print("bestSpell: "..bestSpell.name.." "..bestSpell.rank);
 
@@ -316,25 +390,7 @@ function doSpell(dist, realTime, target, s)
 		-- so we must disregard it from our selection of attack spells.
 	end
 
-	local ri = s.rangeIndex;
-	if(ri == SPELL_RANGE_IDX_SELF_ONLY or
-		ri == SPELL_RANGE_IDX_ANYWHERE)
-	then
-		--hack
-		-- requiredDistance = nil;
-	elseif(ri == SPELL_RANGE_IDX_COMBAT) then
-		-- algo copied from mangos.
-		requiredDistance = math.max(MELEE_RANGE,
-			BASE_MELEERANGE_OFFSET +
-			(cIntAsFloat(STATE.my.values[UNIT_FIELD_COMBATREACH]) or 1.5) +
-			(cIntAsFloat(target.values[UNIT_FIELD_COMBATREACH]) or 1.5)) - 1
-	else
-		local range = cSpellRange(ri);
-		if(range) then
-			requiredDistance = range.max;
-			-- todo: move away from target if we're closer than range.min.
-		end
-	end
+	local requiredDistance = spellRange(s, target) or MELEE_DIST;
 
 	-- start moving.
 	local closeEnough = true;
@@ -352,13 +408,15 @@ function doSpell(dist, realTime, target, s)
 		setTarget(target);
 		print("requiredDistance for "..s.id..": "..requiredDistance);
 		castSpellAtUnit(s.id, target);
+		tookAction = true;	-- is this right?
 	end
 	return tookAction;
 end
 
 function attackSpell(dist, realTime, enemy)
 	-- look at all our spells and find the best one.
-	local bestSpell = mostEffectiveSpell(realTime, STATE.attackSpells);
+	-- todo: also look at combatBuffSpells.
+	local bestSpell = mostEffectiveSpell(realTime, STATE.attackSpells, true, enemy);
 	if(not bestSpell) then
 		return false;
 	end
@@ -384,7 +442,7 @@ end
 
 -- returns true if we're healing.
 function doHeal(realTime)
-	local healSpell, points = mostEffectiveSpell(realTime, STATE.healingSpells);
+	local healSpell, points = mostEffectiveSpell(realTime, STATE.healingSpells, false);
 	if(not healSpell) then return; end
 	-- TODO: if we don't have enough mana to cast the spell, don't try.
 	for i,m in ipairs(STATE.groupMembers) do
@@ -428,36 +486,186 @@ function doBuff(realTime)
 	return doBuffSingle(STATE.me, realTime);
 end
 
--- return true if we did something useful.
-local function doTaunt(realTime, o)
-	return doSpell(distanceToObject(o), realTime, o, STATE.tauntSpell)
+local classInfo = {
+	[CLASS_WARRIOR] = {tankPrio = 1},
+	[CLASS_PALADIN] = {tankPrio = 1},
+	[CLASS_HUNTER] = {tankPrio = 2},
+	[CLASS_SHAMAN] = {tankPrio = 2},
+	[CLASS_ROGUE] = {tankPrio = 3},
+	[CLASS_DRUID] = {tankPrio = 3},
+	[CLASS_MAGE] = {tankPrio = 4},
+	[CLASS_WARLOCK] = {tankPrio = 4},
+	[CLASS_PRIEST] = {tankPrio = 4},
+}
+
+-- healers first, then other clothies, leather-wearers, mail, plate, in that order.
+local function tankPrio(o)
+	if(not isAlly(o)) then return 0; end
+	if(o.bot.isHealer) then return 99; end
+	local c = class(o);
+	return classInfo[c].tankPrio;
+end
+
+local function tankTargetTest(enemyFilter)
+	local maxPrio = 0;
+	local chosen = nil;
+	for guid,o in pairs(STATE.enemies) do
+		local info = STATE.knownCreatures[o.values[OBJECT_FIELD_ENTRY]];
+		if(info and enemyFilter(info)) then
+			local tGuid = unitTarget(o);
+			local prio;
+			if(not tGuid) then
+				prio = 0.5;
+			else
+				prio = tankPrio(STATE.knownObjects[tGuid]);
+			end
+			if(STATE.myGuid ~= tGuid and prio > maxPrio) then
+				prio = maxPrio;
+				chosen = o;
+			end
+		end
+	end
+	return chosen;
+end
+
+-- pick an enemy that is attacking one of our allies.
+local function chooseTankTarget()
+	-- elites first.
+	local t = tankTargetTest(function(info)
+		return info.rank ~= CREATURE_ELITE_NORMAL;
+	end);
+	if(t) then return t; end
+
+	-- then normal enemies
+	return tankTargetTest(function(info)
+		return info.rank == CREATURE_ELITE_NORMAL;
+	end);
+end
+
+function doStanceSpell(realTime, s, target)
+	if(not s) then return false; end
+	if(spellIsOnCooldown(realTime, s)) then return false; end
+
+	-- if the spell requires a different stance...
+	local myForm = shapeshiftForm(STATE.me);
+	if(s.Stances ~= 0 and (not formIsGoodForStances(s, myForm))) then
+		-- see if we have a spell to put us there...
+		for form, ss in pairs(STATE.shapeshiftSpells) do
+			if(formIsGoodForStances(s, form) and canCast(ss, realTime)) then
+				-- if we do, cast the shapeshift spell, but not the stance-requiring one.
+				-- it will be cast later.
+				castSpellWithoutTarget(ss.id);
+				return true;
+			end
+		end
+		-- if not, don't cast it.
+		return false;
+	end
+
+	-- we're good. cast the spell.
+	if(target) then
+		return doSpell(distanceToObject(target), realTime, target, s);
+	elseif(canCast(s, realTime)) then
+		castSpellWithoutTarget(s.id);
+		return true;
+	end
+	return false;
 end
 
 -- return true if we did something useful.
 function doTanking(realTime)
-	if(not STATE.tauntSpell) then return false; end
-	if(not canCast(STATE.tauntSpell, realTime)) then return false; end
-	-- elites first.
-	for guid,o in pairs(STATE.enemies) do
-		local info = STATE.knownCreatures[o.values[OBJECT_FIELD_ENTRY]];
-		if(info and info.rank ~= CREATURE_ELITE_NORMAL) then
-			local tGuid = unitTarget(o);
-			local t = STATE.knownObjects[tGuid];
-			if(STATE.myGuid ~= tGuid and isAlly(t)) then
-				return doTaunt(realTime, o);
-			end
+	assert(STATE.amTank);
+	-- if we have an enemy but are not in combat ourselves, take time to do the rotation.
+	-- for all these named spells, check not for specifics,
+	-- but for the best spell among those we know, that have the required effects.
+	local enemy = chooseEnemy();
+	if(not enemy) then return false; end
+	if(not bit32.btest(STATE.my.values[UNIT_FIELD_FLAGS], UNIT_FLAG_IN_COMBAT)) then
+		-- if we don't have the bloodrage buff, try to get it.
+		if(doStanceSpell(realTime, STATE.energizeSelfSpell)) then
+			return true;
 		end
+		-- if we do have it or can't cast it, Charge!
+		if(doStanceSpell(realTime, STATE.chargeSpell, enemy)) then
+			return true;
+		end
+		-- if we couldn't cast Charge, we'll just run in, the normal way.
 	end
 
-	-- then normal enemies
-	for guid,o in pairs(STATE.enemies) do
-		local info = STATE.knownCreatures[o.values[OBJECT_FIELD_ENTRY]];
-		if((not info) or info.rank == CREATURE_ELITE_NORMAL) then
-			local tGuid = unitTarget(o);
-			local t = STATE.knownObjects[tGuid];
-			if(STATE.myGuid ~= tGuid and isAlly(t)) then
-				return doTaunt(realTime, o);
-			end
+	-- if we're still in Battle Stance, do Thunder Clap.
+	-- TODO: move closer to enemies.
+	--sLog = true;
+	if(STATE.pbAoeSpell and canCast(STATE.pbAoeSpell, realTime)) then
+		castSpellWithoutTarget(STATE.pbAoeSpell.id);
+		return true;
+	end
+	--sLog = false;
+	-- if we can't cast that, go to Berserker/Defensive Stance.
+
+	-- todo: Berserker Stance
+	-- if we're in Berserker Stance, do Demoralizing Shout and Berserker Rage.
+	-- not neccesarily in that order.
+	-- once those are on cooldown, go to Defensive Stance.
+
+	-- in Defensive Stance, do Shield Block and Sunder Armor
+	if(doStanceSpell(realTime, STATE.sunderSpell, enemy)) then return true; end
+	if(not hasAura(enemy, STATE.blockBuffSpell)) then
+		if(doStanceSpell(realTime, STATE.blockBuffSpell)) then return true; end
+	end
+
+	-- taunt someone, if we can and should.
+	local target = chooseTankTarget();
+	if(not target) then return false; end
+	if(doStanceSpell(realTime, STATE.tauntSpell, target)) then return true; end
+end
+
+local function mainTankTarget()
+	if(not STATE.mainTank) then return nil; end
+	return unitTarget(STATE.mainTank);
+end
+
+local function isRaidTarget(iconId)
+	local guid = STATE.raidIcons[iconId]
+	if(isValidGuid(guid)) then
+		return STATE.knownObjects[guid] and STATE.enemies[guid];
+	end
+	return false;
+end
+
+-- Skull, Moon, Diamond
+local function raidTarget()
+	local o = isRaidTarget(RAID_ICON_SKULL);
+	if(o) then return o; end
+	o = isRaidTarget(RAID_ICON_MOON);
+	if(o) then return o; end
+	o = isRaidTarget(RAID_ICON_DIAMOND);
+	if(o) then return o; end
+	return nil;
+end
+
+local function tankIsWarrior()
+	if(not STATE.mainTank) then return false; end
+	return class(STATE.mainTank) == CLASS_WARRIOR;
+end
+
+local function hasSunder(o)
+	return GetMaxNegativeAuraModifier(o, SPELL_AURA_MOD_RESISTANCE) ~= 0;
+end
+
+function chooseEnemy()
+	-- if an enemy targets a party member, attack that enemy.
+	-- if there are several enemies, pick any one.
+	local i, enemy = next(STATE.enemies);
+	if(STATE.amTank) then
+		enemy = raidTarget() or enemy;
+		enemy = chooseTankTarget() or enemy;
+	else
+		-- focus on main tank's target, if any.
+		enemy = raidTarget() or enemy;
+		enemy = STATE.enemies[mainTankTarget()] or enemy;
+		if(tankIsWarrior() and (not hasSunder(enemy))) then
+			enemy = false;
 		end
 	end
+	return enemy;
 end

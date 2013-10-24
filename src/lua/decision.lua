@@ -15,6 +15,7 @@ function decision(realTime)
 	updateLeaderPosition(realTime);
 
 	local leaderPos = STATE.leader and STATE.leader.location.position;
+	if(not leaderPos) then return; end
 
 	--print("decision...");
 	-- if we're already attacking someone, keep at it.
@@ -27,6 +28,7 @@ function decision(realTime)
 	end
 
 	-- if there are units that can be skinned, go get them.
+	-- todo: if we're healer or tank, skinning should get lower prio.
 	local i, skinnable = next(STATE.skinnables);
 	if(skinnable) then
 		setAction("Skinning "..skinnable.guid:hex());
@@ -54,14 +56,8 @@ function decision(realTime)
 		return;
 	end
 
-	-- if an enemy targets a party member, attack that enemy.
-	-- if there are several enemies, pick any one.
-	local i, enemy = next(STATE.enemies);
+	local enemy = chooseEnemy();
 	if(enemy and not STATE.stealthed) then
-		-- focus on leader's target, if any.
-		local lt = STATE.enemies[leaderTarget()];
-		if(lt) then enemy = lt; end
-
 		setAction("Attacking "..enemy.guid:hex());
 		attack(realTime, enemy);
 		return;
@@ -432,7 +428,8 @@ end
 
 function doPickpocket(realTime)
 	if(not STATE.pickpocketSpell) then return false; end
-	local minDist = PERMASTATE.gatherRadius;
+	local minDist = PERMASTATE.gatherRadius * 1.5;
+	if(not STATE.leader) then return false; end
 	local leaderPos = STATE.leader.location.position;
 	local tar;
 	for guid, o in pairs(STATE.pickpocketables) do
@@ -447,8 +444,11 @@ function doPickpocket(realTime)
 		pickpocket(realTime, tar);
 		return true;
 	elseif(STATE.stealthed) then
+		-- TODO: de-stealth only when out of all hostiles' aggro radius.
+		--[[
 		partyChat("Canceling stealth...");
 		send(CMSG_CANCEL_AURA, {spellId=STATE.stealthSpell.id});
+		--]]
 		STATE.stealthed = false;
 	end
 	return false;

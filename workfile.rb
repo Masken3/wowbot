@@ -59,6 +59,8 @@ work = ExeWork.new do
 				'Stats',
 				'CreatureType',
 				'CreatureEliteType',
+				'Classes',
+				'ShapeshiftForm',
 				'TradeStatus', 'Language', 'ChatMsg']}),
 		GenLuaFromHeaderTask.new('Unit', 'server-code/Unit.h',
 			{:includedEnums=>['UnitFlags', 'NPCFlags']}),

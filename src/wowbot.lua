@@ -51,6 +51,8 @@ if(rawget(_G, 'STATE') == nil) then
 
 		groupMembers = {},	-- set by hSMSG_GROUP_LIST.
 
+		mainTank = false, -- KnownObject.
+
 		knownObjects = {},
 
 		looting = false,
@@ -95,6 +97,8 @@ if(rawget(_G, 'STATE') == nil) then
 
 		myTarget = false,	-- guid of my target.
 
+		raidIcons = {},	-- raidIconId:guid
+
 		attackSpells = {},	-- Spells we know that are useful for attacking other creatures.
 		meleeSpell = false,	-- spell table.
 		attacking = false,	-- boolean.
@@ -128,6 +132,12 @@ if(rawget(_G, 'STATE') == nil) then
 		combatBuffSpells = {},	-- name:spellTable	-- like a warrior's Shouts
 		focusSpells = {},
 		tauntSpell = false,	-- spellTable
+		energizeSelfSpell = false,	-- Energize must be the only effect except Trigger Spell.
+		chargeSpell = false,
+		pbAoeSpell = false,
+		sunderSpell = false,
+		blockBuffSpell = false,
+		shapeshiftSpells = {},	-- form:spellTable
 
 		-- key: id. value: table. All the spells we know.
 		knownSpells = {},
@@ -862,10 +872,74 @@ local function learnSpell(id)
 				STATE.attackSpells[id] = s;
 			end
 		end
+		-- combatBuffSpells
+		if(e.id == SPELL_EFFECT_APPLY_AURA and
+			(e.implicitTargetA == TARGET_CASTER_COORDINATES and
+			e.implicitTargetB == TARGET_ALL_ENEMY_IN_AREA) or
+			e.implicitTargetA == TARGET_ALL_PARTY_AROUND_CASTER)
+		then
+			STATE.combatBuffSpells[id] = s;
+		end
 		-- taunt
 		if(e.id == SPELL_EFFECT_ATTACK_ME) then
 			STATE.tauntSpell = s;
 		end
+		-- Energize must be the only effect except Trigger Spell.
+		if(e.id == SPELL_EFFECT_ENERGIZE) then
+			local match = true;
+			for i, e in ipairs(s.effect) do
+				if((e.id ~= SPELL_EFFECT_ENERGIZE) and (e.id ~= SPELL_EFFECT_TRIGGER_SPELL) and
+					(e.id ~= 0))
+				then
+					match = false;
+				end
+			end
+			if(match) then
+				print("energizeSelfSpell", s.id);
+				STATE.energizeSelfSpell = s;
+			end
+		end
+		-- Charge
+		if(e.id == SPELL_EFFECT_CHARGE) then
+			print("chargeSpell", s.id);
+			STATE.chargeSpell = s;
+		end
+		-- Thunder Clap
+		if(e.id == SPELL_EFFECT_SCHOOL_DAMAGE and
+			e.implicitTargetA == TARGET_CASTER_COORDINATES and
+			e.implicitTargetB == TARGET_ALL_ENEMY_IN_AREA)
+		then
+			print("pbAoeSpell", s.id);
+			STATE.pbAoeSpell = s;
+		end
+		-- Sunder
+		if(e.id == SPELL_EFFECT_APPLY_AURA and
+			e.applyAuraName == SPELL_AURA_MOD_RESISTANCE and
+			e.implicitTargetA == TARGET_CHAIN_DAMAGE and
+			e.basePoints < 0 and
+			SPELL_THREAT[id])
+		then
+			print("sunderSpell", s.id);
+			STATE.sunderSpell = s;
+		end
+		-- Shield Block
+		if(e.id == SPELL_EFFECT_APPLY_AURA and
+			e.applyAuraName == SPELL_AURA_MOD_BLOCK_PERCENT and
+			e.implicitTargetA == TARGET_SELF and
+			e.basePoints > 0)
+		then
+			print("blockBuffSpell", s.id);
+			STATE.blockBuffSpell = s;
+		end
+		-- shapeshiftSpells
+		if(e.id == SPELL_EFFECT_APPLY_AURA and
+			e.applyAuraName == SPELL_AURA_MOD_SHAPESHIFT and
+			e.implicitTargetA == TARGET_SELF)
+		then
+			print("shapeshiftSpells", e.miscValue, s.id);
+			STATE.shapeshiftSpells[e.miscValue] = s;
+		end
+
 		-- direct heals
 		if(e.id == SPELL_EFFECT_HEAL and
 			(e.implicitTargetA == TARGET_SINGLE_FRIEND))
@@ -1104,12 +1178,17 @@ end
 
 function hMSG_RAID_TARGET_UPDATE(p)
 	print("MSG_RAID_TARGET_UPDATE", dump(p));
+	STATE.raidIcons[p.id] = p.guid;
 	if(STATE.stealthSpell and (p.id == RAID_ICON_STAR)) then
 		-- todo: also check STATE.pickpocketSpell
 		--STATE.pickpocketables = {};	--hack
 		if(isValidGuid(p.guid)) then
 			STATE.pickpocketables[p.guid] = STATE.knownObjects[p.guid];
 		end
+		decision();
+	end
+	if(STATE.amTank and (p.id == RAID_ICON_SKULL)) then
+		STATE.enemies[p.guid] = STATE.knownObjects[p.guid];
 		decision();
 	end
 end

@@ -601,6 +601,18 @@ local function buyBankSlot(p)
 	reply(p, "buyBankSlot @ "..targetGuid:hex());
 end
 
+local function amTank(p)
+	STATE.knownObjects[p.senderGuid].bot.isTank = true
+	-- todo when we start raiding: allow for multiple mainTanks and offTanks.
+	STATE.mainTank = STATE.knownObjects[p.senderGuid]
+	print("tank", p.senderGuid:hex())
+end
+
+local function amHealer(p)
+	STATE.knownObjects[p.senderGuid].bot.isHealer = true
+	print("healer", p.senderGuid:hex())
+end
+
 function handleChatMessage(p)
 	if(not p.text) then return end
 	if(p.text == 'lq') then
@@ -683,6 +695,10 @@ function handleChatMessage(p)
 		profession(p)
 	elseif(p.text == 'bbs') then
 		buyBankSlot(p)
+	elseif(p.text == 'amTank') then
+		amTank(p)
+	elseif(p.text == 'amHealer') then
+		amHealer(p)
 	else
 		return
 	end

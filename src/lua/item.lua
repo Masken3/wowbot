@@ -275,9 +275,9 @@ ClassInfo = {
 	},
 	Paladin = {
 		ranged=false,
-		primary=STAT_STRENGTH,	-- Retribution
+		primary=STAT_STRENGTH,	-- Retribution or Holy/Damage
 		secondaries={STAT_STAMINA},
-		--[[ Holy
+		--[[ Holy/Healing
 		primary=STAT_INTELLECT,
 		secondaries={STAT_SPIRIT, STAT_STAMINA},]]
 		--[[ Protection

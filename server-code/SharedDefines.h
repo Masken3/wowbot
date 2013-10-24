@@ -2249,7 +2249,7 @@ enum ShapeshiftForm
 	FORM_SHADOW             = 0x1C,
 	FORM_STEALTH            = 0x1E,
 	FORM_MOONKIN            = 0x1F,
-	FORM_SPIRITOFREDEMPTION = 0x20
+	FORM_SPIRITOFREDEMPTION = 0x20,
 };
 
 enum ResponseCodes

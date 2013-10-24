@@ -103,12 +103,24 @@ local function tabLabelCaption(tab)
 	return tab.name.." ("..tab.spentPoints.."/"..tab.rankCount..")"
 end
 
+function class(o)
+	return bit32.extract(o.values[UNIT_FIELD_BYTES_0], 8, 8)
+end
+
+function classMask(o)
+	return bit32.lshift(1, class(o) - 1)
+end
+
 function myClassMask()
-	return bit32.lshift(1, (bit32.extract(STATE.my.values[UNIT_FIELD_BYTES_0], 8, 8) - 1))
+	return classMask(STATE.me)
+end
+
+function raceMask(o)
+	return bit32.lshift(1, (bit32.extract(o.values[UNIT_FIELD_BYTES_0], 0, 8) - 1))
 end
 
 function myRaceMask()
-	return bit32.lshift(1, (bit32.extract(STATE.my.values[UNIT_FIELD_BYTES_0], 0, 8) - 1))
+	return raceMask(STATE.me)
 end
 
 function initializeForm()
