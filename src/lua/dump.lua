@@ -1,3 +1,20 @@
+
+if(not rawget(_G, 'oldPrint')) then oldPrint = print end
+
+function print(...)
+	local s = rawget(_G, 'STATE')
+	local str = ''
+	if(s) then str = str..STATE.myClassName..": " end
+	local arg = {...}
+	for i,v in ipairs(arg) do
+		if(i > 1) then
+			str = str.."\t"
+		end
+		str = str..tostring(v)
+	end
+	oldPrint(str)
+end
+
 function string.endWith(s, o)
 	return s:sub(-#o) == o;
 end
