@@ -139,6 +139,8 @@ if(rawget(_G, 'STATE') == nil) then
 		blockBuffSpell = false,
 		shapeshiftSpells = {},	-- form:spellTable
 
+		pullPosition = false,	-- Position.
+
 		waitingForDrink = false,
 		conjureDrinkSpell = false,
 		drinkRecipients = {},	-- guid:true, characters to give drink to.
@@ -1231,6 +1233,12 @@ function hMSG_RAID_TARGET_UPDATE(p)
 		decision();
 	end
 	if(STATE.amTank and (p.id == RAID_ICON_SKULL)) then
+		STATE.enemies[p.guid] = STATE.knownObjects[p.guid];
+		decision();
+	end
+	-- leader's position when SQUARE is set is the pull position.
+	if(STATE.amTank and (p.id == RAID_ICON_SQUARE)) then
+		STATE.pullPosition = STATE.leader.location.position;
 		STATE.enemies[p.guid] = STATE.knownObjects[p.guid];
 		decision();
 	end

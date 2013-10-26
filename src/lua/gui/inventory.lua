@@ -128,6 +128,7 @@ local function getClickInfo(t, button)
 			local d = "Use"
 			if(bit32.btest(t.proto.Flags, ITEM_FLAG_LOOTABLE)) then d = "Open" end
 			if(t.proto.InventoryType == INVTYPE_BAG) then d = "Put in bank slot" end
+			if(t.proto.InventoryType == INVTYPE_AMMO) then d = "Use as ammo" end
 			--if(t.proto.InventoryType == INVTYPE_BAG) then return nil end
 			return {description=d, f=function()
 				print(gUseItem(itemId))

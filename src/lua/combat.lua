@@ -599,6 +599,35 @@ function doStanceSpell(realTime, s, target)
 	return false;
 end
 
+local function goToPullPosition(realTime)
+	local dist = distance3(STATE.my.location.position, STATE.pullPosition);
+	if(dist < 1) then
+		if(STATE.moving) then
+			sendMovement(MSG_MOVE_STOP);
+			STATE.moving = false;
+		end
+	else
+		doMoveToPoint(realTime, STATE.pullPosition);
+	end
+end
+
+local function shootSpell()
+	-- if we have a ranged weapon equipped
+	-- and a spell requires it, then
+	-- that spell is our Shoot spell.
+	local rangedWeaponGuid = equipmentInSlot(EQUIPMENT_SLOT_RANGED);
+	if(not rangedWeaponGuid) then return nil; end
+	local proto = itemProtoFromId(itemIdOfGuid(rangedWeaponGuid));
+	for id,s in pairs(STATE.attackSpells) do
+		if(s.EquippedItemClass == ITEM_CLASS_WEAPON and
+			bit32.btest(s.EquippedItemSubClassMask, 2 ^ proto.subClass))
+		then
+			return s;
+		end
+	end
+	return nil;
+end
+
 -- return true if we did something useful.
 function doTanking(realTime)
 	assert(STATE.amTank);
@@ -612,6 +641,22 @@ function doTanking(realTime)
 		if(doStanceSpell(realTime, STATE.energizeSelfSpell)) then
 			return true;
 		end
+
+		-- if RAID_ICON_SQUARE, pull it.
+		if(STATE.raidIcons[RAID_ICON_SQUARE] == enemy.guid) then
+			setAction("Pulling "..enemy.guid:hex());
+			-- Shoot the pullee.
+			-- make sure a ranged weapon and ammo are equipped.
+			-- If they're not, tank is likely to go into a SPELL_FAILED loop.
+			if(doSpell(distanceToObject(enemy), realTime, enemy, shootSpell())) then
+				return true;
+			else
+				-- then run to leader.
+				goToPullPosition(realTime);
+				return true;
+			end
+		end
+
 		-- if we do have it or can't cast it, Charge!
 		STATE.chargeSpell.goCallback = function()
 			STATE.my.location.position = contactPoint(STATE.my.location.position,
@@ -621,6 +666,15 @@ function doTanking(realTime)
 			return true;
 		end
 		-- if we couldn't cast Charge, we'll just run in, the normal way.
+	end
+
+	-- wait for enemy to arrive.
+	if(STATE.raidIcons[RAID_ICON_SQUARE] == enemy.guid) then
+		local dist = distanceToObject(enemy);
+		if(dist > MELEE_RANGE) then
+			goToPullPosition(realTime);
+			return true;
+		end
 	end
 
 	-- if we're still in Battle Stance, do Thunder Clap.
@@ -666,6 +720,8 @@ end
 -- Skull, Moon, Diamond
 local function raidTarget()
 	local o = isRaidTarget(RAID_ICON_SKULL);
+	if(o) then return o; end
+	o = isRaidTarget(RAID_ICON_SQUARE);
 	if(o) then return o; end
 	o = isRaidTarget(RAID_ICON_MOON);
 	if(o) then return o; end

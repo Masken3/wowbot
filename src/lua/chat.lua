@@ -422,6 +422,9 @@ function gUseItem(itemId)
 				end)
 			elseif(bit32.btest(proto.Flags, ITEM_FLAG_LOOTABLE)) then
 				send(CMSG_OPEN_ITEM, {slot = slot, bagSlot = bagSlot})
+			elseif(proto.InventoryType == INVTYPE_AMMO) then
+				print("CMSG_SET_AMMO "..itemId);
+				send(CMSG_SET_AMMO, {itemId=itemId});
 			else
 				send(CMSG_USE_ITEM, {slot = slot, bag = bagSlot, spellCount = 0, targetFlags = 0})
 			end

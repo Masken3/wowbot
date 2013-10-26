@@ -460,7 +460,7 @@ function doCombatMoveBehindTarget(realTime, mo)
 end
 
 -- returns true if we're stopped in a proper position, which for this function is never.
-function doMoveToPoint(realTime, tarPos)
+function doMoveToPoint(realTime, tarPos, tarDist)
 	local myPos = STATE.myLocation.position;
 	local diff = diff3(myPos, tarPos);
 	local dist = length2(diff);
