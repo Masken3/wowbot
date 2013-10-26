@@ -267,8 +267,7 @@ static uint16 genCMSG_MESSAGECHAT(lua_State* L, byte* buf) {
 			M(string, channelName);
 			break;
 		default:
-			lua_pushfstring(L, "gen error: unknown chat type: %i", type);
-			lua_error(L);
+			luaL_error(L, "gen error: unknown chat type: %d", type);
 		}
 		M(string, msg);
 	}

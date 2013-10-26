@@ -47,6 +47,17 @@ function itemProtoFromId(id)
 	send(CMSG_ITEM_QUERY_SINGLE, {itemId=id, guid=ZeroGuid});
 end
 
+function delayedItemProto(id, f)
+	local proto = itemProtoFromId(id);
+	if(proto) then
+		f(proto);
+	else
+		STATE.itemDataCallbacks[{id=id, f=f}] = function(t)
+			t.f(itemProtoFromId(t.id));
+		end;
+	end
+end
+
 function doCallbacks(callbacks)
 	-- keep a separate set; new callbacks may be added by old callbacks.
 	local set = {}

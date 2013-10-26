@@ -1,4 +1,4 @@
-local function investigateAuras(target, f)
+function investigateAuras(target, f)
 	for i=0,(MAX_AURAS-1) do
 		local spellId = target.values[UNIT_FIELD_AURA + i];
 		local s;

@@ -78,6 +78,7 @@ work = ExeWork.new do
 				'ItemModType',
 				'ItemSubclassContainer',
 				'ItemPrototypeFlags',
+				'ItemSpelltriggerType',
 				'ItemSubclassArmor']}),
 		GenLuaFromHeaderTask.new('Player', 'server-code/Player.h',
 			{:includedEnums=>['EquipmentSlots', 'InventorySlots', 'InventoryPackSlots',

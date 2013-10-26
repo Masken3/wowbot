@@ -100,15 +100,14 @@ local function avgMainhandDamage()
 end
 
 function spellLevel(s)
-	local level = STATE.myLevel;
-	--print("myLevel: "..level.." maxLevel: "..s.maxLevel);
+	local level = STATE.myLevel - s.spellLevel;
+	--assert(s.spellLevel == s.baseLevel);
 
 	if (level > s.maxLevel and s.maxLevel > 0) then
 		level = s.maxLevel;
 	elseif (level < s.baseLevel) then
 		level = s.baseLevel;
 	end
-	level = level - s.spellLevel;
 
 	return level;
 end
@@ -230,7 +229,7 @@ end
 
 -- returns false or
 -- level, duration, cost, powerIndex, availablePower.
-local function canCast(s, realTime, abortOnLowPower)
+function canCast(s, realTime, abortOnLowPower)
 	local level, duration, cost, powerIndex, availablePower;
 	-- if spell's cooldown hasn't yet expired, don't try to cast it.
 	if(spellIsOnCooldown(realTime, s)) then return false; end
@@ -455,6 +454,13 @@ local function doHealSingle(o, healSpell, points, realTime)
 			setAction("Healing "..name);
 		end)
 		local dist = distanceToObject(o);
+
+		-- update target health asap after cast, to avoid double cast.
+		-- server's update, which comes later, will overwrite any inaccuracies.
+		healSpell.goCallback = function()
+			o.values[UNIT_FIELD_HEALTH] = o.values[UNIT_FIELD_HEALTH] + points;
+		end
+
 		return doSpell(dist, realTime, o, healSpell);
 	end
 end
@@ -464,6 +470,7 @@ function doHeal(realTime)
 	local healSpell, points = mostEffectiveSpell(realTime, STATE.healingSpells, false);
 	if(not healSpell) then return; end
 	-- TODO: if we don't have enough mana to cast the spell, don't try.
+	-- TODO: heal all allies, not just toons.
 	for i,m in ipairs(STATE.groupMembers) do
 		local o = STATE.knownObjects[m.guid];
 		if(not o) then return false; end
@@ -497,10 +504,11 @@ function doBuff(realTime)
 	-- check each party member
 	for i,m in ipairs(STATE.groupMembers) do
 		local o = STATE.knownObjects[m.guid];
-		if(not o) then return false; end
-		--print("doBuff "..m.guid:hex());
-		local res = doBuffSingle(o, realTime);
-		if(res) then return res; end
+		if(o) then
+			--print("doBuff "..m.guid:hex());
+			local res = doBuffSingle(o, realTime);
+			if(res) then return res; end
+		end
 	end
 	return doBuffSingle(STATE.me, realTime);
 end
@@ -605,6 +613,10 @@ function doTanking(realTime)
 			return true;
 		end
 		-- if we do have it or can't cast it, Charge!
+		STATE.chargeSpell.goCallback = function()
+			STATE.my.location.position = contactPoint(STATE.my.location.position,
+				enemy.location.position, MELEE_DIST);
+		end
 		if(doStanceSpell(realTime, STATE.chargeSpell, enemy)) then
 			return true;
 		end
@@ -682,7 +694,7 @@ function chooseEnemy()
 		-- focus on main tank's target, if any.
 		enemy = raidTarget() or enemy;
 		enemy = STATE.enemies[mainTankTarget()] or enemy;
-		if(tankIsWarrior() and (not hasSunder(enemy))) then
+		if(enemy and tankIsWarrior() and (not hasSunder(enemy))) then
 			enemy = false;
 		end
 	end

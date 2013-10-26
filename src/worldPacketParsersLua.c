@@ -860,7 +860,13 @@ void pSMSG_ITEM_PUSH_RESULT(pLUA_ARGS) {
 
 void pSMSG_TRADE_STATUS(pLUA_ARGS) {
 	PL_START;
-	M(uint32, status);
+	{
+		MM(uint32, status);
+		if(status == TRADE_STATUS_BEGIN_TRADE) {
+			// is 0 if you were the one who initiated the trade.
+			M(Guid, guid);
+		}
+	}
 }
 
 void pSMSG_TRADE_STATUS_EXTENDED(pLUA_ARGS) {

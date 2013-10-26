@@ -109,6 +109,27 @@ local function giveAll(p)
 	send(CMSG_INITIATE_TRADE, {guid=p.senderGuid})
 end
 
+function giveDrinkTo(drinkId, targetGuid)
+	STATE.tradeGiveItems = {[drinkId]=true}
+	-- this should be enough, assuming bots always accept trade.
+	send(CMSG_INITIATE_TRADE, {guid=targetGuid})
+	STATE.drinkRecipients[targetGuid] = nil
+end
+
+local function giveDrink(p)
+	local drinkId = findDrinkItem()
+	if(drinkId) then
+		giveDrinkTo(drinkId, p.senderGuid)
+	else
+		if(STATE.conjureDrinkSpell) then
+			STATE.drinkRecipients[p.senderGuid] = true
+			reply(p, 'Hold on, conjuring...')
+		else
+			reply(p, 'No can do.')
+		end
+	end
+end
+
 local function giveItem(p)
 	local items = {}
 	for itemId in p.text:sub(6):gmatch("%w+") do
@@ -154,6 +175,8 @@ function hSMSG_TRADE_STATUS(p)
 		send(CMSG_ACCEPT_TRADE, {padding=0})
 	elseif(p.status == TRADE_STATUS_TRADE_CANCELED) then
 		print("Trade cancelled!")
+		-- if this was not the drink-giver, we'll just ask again soon.
+		STATE.waitingForDrink = false
 	elseif(p.status == TRADE_STATUS_TRADE_COMPLETE) then
 		print("Trade complete!")
 		STATE.me.updateValuesCallbacks[p] = function(p)
@@ -161,10 +184,14 @@ function hSMSG_TRADE_STATUS(p)
 				maybeEquip(o.guid)
 			end)
 		end
+		-- if this was not the drink-giver, we'll just ask again soon.
+		STATE.waitingForDrink = false
 	elseif(p.status == TRADE_STATUS_BEGIN_TRADE) then
 		-- player has requested to trade with us. just accept.
 		print("Remote trade initiated!")
 		send(CMSG_BEGIN_TRADE)
+	elseif(p.status == TRADE_STATUS_TRADE_ACCEPT) then
+		send(CMSG_ACCEPT_TRADE, {padding=0})
 	else
 		print("Trade status "..p.status)
 	end
@@ -605,12 +632,12 @@ local function amTank(p)
 	STATE.knownObjects[p.senderGuid].bot.isTank = true
 	-- todo when we start raiding: allow for multiple mainTanks and offTanks.
 	STATE.mainTank = STATE.knownObjects[p.senderGuid]
-	print("tank", p.senderGuid:hex())
+	--print("tank", p.senderGuid:hex())
 end
 
 local function amHealer(p)
 	STATE.knownObjects[p.senderGuid].bot.isHealer = true
-	print("healer", p.senderGuid:hex())
+	--print("healer", p.senderGuid:hex())
 end
 
 function handleChatMessage(p)
@@ -633,6 +660,8 @@ function handleChatMessage(p)
 		listMoney(p)
 	elseif(p.text == 'give all') then
 		giveAll(p)
+	elseif(p.text == 'give drink') then
+		giveDrink(p)
 	elseif(p.text:startWith('give ')) then
 		giveItem(p)
 	elseif(p.text == 'recreate') then
@@ -700,12 +729,22 @@ function handleChatMessage(p)
 	elseif(p.text == 'amHealer') then
 		amHealer(p)
 	else
+		if(p.type == CHAT_MSG_WHISPER or p.type == CHAT_MSG_WHISPER_INFORM) then
+			print("Whisper: "..p.text)
+		end
 		return
 	end
-	print("Chat command: "..p.text)
+	--print("Chat command: "..p.text)
 end
 
 function partyChat(msg)
 	print("partyChat("..msg..")");
 	send(CMSG_MESSAGECHAT, {type=CHAT_MSG_PARTY, language=LANG_UNIVERSAL, msg=msg})
+end
+
+function whisper(recipient, msg)
+	objectNameQuery(recipient, function(name)
+		send(CMSG_MESSAGECHAT, {type=CHAT_MSG_WHISPER, language=LANG_ADDON,
+			msg=msg, targetName=name})
+	end)
 end

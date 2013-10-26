@@ -49,6 +49,14 @@ function distanceToObject(o)
 	return distance2(STATE.myLocation.position, o.location.position);
 end
 
+function contactPoint(m, t, dist)
+	local diff = diff3(m, t);
+	local len = length3(diff);
+	if(len < dist) then return m; end
+	local f = (len - dist) / len;
+	return Position.new({x = m.x + d.x*f, y = m.y + d.y*f, z = m.z + d.z*f});
+end
+
 -- In yards, the same unit as world coordinates.
 -- Bot will run until it's within TOLERANCE of DIST yards from leader.
 -- Then it will follow leader's movements:

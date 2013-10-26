@@ -139,7 +139,11 @@ if(rawget(_G, 'STATE') == nil) then
 		blockBuffSpell = false,
 		shapeshiftSpells = {},	-- form:spellTable
 
-		-- key: id. value: table. All the spells we know.
+		waitingForDrink = false,
+		conjureDrinkSpell = false,
+		drinkRecipients = {},	-- guid:true, characters to give drink to.
+
+		-- key: id. value: table. All the spells we can cast.
 		knownSpells = {},
 
 		-- set of RequiresSpellFocus.
@@ -318,6 +322,12 @@ function hSMSG_GROUP_LIST(p)
 				send(CMSG_GROUP_SET_LEADER, {guid=m.guid});
 				STATE.newLeader = false;
 			end
+		end
+		if(STATE.amTank) then
+			partyChat('amTank');
+		end
+		if(STATE.amHealer) then
+			partyChat('amHealer');
 		end
 	end
 end
@@ -502,6 +512,20 @@ local function valueUpdated(o, idx)
 			partyChat("Level up! "..o.values[idx]);
 		end
 		STATE.myLevel = o.values[idx];
+	end
+	-- finished drinking
+	if(o == STATE.me and STATE.casting and idx == UNIT_FIELD_POWER1 and
+		o.values[idx] == o.values[UNIT_FIELD_MAXPOWER1])
+	then
+		partyChat("max mana reached, stop drink.");
+		STATE.casting = false;
+	end
+	if(o == STATE.me and STATE.casting and
+		idx >= UNIT_FIELD_AURA and idx <= UNIT_FIELD_AURA_LAST and
+		(not amDrinking()))
+	then
+		partyChat("drink over.");
+		STATE.casting = false;
 	end
 	-- money
 	if(o == STATE.me and idx == PLAYER_FIELD_COINAGE) then
@@ -759,9 +783,9 @@ end
 function hSMSG_DESTROY_OBJECT(p)
 	--print("SMSG_DESTROY_OBJECT", dump(p));
 	for i, koh in pairs(STATE.knownObjectHolders) do
-		--koh[p.guid] = nil;
+		koh[p.guid] = nil;
 	end
-	--STATE.knownObjects[p.guid] = nil;
+	STATE.knownObjects[p.guid] = nil;
 	if(STATE.fishingBobber and p.guid == STATE.fishingBobber.guid) then
 		print("fishingBobber destroyed.");
 		STATE.fishingBobber = false;
@@ -967,6 +991,17 @@ local function learnSpell(id)
 					STATE.focusTypes[s.RequiresSpellFocus] = STATE.focusTypes[s.RequiresSpellFocus] or {};
 					STATE.focusTypes[s.RequiresSpellFocus][id] = s;
 				end
+			else
+				delayedItemProto(e.itemType, function(proto)
+					if(isDrinkItem(e.itemType)) then
+						if((not STATE.conjureDrinkSpell) or
+							(STATE.conjureDrinkSpell.spellLevel < s.spellLevel))
+						then
+							print("conjureDrinkSpell:", s.id, s.name, s.rank, s.spellLevel);
+							STATE.conjureDrinkSpell = s;
+						end
+					end
+				end);
 			end
 		end
 	end
@@ -1066,6 +1101,7 @@ function hSMSG_ATTACKSTOP(p)
 	if(isAlly(STATE.knownObjects[p.victim])) then
 		print("peace:", p.attacker:hex());
 		STATE.enemies[p.attacker] = nil;
+		STATE.pickpocketables[p.attacker] = nil;
 	end
 end
 
@@ -1114,8 +1150,15 @@ function hSMSG_SPELL_GO(p)
 	--print("SMSG_SPELL_GO", dump(p));
 	local s = STATE.knownSpells[p.spellId]
 	if(p.casterGuid == STATE.myGuid and s) then
-		setLocalSpellCooldown(getRealTime(), s)
 		STATE.casting = false;
+		if(s) then
+			setLocalSpellCooldown(getRealTime(), s)
+			if(s.goCallback) then
+				local cb = s.goCallback;
+				s.goCallback = nil;
+				cb();
+			end
+		end
 		setAction("not casting. SMSG_SPELL_GO");
 		print("SMSG_SPELL_GO "..p.spellId);
 	end

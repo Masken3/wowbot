@@ -231,6 +231,10 @@ function decision(realTime)
 		return;
 	end
 
+	if(doDrink()) then
+		return;
+	end
+
 	-- don't try following the leader if we don't know where he is.
 	if(STATE.inGroup and STATE.leader and STATE.leader.location.position.x) then
 		if(STATE.currentAction ~= "Following leader") then
@@ -246,6 +250,107 @@ function decision(realTime)
 		return;
 	end
 	setAction("Noting to do...");
+end
+
+-- returns the regen points of the drink, or nil.
+local function isDrinkSpell(s, level)
+	-- these attributes are observed on every drink spell.
+	if(bit32.band(s.Attributes, 0x18000100) ~= 0x18000100) then return nil; end
+	for i,e in ipairs(s.effect) do
+		if(e.id == SPELL_EFFECT_APPLY_AURA and
+			e.applyAuraName == SPELL_AURA_MOD_POWER_REGEN and
+			e.implicitTargetA == TARGET_SELF)
+		then
+			return calcAvgEffectPoints(level, e);
+		end
+	end
+	return nil;
+end
+
+-- returns the regen points of the drink, or nil.
+function isDrinkItem(itemId)
+	local points = nil;
+	local proto = itemProtoFromId(itemId);
+	if(not proto) then return false; end
+	for i,is in ipairs(proto.spells) do
+		if(is.trigger == ITEM_SPELLTRIGGER_ON_USE and is.id ~= 0) then
+			local s = cSpell(is.id);
+			local level = spellLevel(s);
+			points = isDrinkSpell(s, level) or points;
+		end
+	end
+	return points;
+end
+
+-- returns item KnownObject, id or false.
+function findDrinkItem()
+	local item = false;
+	investigateInventory(function(o)
+		local id = o.values[OBJECT_FIELD_ENTRY];
+		if(isDrinkItem(id)) then
+			item = o;
+			return false;
+		end
+	end);
+	return item;
+end
+
+function amDrinking()
+	local points = nil;
+	investigateAuras(STATE.me, function(s, level)
+		points = isDrinkSpell(s, level) or points;
+	end);
+	return points;
+end
+
+local function findPartyMage()
+	for i,m in ipairs(STATE.groupMembers) do
+		local o = STATE.knownObjects[m.guid];
+		if(o and (class(o) == CLASS_MAGE)) then return o; end
+	end
+	return nil;
+end
+
+-- make drink if we don't have any.
+-- ask mage for drink if we can't make any.
+-- drink up if we're low on mana.
+function doDrink()
+	local drinkItem = findDrinkItem();
+	--print("doDrink()");
+	if(not drinkItem) then
+		--print("doDrink not");
+		if(STATE.conjureDrinkSpell) then
+			castSpellWithoutTarget(STATE.conjureDrinkSpell.id);
+			return true;
+		elseif(not STATE.waitingForDrink) then
+			local partyMage = findPartyMage();
+			if(partyMage) then
+				whisper(partyMage, 'give drink');
+				STATE.waitingForDrink = true;
+				return true;
+			end
+		end
+		return false;
+	end
+	local id = drinkItem.values[OBJECT_FIELD_ENTRY];
+	--print("doDrink id "..id);
+	local guid,dummy = next(STATE.drinkRecipients);
+	if(guid) then
+		print("giveDrinkTo "..guid:hex());
+		giveDrinkTo(id, guid);
+		return true;
+	end
+	if(amDrinking()) then
+		print("amDrinking");
+		return true;
+	end
+	if(manaFraction(STATE.me) < 0.25) then
+		setAction("Drinking "..itemLink(drinkItem), true);
+		gUseItem(id);
+		return true;
+	end
+	--print("doneDrink()");
+	return false;
 end
 
 function doPickLockOnItem()
@@ -426,10 +531,25 @@ function doFish(realTime)
 	end
 end
 
+function manaFraction(o)
+	return o.values[UNIT_FIELD_POWER1] / o.values[UNIT_FIELD_MAXPOWER1];
+end
+
+local function allHealersHaveAtLeastHalfMana()
+	if(not STATE.inGroup) then return true; end
+	for i,m in ipairs(STATE.groupMembers) do
+		local o = STATE.knownObjects[m.guid];
+		if(o.bot.isHealer and (manaFraction(o) < 0.5)) then return false; end
+	end
+	return true;
+end
+
 function doPickpocket(realTime)
 	if(not STATE.pickpocketSpell) then return false; end
 	local minDist = PERMASTATE.gatherRadius * 1.5;
 	if(not STATE.leader) then return false; end
+	if(not allHealersHaveAtLeastHalfMana()) then return false; end
+	if(not STATE.stealthed and not canCast(STATE.stealthSpell, realTime)) then return false; end
 	local leaderPos = STATE.leader.location.position;
 	local tar;
 	for guid, o in pairs(STATE.pickpocketables) do

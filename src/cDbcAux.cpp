@@ -20,11 +20,13 @@ extern "C" {
 
 static void dumpTalents();
 static void dumpSpellCooldowns();
+static void dumpSpellLevels();
 
 void loadAuxDBC() {
 	SkillLineAbilityIndex::load();
 	dumpTalents();
 	dumpSpellCooldowns();
+	dumpSpellLevels();
 }
 
 static int l_skillLineAbilityBySpell(lua_State* L) {
@@ -76,6 +78,19 @@ static void dumpSpellCooldowns() {
 				s.id, s.CasterAuraState, s.name);
 		}
 #endif
+	}
+	exit(0);
+#endif
+}
+
+static void dumpSpellLevels() {
+#if 0
+	for(auto itr = gSpells.begin(); itr != gSpells.end(); ++itr) {
+		const Spell& s(itr->second);
+		if(s.baseLevel != s.spellLevel and s.effect[0].realPointsPerLevel > 0) {
+			LOG("%i: base %i, spell %i. (%s)\n",
+				s.id, s.baseLevel, s.spellLevel, s.name);
+		}
 	}
 	exit(0);
 #endif
