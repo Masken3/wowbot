@@ -654,7 +654,7 @@ local function investigateSlots(directField1, directFieldLast,
 			local o = STATE.knownObjects[guid];
 			if(o) then
 				local res = f(o, bagSlot, slot);
-				if(res == false) then return; end
+				if(res == false) then return false; end
 			end
 		else
 			if(emptySlotFunction) then
@@ -684,7 +684,7 @@ local function baseInvestigate(directField1, directFieldLast,
 				local o = STATE.knownObjects[guid];
 				if(o) then
 					local res = f(o, bagSlot, slot);
-					if(res == false) then return; end
+					if(res == false) then return false; end
 				end
 			else
 				if(emptySlotFunction) then

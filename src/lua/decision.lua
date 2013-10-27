@@ -45,10 +45,12 @@ function decision(realTime)
 	end
 
 	-- if there's an appropriate confusion target, hit it.
+	--[[
 	if(doCrowdControl(realTime)) then
 		setAction("CrowdControl...");
 		return;
 	end
+	--]]
 
 	-- if we can buff anyone, do that.
 	if(doBuff(realTime)) then
@@ -204,7 +206,7 @@ function decision(realTime)
 		return;
 	end
 
-	if(STATE.disenchantItems) then
+	if(STATE.disenchantItems and not STATE.tempSkipDisenchant) then
 		local s = STATE.knownSpells[STATE.disenchantSpell];
 		if(spellIsOnCooldown(realTime, s)) then return; end
 		local found = false;
@@ -228,6 +230,7 @@ function decision(realTime)
 			STATE.disenchantItems = false;
 		end
 	end
+	STATE.tempSkipDisenchant = false;
 
 	if(doBags()) then
 		return;

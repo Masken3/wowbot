@@ -49,7 +49,7 @@ if(rawget(_G, 'STATE') == nil) then
 		leader = false,
 		newLeader = false,
 
-		groupMembers = {},	-- set by hSMSG_GROUP_LIST.
+		groupMembers = {},	-- i:m, set by hSMSG_GROUP_LIST.
 
 		mainTank = false, -- KnownObject.
 
@@ -123,6 +123,7 @@ if(rawget(_G, 'STATE') == nil) then
 		disenchantSpell = false,	-- spellId.
 		disenchantItems = false,	-- or itemId:true.
 		currentDisenchant = false,	-- itemId.
+		tempSkipDisenchant = false,
 
 		openLockSpells = {},	--miscValue:spellTable.
 
@@ -528,7 +529,7 @@ local function valueUpdated(o, idx)
 		idx >= UNIT_FIELD_AURA and idx <= UNIT_FIELD_AURA_LAST and
 		(not amDrinking()))
 	then
-		partyChat("drink over.");
+		--partyChat("drink over.");
 		STATE.casting = false;
 	end
 	-- money
@@ -780,7 +781,8 @@ function newUnit(k, o)
 		partyChat(k.name..", "..distance3(myPos, pos).." yards.");
 		send(MSG_MINIMAP_PING, pos);
 		--]]
-		STATE.pickpocketables[o.guid] = o;
+		-- not safe until we can avoid other enemies.
+		--STATE.pickpocketables[o.guid] = o;
 	end
 end
 
@@ -1181,6 +1183,9 @@ function hSMSG_SPELL_GO(p)
 		setAction("not casting. SMSG_SPELL_GO");
 		print("SMSG_SPELL_GO "..p.spellId);
 	end
+	-- allow time for looting before dissing the next item.
+	STATE.tempSkipDisenchant = true;
+
 	decision();
 end
 

@@ -643,6 +643,12 @@ local function amHealer(p)
 	--print("healer", p.senderGuid:hex())
 end
 
+local function test(p)
+	local targetGuid = guidFromValues(STATE.knownObjects[p.senderGuid], UNIT_FIELD_TARGET)
+	local target = STATE.knownObjects[targetGuid]
+	reply(p, tostring(isTargetOfPartyMember(target)))
+end
+
 function handleChatMessage(p)
 	if(not p.text) then return end
 	if(p.text == 'lq') then
@@ -731,6 +737,8 @@ function handleChatMessage(p)
 		amTank(p)
 	elseif(p.text == 'amHealer') then
 		amHealer(p)
+	elseif(p.text == 'test') then
+		test(p)
 	else
 		if(p.type == CHAT_MSG_WHISPER or p.type == CHAT_MSG_WHISPER_INFORM) then
 			print("Whisper: "..p.text)

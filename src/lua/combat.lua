@@ -396,6 +396,7 @@ end
 
 function doSpell(dist, realTime, target, s)
 	assert(s);
+	if(not canCast(s, realTime, true)) then return false; end
 	-- calculate distance.
 	local behindTarget = false;
 	--print("bestSpell: "..bestSpell.name.." "..bestSpell.rank);
@@ -522,6 +523,14 @@ local function creatureTypeMask(info)
 	end
 end
 
+function isTargetOfPartyMember(o)
+	for i,m in ipairs(STATE.groupMembers) do
+		local go = STATE.knownObjects[m.guid];
+		if(go and unitTarget(go) == o.guid) then return true; end
+	end
+	return false;
+end
+
 function doCrowdControl(realTime)
 	if(not STATE.ccSpell) then return false; end
 
@@ -555,6 +564,7 @@ function doCrowdControl(realTime)
 		end
 	end
 	if(target) then
+		STATE.ccTarget = target;
 		return doSpell(distanceToObject(target), realTime, target, STATE.ccSpell);
 	else
 		return false;
@@ -746,7 +756,7 @@ function doTanking(realTime)
 
 	-- in Defensive Stance, do Shield Block and Sunder Armor
 	if(doStanceSpell(realTime, STATE.sunderSpell, enemy)) then return true; end
-	if(not hasAura(enemy, STATE.blockBuffSpell)) then
+	if(not hasAura(STATE.me, STATE.blockBuffSpell)) then
 		if(doStanceSpell(realTime, STATE.blockBuffSpell)) then return true; end
 	end
 
