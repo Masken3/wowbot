@@ -23,6 +23,10 @@ local sCreateCountBox = {caption=1}
 local sCreateButton
 local sCancelButton
 
+local sScrollOffset
+local sScrollHeight
+local sTextHeight
+
 local function windowTitle()
 	return sSkillLine.name.." - "..sSkillValue.."/"..(sSkillMax+sSkillModifier)
 end
@@ -48,6 +52,7 @@ function createWindow()
 		800, 600, SDL.SDL_WINDOW_SHOWN)
 	gSurface = SDL.SDL_GetWindowSurface(gWindow)
 
+	sScrollOffset = 0
 	showNonModal(drawProfWindow, onCloseProfWindow, profHandleClickEvent,
 		profHandleKeyEvent, profHandleMouseUpEvent)
 end
@@ -83,7 +88,7 @@ function init(skillLine)
 				if(rea.count > 0) then
 					local proto = itemProtoFromId(rea.id)
 					if(not proto) then
-						print("WAIT: no proto for item="..rea.id.." spell="..s.id.." ("..s.name..")")
+						--print("WAIT: no proto for item="..rea.id.." spell="..s.id.." ("..s.name..")")
 					end
 					if(not proto) then haveAllProtos = false end
 				end
@@ -122,6 +127,7 @@ function drawProfWindow()
 	local x = 2
 	local y = 2
 	local itemCounts = getItemCounts()
+	local spellCount = 0
 
 	sSkillValue, sSkillMax = skillLevelByIndex(sSkillIndex)
 	SDL.SDL_SetWindowTitle(gWindow, windowTitle())
@@ -163,7 +169,8 @@ function drawProfWindow()
 			spellColor = SDL_white
 			local bc = backgroundColor
 			backgroundColor = function(r)
-				r.w = gSurface.w/2
+				r.w = gSurface.w/2 - iconSize/3
+				--r.y = r.y - sScrollOffset
 				SDL.SDL_FillRect(gSurface, r, bc)
 			end
 		else
@@ -175,11 +182,26 @@ function drawProfWindow()
 			offset = 1
 		end
 
-		local r = drawText(spellText, spellColor, x+offset, y+offset, backgroundColor)
-		sp.r = {x=x, y=y, w=gSurface.w/2, h=r.h}
+		local r = drawText(spellText, spellColor, x+offset, y+offset - sScrollOffset, backgroundColor)
+		sp.r = {x=x, y=y - sScrollOffset, w=gSurface.w/2, h=r.h}
 
-		y = y + r.h
+		sTextHeight = math.max(r.h, sTextHeight or 0)
+		y = y + sTextHeight
+		spellCount = spellCount + 1
 	end
+
+	sScrollHeight = math.max(sScrollHeight or 0, spellCount * sTextHeight)
+
+	-- scroll bar
+	local w = iconSize / 4
+	x = gSurface.w / 2 - w
+	-- background
+	SDL.SDL_FillRect(gSurface, SDL_Rect(x, 0, w, gSurface.h), 0xff008000)
+	-- grip
+	local h = iconSize
+	y = (sScrollOffset / sScrollHeight) * (gSurface.h - h)
+	--print(sScrollHeight, sScrollOffset, y)
+	SDL.SDL_FillRect(gSurface, SDL_Rect(x, y, w, h), 0xff00ff00)
 
 	-- right side
 	x = gSurface.w / 2
@@ -288,6 +310,7 @@ end
 
 local function onCreate()
 	castMulti(sSpells[sSelectedSpell].s, tonumber(sCreateCountBox.caption))
+	sCreateCountBox.caption = 1
 end
 
 local function onCancel()
@@ -325,6 +348,10 @@ end
 
 function profHandleKeyEvent(event, sym)
 	local c = sCreateCountBox.caption
+
+	local maxScrollOffset = (sScrollHeight - gSurface.h)
+	if(maxScrollOffset < 0) then maxScrollOffset = 0 end
+
 	if(sym == SDL.SDLK_BACKSPACE) then
 		if(type(c) == "string") then
 			c = c:sub(1, #c - 1)
@@ -341,5 +368,19 @@ function profHandleKeyEvent(event, sym)
 			c = tostring(num)
 		end
 		sCreateCountBox.caption = c
+	elseif(sym == SDL.SDLK_HOME) then
+		--print("home", sScrollOffset)
+		sScrollOffset = 0
+	elseif(sym == SDL.SDLK_END) then
+		sScrollOffset = maxScrollOffset
+		--print("end", sScrollOffset, sScrollHeight, maxScrollOffset)
+	elseif(sym == SDL.SDLK_PAGEUP) then
+		sScrollOffset = sScrollOffset - gSurface.h
+		if(sScrollOffset < 0) then sScrollOffset = 0 end
+		--print("up", sScrollOffset, sScrollHeight)
+	elseif(sym == SDL.SDLK_PAGEDOWN) then
+		sScrollOffset = sScrollOffset + gSurface.h
+		if(sScrollOffset > maxScrollOffset) then sScrollOffset = maxScrollOffset end
+		--print("down", sScrollOffset, sScrollHeight)
 	end
 end
