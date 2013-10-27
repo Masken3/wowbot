@@ -23,7 +23,7 @@ function calcAvgEffectPoints(level, e)
 end
 
 -- in seconds.
-local function getDuration(index, level)
+function getDuration(index, level)
 	local sd = cSpellDuration(index);
 	if(not sd) then return 0; end
 	local dur = sd.base + sd.perLevel * level;
@@ -513,17 +513,69 @@ function doBuff(realTime)
 	return doBuffSingle(STATE.me, realTime);
 end
 
+local function creatureTypeMask(info)
+	local ct = info.type;
+	if(ct == 0) then
+		return 0;
+	else
+		return 2 ^ (ct-1);
+	end
+end
+
+function doCrowdControl(realTime)
+	if(not STATE.ccSpell) then return false; end
+
+	-- no other enemy must be afflicted by our cc already.
+	-- unfortunately, we have no way to know which enemy aura is ours.
+	-- we can perhaps save the last enemy we tried to cc, and just check that one...
+	-- but that won't work if another player of the same class hit it before us.
+	-- still, better than nothing.
+	if(STATE.ccTarget and hasAura(STATE.ccTarget, STATE.ccSpell)) then return false; end
+
+	if(not canCast(STATE.ccSpell, realTime)) then return false; end
+
+	local target;
+	local targetInfo;
+	-- the target must be an enemy with full health,
+	-- must be of the correct type for the spell,
+	-- mustn't be immune to the spell (we can't check this),
+	-- that is not being targeted by any party member.
+	-- elites are preferred.
+	for guid,o in pairs(STATE.enemies) do
+		local info = STATE.knownCreatures[o.values[OBJECT_FIELD_ENTRY]];
+		if(bit32.btest(STATE.ccSpell.TargetCreatureType, creatureTypeMask(info)) and
+			(o.values[UNIT_FIELD_HEALTH] == o.values[UNIT_FIELD_MAXHEALTH]) and
+			(not isTargetOfPartyMember(o)) and
+			((not targetInfo) or
+				((targetInfo.rank == CREATURE_ELITE_NORMAL) and (info.rank ~= CREATURE_ELITE_NORMAL))
+			))
+		then
+			target = o;
+			targetInfo = info;
+		end
+	end
+	if(target) then
+		return doSpell(distanceToObject(target), realTime, target, STATE.ccSpell);
+	else
+		return false;
+	end
+end
+
 local classInfo = {
 	[CLASS_WARRIOR] = {tankPrio = 1},
-	[CLASS_PALADIN] = {tankPrio = 1},
-	[CLASS_HUNTER] = {tankPrio = 2},
-	[CLASS_SHAMAN] = {tankPrio = 2},
+	[CLASS_PALADIN] = {tankPrio = 1, drink=true},
+	[CLASS_HUNTER] = {tankPrio = 2, drink=true},
+	[CLASS_SHAMAN] = {tankPrio = 2, drink=true},
 	[CLASS_ROGUE] = {tankPrio = 3},
-	[CLASS_DRUID] = {tankPrio = 3},
-	[CLASS_MAGE] = {tankPrio = 4},
-	[CLASS_WARLOCK] = {tankPrio = 4},
-	[CLASS_PRIEST] = {tankPrio = 4},
+	[CLASS_DRUID] = {tankPrio = 3, drink=true},
+	[CLASS_MAGE] = {tankPrio = 4, drink=true},
+	[CLASS_WARLOCK] = {tankPrio = 4, drink=true},
+	[CLASS_PRIEST] = {tankPrio = 4, drink=true},
 }
+
+function getClassInfo(o)
+	return classInfo[class(o)];
+end
 
 -- healers first, then other clothies, leather-wearers, mail, plate, in that order.
 local function tankPrio(o)

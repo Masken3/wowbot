@@ -44,6 +44,12 @@ function decision(realTime)
 		return;
 	end
 
+	-- if there's an appropriate confusion target, hit it.
+	if(doCrowdControl(realTime)) then
+		setAction("CrowdControl...");
+		return;
+	end
+
 	-- if we can buff anyone, do that.
 	if(doBuff(realTime)) then
 		setAction("buffing...");
@@ -207,6 +213,7 @@ function decision(realTime)
 			if(STATE.disenchantItems[itemId] and
 				(not PERMASTATE.undisenchantable[itemId]))
 			then
+				assert(not found);
 				partyChat("Dis: "..itemLink(o));
 				-- if disenchant fails, remember that.
 				STATE.currentDisenchant = itemId;
@@ -315,6 +322,8 @@ end
 -- ask mage for drink if we can't make any.
 -- drink up if we're low on mana.
 function doDrink()
+	if(not getClassInfo(STATE.me).drink) then return false; end
+
 	local drinkItem = findDrinkItem();
 	--print("doDrink()");
 	if(not drinkItem) then
@@ -539,7 +548,7 @@ local function allHealersHaveAtLeastHalfMana()
 	if(not STATE.inGroup) then return true; end
 	for i,m in ipairs(STATE.groupMembers) do
 		local o = STATE.knownObjects[m.guid];
-		if(o.bot.isHealer and (manaFraction(o) < 0.5)) then return false; end
+		if((not o) or (o.bot.isHealer and (manaFraction(o) < 0.5))) then return false; end
 	end
 	return true;
 end

@@ -634,7 +634,8 @@ function baseInvestigateBags(bagField1, bagFieldLast, bagSlotStart, f, emptySlot
 			if(bag) then
 				local slotCount = bag.values[CONTAINER_FIELD_NUM_SLOTS];
 				if(slotCount) then
-					f(bag, bagSlot, slotCount);
+					local res = f(bag, bagSlot, slotCount);
+					if(res == false) then return; end
 				end
 			end
 		elseif(emptySlotFunction) then

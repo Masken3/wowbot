@@ -138,6 +138,8 @@ if(rawget(_G, 'STATE') == nil) then
 		sunderSpell = false,
 		blockBuffSpell = false,
 		shapeshiftSpells = {},	-- form:spellTable
+		ccSpell = false,
+		ccTarget = false,	-- KnownObject
 
 		pullPosition = false,	-- Position.
 
@@ -964,6 +966,21 @@ local function learnSpell(id)
 		then
 			print("shapeshiftSpells", e.miscValue, s.id);
 			STATE.shapeshiftSpells[e.miscValue] = s;
+		end
+		-- Crowd Control (Polymorph, Hex, Shackle and Hibernate, but not Fear or Sap.)
+		if(e.id == SPELL_EFFECT_APPLY_AURA and
+			(e.applyAuraName == SPELL_AURA_MOD_CONFUSE or
+			e.applyAuraName == SPELL_AURA_MOD_STUN) and
+			e.implicitTargetA == TARGET_CHAIN_DAMAGE)
+		then
+			local level = spellLevel(s);
+			local duration = getDuration(s.DurationIndex, level);
+			if(duration > 15 and ((not STATE.ccSpell) or
+				duration > getDuration(STATE.ccSpell.DurationIndex, level)))
+			then
+				print("ccSpell", s.id, s.name, s.rank);
+				STATE.ccSpell = s;
+			end
 		end
 
 		-- direct heals
