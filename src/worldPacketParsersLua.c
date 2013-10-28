@@ -473,8 +473,8 @@ void pSMSG_CAST_FAILED(pLUA_ARGS) {
 				M(uint32, focus);
 			} else if(result == SPELL_FAILED_EQUIPPED_ITEM_CLASS) {
 				M(uint32, itemClass);
-				M(uint32, itemSubClass);
-				M(uint32, itemInventoryType);
+				M(uint32, itemSubClassMask);
+				M(uint32, itemInventoryTypeMask);
 			}
 		} else {
 			LOG("pSMSG_CAST_FAILED: unknown status %i\n", status);
@@ -871,7 +871,37 @@ void pSMSG_TRADE_STATUS(pLUA_ARGS) {
 
 void pSMSG_TRADE_STATUS_EXTENDED(pLUA_ARGS) {
 	PL_START;
-	// we don't need any of the info, because bots accept any trade.
+	M(byte, trader_state);
+	{
+		MM(uint32, count);
+		{
+			MM(uint32, count2);
+			assert(count == count2);
+		}
+		M(uint32, money);
+		M(uint32, spell);	// spell cast on lowest slot item
+		lua_pushstring(L, "items");
+		lua_createtable(L, count, 0);
+		for(uint32 i=0; i<count; i++) {
+			lua_createtable(L, 0, 14);
+			M(byte, i);
+			M(uint32, itemId);
+			M(uint32, displayInfoID);
+			M(uint32, count);
+			M(uint32, isWrapped);
+			M(Guid, wrapperGuid);
+			M(uint32, enchantment);
+			M(Guid, creatorGuid);
+			M(uint32, charges);
+			M(uint32, suffixFactor);
+			M(uint32, randomProprtyId);
+			M(uint32, lockId);
+			M(uint32, maxDurability);
+			M(uint32, durability);
+			lua_rawseti(L, -2, i);
+		}
+		lua_settable(L, -3);
+	}
 }
 
 void pSMSG_NAME_QUERY_RESPONSE(pLUA_ARGS) {

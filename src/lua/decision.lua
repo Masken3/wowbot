@@ -81,20 +81,43 @@ function decision(realTime)
 		if(s.Targets == TARGET_FLAG_ITEM) then
 			local itemTarget
 			local mask = s.EquippedItemInventoryTypeMask
+			local protoTest
 			if(mask == 0) then
-				-- probably invalid assumption
-				mask = 0x4000	-- shield
+				local class = s.EquippedItemClass
+				mask = s.EquippedItemSubClassMask
+				protoTest = function(proto)
+					return (class == proto.itemClass and bit32.btest(mask, (2 ^ proto.subClass)));
+				end
+			else
+				protoTest = function(proto)
+					--print(string.format("test 0x%x, 0x%x (%i), %s",
+						--mask, (2 ^ proto.InventoryType), proto.InventoryType, proto.name));
+					return (bit32.btest(mask, (2 ^ proto.InventoryType)));
+				end
 			end
 			local f = function(o)
 				local proto = itemProtoFromId(o.values[OBJECT_FIELD_ENTRY]);
-				--print(string.format("test 0x%x, 0x%x (%i), %s",
-					--mask, (2 ^ proto.InventoryType), proto.InventoryType, proto.name));
-				if(bit32.btest(mask, (2 ^ proto.InventoryType))) then
+				if protoTest(proto) then
 					itemTarget = o;
-					--print("Found it.");
 					return false;
 				end
 			end
+			-- first, check the trade window's last slot.
+			--print(STATE.tradeStatus, dump(STATE.extendedTradeStatus));
+			if(STATE.tradeStatus == TRADE_STATUS_BACK_TO_TRADE and STATE.extendedTradeStatus) then
+				local itemId = STATE.extendedTradeStatus.items[TRADE_SLOT_NONTRADED].itemId;
+				if(itemId ~= 0) then
+					local proto = itemProtoFromId(itemId);
+					if(protoTest(proto)) then
+						castSpellAtTradeSlot(s.id, TRADE_SLOT_NONTRADED);
+					end
+				end
+				-- if the trade window is open at all, don't check own inventory;
+				-- likely that trader wants an enchantment,
+				-- and we don't want to waste reagents.
+				return;
+			end
+
 			investigateEquipment(f)
 			if(not itemTarget) then
 				investigateInventory(f)

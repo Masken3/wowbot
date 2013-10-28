@@ -173,6 +173,7 @@ if(rawget(_G, 'STATE') == nil) then
 		tradeGiveAll = false,
 		tradeGiveItems = {},	-- itemId:true.
 		recreate = false,
+		extendedTradeStatus = false,	-- set by hSMSG_TRADE_STATUS_EXTENDED.
 
 		knownCreatures = {},
 		creatureQueryCallbacks = {},
@@ -357,17 +358,21 @@ function bit32.bytes(x)
 	return bit32.extract(x,0,8),bit32.extract(x,8,8),bit32.extract(x,16,8),bit32.extract(x,24,8)
 end
 
+function guidFromInts(a, b)
+	if((not a) or (not b)) then return nil; end
+	local s = string.char(bit32.bytes(a)) .. string.char(bit32.bytes(b));
+	--local s = string.format("%08X%08X", a, b);
+	--print("guidFromInts", s);
+	assert(#s == 8);
+	--print("guidFromInts", s:hex());
+	return s;
+end
+
 function guidFromValues(o, idx)
 	local a = o.values[idx];
 	local b = o.values[idx+1];
-	if((not a) or (not b)) then return nil; end
 	--print("guidFromValues", idx, a, b);
-	local s = string.char(bit32.bytes(a)) .. string.char(bit32.bytes(b));
-	--local s = string.format("%08X%08X", a, b);
-	--print("guidFromValues", s);
-	assert(#s == 8);
-	--print("guidFromValues", s:hex());
-	return s;
+	return guidFromInts(a, b);
 end
 
 ZeroGuid = string.rep(string.char(0), 8);
@@ -570,6 +575,16 @@ local function valueUpdated(o, idx)
 	then
 		updateInventoryScreen()
 	end
+
+	local f = function(b)
+		if(o == b) then
+			updateInventoryScreen();
+			return false;
+		end
+	end
+	investigateBags(f)
+	investigateBankBags(f)
+
 	--[[
 	if(o == STATE.me and idx == PLAYER_CHARACTER_POINTS1) then
 		if(o.values[idx] > 0) then
@@ -1095,7 +1110,21 @@ function castSpellAtItem(spellId, target)
 		targetFlags = TARGET_FLAG_ITEM,
 		itemTarget = target.guid,
 	}
-	print("castSpellAtItem "..spellId.." @"..target.guid:hex());
+	print("castSpellAtItem "..spellId.." @"..itemLink(target));
+	setSpellCooldown(spellId);
+	send(CMSG_CAST_SPELL, data);
+end
+
+-- slot must be an int < TRADE_SLOT_COUNT.
+-- will cause SMSG_CAST_FAILED with SPELL_FAILED_DONT_REPORT,
+-- and later, when trade is complete, SMSG_SPELL_GO.
+function castSpellAtTradeSlot(spellId, slot)
+	local data = {
+		spellId = spellId,
+		targetFlags = TARGET_FLAG_TRADE_ITEM,
+		itemTarget = guidFromInts(slot, 0),
+	}
+	print("castSpellAtTradeSlot "..spellId.." @"..slot);
 	setSpellCooldown(spellId);
 	send(CMSG_CAST_SPELL, data);
 end

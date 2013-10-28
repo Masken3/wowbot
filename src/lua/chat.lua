@@ -198,6 +198,7 @@ function hSMSG_TRADE_STATUS(p)
 end
 
 function hSMSG_TRADE_STATUS_EXTENDED(p)
+	STATE.extendedTradeStatus = p
 	send(CMSG_ACCEPT_TRADE, {padding=0})
 end
 
