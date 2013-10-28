@@ -95,7 +95,7 @@ end
 -- returns one of enum EquipmentSlots.
 function itemEquipSlot(proto)
 	--print("itemSlotIndex("..proto.InventoryType..")", dump(itemInventoryToEquipmentSlot));
-	if((proto.InventoryType == INVTYPE_WEAPON) and not canDualWield()) then
+	if((proto.InventoryType == INVTYPE_WEAPON) and ((not canDualWield()) or STATE.amTank)) then
 		return EQUIPMENT_SLOT_MAINHAND;
 	end
 	return itemInventoryToEquipmentSlot[proto.InventoryType];
@@ -612,6 +612,13 @@ function maybeEquip(itemGuid, verbose)
 	if(slot) then
 		equip(itemGuid, id, slot);
 	end
+end
+
+function forceEquip(itemGuid)
+	local id = itemIdOfGuid(itemGuid);
+	local proto = itemProtoFromId(id);
+	local slot = itemEquipSlot(proto);
+	equip(itemGuid, id, slot);
 end
 
 -- slot is one of the EQUIPMENT_SLOT constants.

@@ -137,6 +137,10 @@ local function getClickInfo(t, button)
 			return {description="maybeEquip", f=function()
 				maybeEquip(t.o.guid, true)
 			end}
+		elseif(ssAlt and (not ssShift) and ssCtrl) then
+			return {description="forceEquip", f=function()
+				forceEquip(t.o.guid)
+			end}
 		elseif(ssCtrl and (not ssShift) and (not ssAlt)) then
 			return {description="Sell", f=function()
 				STATE.itemsToSell[itemId] = true
