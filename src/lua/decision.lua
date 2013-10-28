@@ -241,7 +241,7 @@ function decision(realTime)
 		return;
 	end
 
-	if(doDrink()) then
+	if(doDrink(realTime)) then
 		return;
 	end
 
@@ -324,7 +324,7 @@ end
 -- make drink if we don't have any.
 -- ask mage for drink if we can't make any.
 -- drink up if we're low on mana.
-function doDrink()
+function doDrink(realTime)
 	if(not getClassInfo(STATE.me).drink) then return false; end
 
 	local drinkItem = findDrinkItem();
@@ -332,6 +332,7 @@ function doDrink()
 	if(not drinkItem) then
 		--print("doDrink not");
 		if(STATE.conjureDrinkSpell) then
+			if(spellIsOnCooldown(realTime, STATE.conjureDrinkSpell)) then return false; end
 			castSpellWithoutTarget(STATE.conjureDrinkSpell.id);
 			return true;
 		elseif(not STATE.waitingForDrink) then

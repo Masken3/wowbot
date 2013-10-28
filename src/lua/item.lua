@@ -379,6 +379,7 @@ local function enchValue(enchId, proto, ci, verbose)
 			local s = cSpell(e.spellId);
 			local level = spellLevel(s);
 			for j,se in ipairs(s.effect) do
+				local points = calcAvgEffectPoints(level, se);
 				if(se.id == SPELL_EFFECT_APPLY_AURA) then
 					if(se.applyAuraName == SPELL_AURA_MOD_STAT) then
 						-- for this aura, miscValue is one of the STAT_ defines (0-4).
@@ -387,7 +388,6 @@ local function enchValue(enchId, proto, ci, verbose)
 						mods[m] = (mods[m] or 0) + calcAvgEffectPoints(0, se);
 					elseif(se.applyAuraName == SPELL_AURA_MOD_DAMAGE_DONE) then
 						-- se.miscValue is schoolMask (1 << enum SpellSchools)
-						--local points = calcAvgEffectPoints(level, se);
 
 						-- it's really hard to assign a reasonable value to this effect;
 						-- you have to know if you would more damage with it than without.
@@ -395,11 +395,15 @@ local function enchValue(enchId, proto, ci, verbose)
 						-- that you're actually using.
 						-- for now, we'll just ignore it.
 					elseif(se.applyAuraName == SPELL_AURA_MOD_ATTACK_POWER) then
-						local points = calcAvgEffectPoints(level, se);
-						v = addDamageValueRaw(v, points / (proto.Delay / 1000), false, ci, verbose)
+						v = addDamageValueRaw(v, points / 14, false, ci, verbose)
 					elseif(se.applyAuraName == SPELL_AURA_MOD_RANGED_ATTACK_POWER) then
-						local points = calcAvgEffectPoints(level, se);
-						v = addDamageValueRaw(v, points / (proto.Delay / 1000), true, ci, verbose)
+						v = addDamageValueRaw(v, points / 14, true, ci, verbose)
+					elseif(se.applyAuraName == SPELL_AURA_MOD_INCREASE_ENERGY) then
+						v = addDumpIf(v, points, "Mana+", verbose)
+					elseif(se.applyAuraName == SPELL_AURA_MOD_INCREASE_HEALTH) then
+						v = addDumpIf(v, points, "Health+", verbose)
+					elseif(se.applyAuraName == SPELL_AURA_MOD_RESISTANCE) then
+						-- we don't care about resistances yet.
 					else
 						print("WARN: unhandled aura "..se.applyAuraName..
 							" on spell="..e.spellId.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");

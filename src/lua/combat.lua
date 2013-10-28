@@ -38,7 +38,7 @@ function attack(realTime, enemy)
 	-- if we have a good ranged attack, use that.
 	-- otherwise, go to melee.
 
-	if(not STATE.amHealer) then
+	if((not STATE.amHealer) and (not (STATE.amTank and not hasSunder(enemy)))) then
 		-- todo: set stance, cast area buffs.
 
 		if(attackSpell(dist, realTime, enemy)) then return; end
@@ -132,9 +132,6 @@ local function spellCost(s, level, duration)
 		end
 	end
 
-	if(s.powerType == POWER_RAGE) then
-		cost = cost * 10;
-	end
 	return cost;
 end
 
@@ -229,7 +226,7 @@ end
 
 -- returns false or
 -- level, duration, cost, powerIndex, availablePower.
-function canCast(s, realTime, abortOnLowPower)
+function canCast(s, realTime, ignoreLowPower)
 	local level, duration, cost, powerIndex, availablePower;
 	-- if spell's cooldown hasn't yet expired, don't try to cast it.
 	if(spellIsOnCooldown(realTime, s)) then return false; end
@@ -288,9 +285,9 @@ function canCast(s, realTime, abortOnLowPower)
 	assert(availablePower < 100000);
 
 	-- if we can't cast the spell, ignore it.
-	if(availablePower < cost and (not abortOnLowPower)) then
+	if(availablePower < cost and (not ignoreLowPower)) then
 		if(sLog) then
-			print(s.name.." Need more power!");
+			print(s.name.." Need more power!", availablePower.." < "..cost);
 		end
 		return false;
 	end
@@ -323,9 +320,9 @@ local function spellRange(s, target)
 	end
 end
 
--- if abortOnLowPower, don't ignore spells we don't have enough power for.
+-- if ignoreLowPower, don't ignore spells we don't have enough power for.
 -- instead, if we can't cast the best, don't cast anything.
-function mostEffectiveSpell(realTime, spells, abortOnLowPower, target)
+function mostEffectiveSpell(realTime, spells, ignoreLowPower, target)
 	local maxPpc = 0;
 	local maxPointsForFree = 0;
 	local maxPoints = 0;
@@ -340,7 +337,7 @@ function mostEffectiveSpell(realTime, spells, abortOnLowPower, target)
 	if(sLog and next(spells)) then print("testing...") end
 	for id, s in pairs(spells) do
 		local level, duration, cost, powerIndex, availablePower =
-			canCast(s, realTime, abortOnLowPower);
+			canCast(s, realTime, ignoreLowPower);
 		if(not level) then goto continue; end
 		availP = availablePower;
 
@@ -396,7 +393,7 @@ end
 
 function doSpell(dist, realTime, target, s)
 	assert(s);
-	if(not canCast(s, realTime, true)) then return false; end
+	if(not canCast(s, realTime)) then return false; end
 	-- calculate distance.
 	local behindTarget = false;
 	--print("bestSpell: "..bestSpell.name.." "..bestSpell.rank);
@@ -731,8 +728,8 @@ function doTanking(realTime)
 	end
 
 	-- wait for enemy to arrive.
+	local dist = distanceToObject(enemy);
 	if(STATE.raidIcons[RAID_ICON_SQUARE] == enemy.guid) then
-		local dist = distanceToObject(enemy);
 		if(dist > MELEE_RANGE) then
 			goToPullPosition(realTime);
 			return true;
@@ -742,7 +739,7 @@ function doTanking(realTime)
 	-- if we're still in Battle Stance, do Thunder Clap.
 	-- TODO: move closer to enemies.
 	--sLog = true;
-	if(STATE.pbAoeSpell and canCast(STATE.pbAoeSpell, realTime)) then
+	if(STATE.pbAoeSpell and canCast(STATE.pbAoeSpell, realTime) and dist < MELEE_RANGE) then
 		castSpellWithoutTarget(STATE.pbAoeSpell.id);
 		return true;
 	end
@@ -755,15 +752,20 @@ function doTanking(realTime)
 	-- once those are on cooldown, go to Defensive Stance.
 
 	-- in Defensive Stance, do Shield Block and Sunder Armor
+	--sLog = true;
 	if(doStanceSpell(realTime, STATE.sunderSpell, enemy)) then return true; end
+	sLog = false;
+	--[[	-- aura detection seems broken.
 	if(not hasAura(STATE.me, STATE.blockBuffSpell)) then
 		if(doStanceSpell(realTime, STATE.blockBuffSpell)) then return true; end
 	end
+	--]]
 
 	-- taunt someone, if we can and should.
 	local target = chooseTankTarget();
 	if(not target) then return false; end
 	if(doStanceSpell(realTime, STATE.tauntSpell, target)) then return true; end
+	return false;
 end
 
 local function mainTankTarget()
@@ -797,7 +799,7 @@ local function tankIsWarrior()
 	return class(STATE.mainTank) == CLASS_WARRIOR;
 end
 
-local function hasSunder(o)
+function hasSunder(o)
 	return GetMaxNegativeAuraModifier(o, SPELL_AURA_MOD_RESISTANCE) ~= 0;
 end
 
@@ -812,7 +814,10 @@ function chooseEnemy()
 		-- focus on main tank's target, if any.
 		enemy = raidTarget() or enemy;
 		enemy = STATE.enemies[mainTankTarget()] or enemy;
-		if(enemy and tankIsWarrior() and (not hasSunder(enemy))) then
+		-- if enemy is attacking tank but doesn't have sunder yet, don't attack.
+		if(enemy and tankIsWarrior() and (not hasSunder(enemy)) and
+			unitTarget(enemy) == STATE.mainTank.guid)
+		then
 			enemy = false;
 		end
 	end
