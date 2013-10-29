@@ -207,7 +207,7 @@ static uint16 genCMSG_USE_ITEM(lua_State* L, byte* buf) {
 	GL_START;
 	M(byte, bag);
 	M(byte, slot);
-	M(byte, spellCount);
+	M(byte, spellCount);	// unused, set to 0.
 	spellTargets(L, &ptr);
 	GL_END;
 }

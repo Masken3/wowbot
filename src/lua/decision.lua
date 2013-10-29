@@ -64,6 +64,7 @@ function decision(realTime)
 		return;
 	end
 
+	-- attack an enemy.
 	local enemy = chooseEnemy();
 	if(enemy and not STATE.stealthed) then
 		setAction("Attacking "..enemy.guid:hex());
@@ -72,6 +73,11 @@ function decision(realTime)
 	end
 	STATE.meleeing = false;
 
+	-- if hostiles are near, apply temporary enchantments, if we have any.
+	if(doApplyTempEnchant()) then
+		return;
+	end
+
 	-- continue repeated spell casting.
 	if(STATE.repeatSpellCast.count > 0) then
 		local s = STATE.knownSpells[STATE.repeatSpellCast.id];
@@ -79,24 +85,10 @@ function decision(realTime)
 		setAction("Casting "..s.name..", "..STATE.repeatSpellCast.count.." remain");
 		STATE.repeatSpellCast.count = STATE.repeatSpellCast.count - 1;
 		if(s.Targets == TARGET_FLAG_ITEM) then
-			local itemTarget
-			local mask = s.EquippedItemInventoryTypeMask
-			local protoTest
-			if(mask == 0) then
-				local class = s.EquippedItemClass
-				mask = s.EquippedItemSubClassMask
-				protoTest = function(proto)
-					return (class == proto.itemClass and bit32.btest(mask, (2 ^ proto.subClass)));
-				end
-			else
-				protoTest = function(proto)
-					--print(string.format("test 0x%x, 0x%x (%i), %s",
-						--mask, (2 ^ proto.InventoryType), proto.InventoryType, proto.name));
-					return (bit32.btest(mask, (2 ^ proto.InventoryType)));
-				end
-			end
+			local itemTarget;
+			local protoTest = spellCanTargetItemProtoTest(s);
 			local f = function(o)
-				local proto = itemProtoFromId(o.values[OBJECT_FIELD_ENTRY]);
+				local proto = itemProtoFromObject(o);
 				if protoTest(proto) then
 					itemTarget = o;
 					return false;
@@ -285,6 +277,79 @@ function decision(realTime)
 	setAction("Noting to do...");
 end
 
+local function hostilesAreNear()
+	for guid, o in pairs(STATE.hostiles) do
+		local dist = distance3(STATE.my.location.position, o.location.position);
+		if((dist < 40) and (o.values[UNIT_FIELD_HEALTH] > 0)) then return true; end
+	end
+	return false;
+end
+
+function spellCanTargetItemProtoTest(s)
+	assert(s.Targets == TARGET_FLAG_ITEM);
+	local mask = s.EquippedItemInventoryTypeMask;
+	if(mask == 0) then
+		local class = s.EquippedItemClass;
+		mask = s.EquippedItemSubClassMask;
+		return function(proto)
+			return (class == proto.itemClass and bit32.btest(mask, (2 ^ proto.subClass)));
+		end
+	else
+		return function(proto)
+			--print(string.format("test 0x%x, 0x%x (%i), %s",
+				--mask, (2 ^ proto.InventoryType), proto.InventoryType, proto.name));
+			return (bit32.btest(mask, (2 ^ proto.InventoryType)));
+		end
+	end
+end
+
+local function tempEnchantSpellOnItem(o)
+	local proto = itemProtoFromObject(o);
+	for i,is in ipairs(proto.spells) do
+		if(is.trigger == ITEM_SPELLTRIGGER_ON_USE and is.id ~= 0) then
+			local s = cSpell(is.id);
+			if(s.effect[1].id == SPELL_EFFECT_ENCHANT_ITEM_TEMPORARY) then
+				return s;
+			end
+		end
+	end
+	return nil;
+end
+
+-- use item in slot on item b.
+function useItemOnItem(bagSlot, slot, b)
+	send(CMSG_USE_ITEM, {bag = bagSlot, slot = slot, spellCount = 0,
+		targetFlags = TARGET_FLAG_ITEM, itemTarget = b.guid});
+end
+
+function hasTempEnchant(o)
+	return (o.values[ITEM_FIELD_ENCHANTMENT + TEMP_ENCHANTMENT_SLOT*3] or 0) ~= 0;
+end
+
+-- if hostiles are near, apply temporary enchantments, if we have any.
+function doApplyTempEnchant()
+	if(not hostilesAreNear()) then return false; end
+	-- scan our inventory for enchanter items.
+	local didSomething = false;
+	investigateInventory(function(o, bagSlot, slot)
+		local s = tempEnchantSpellOnItem(o);
+		if(s) then
+			-- if one is found, see if we have any equipment it'd be usable and useful on.
+			local protoTest = spellCanTargetItemProtoTest(s);
+			investigateEquipment(function(e)
+				local proto = itemProtoFromObject(e);
+				if(protoTest(proto) and (not hasTempEnchant(e))) then
+					useItemOnItem(bagSlot, slot, e);
+					didSomething = true;
+					return false;
+				end
+			end);
+			return false;
+		end
+	end);
+	return didSomething;
+end
+
 -- returns the regen points of the drink, or nil.
 local function isDrinkSpell(s, level)
 	-- these attributes are observed on every drink spell.
@@ -436,7 +501,7 @@ local function baseDoBags(bif, iif, minBagCount)
 			itemsInSmallestBagCount = itemsInSmallestBagCount + 1;
 			itemsInSmallestBag[o] = slot;
 		end
-		local proto = itemProtoFromId(o.values[OBJECT_FIELD_ENTRY]);
+		local proto = itemProtoFromObject(o);
 		if(not proto) then
 			return false;
 		end

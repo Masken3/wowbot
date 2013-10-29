@@ -197,6 +197,7 @@ if(rawget(_G, 'STATE') == nil) then
 	-- key:guid. value:knownObject from knownObjects.
 	local knownObjectHolders = {
 		'enemies',
+		'hostiles',
 		'questGivers',
 		'questFinishers',
 		'lootables',
@@ -785,20 +786,24 @@ function hSMSG_UPDATE_OBJECT(p)
 end
 
 function newUnit(k, o)
-	-- if creature is hostile and (humanoid or undead), we can pickpocket it.
-	-- also, don't try pocketing too high level creatures; large chance of failure.
-	if(STATE.pickpocketSpell and isCreature(o) and isHostileToPlayers(o) and
-		(o.values[UNIT_FIELD_LEVEL] < (STATE.myLevel + 5)) and
-		(k.type == CREATURE_TYPE_HUMANOID or k.type == CREATURE_TYPE_UNDEAD))
-	then
-		--[[
-		local myPos = STATE.myLocation.position;
-		local pos = o.location.position;
-		partyChat(k.name..", "..distance3(myPos, pos).." yards.");
-		send(MSG_MINIMAP_PING, pos);
-		--]]
-		-- not safe until we can avoid other enemies.
-		--STATE.pickpocketables[o.guid] = o;
+	if(isCreature(o) and isHostileToPlayers(o)) then
+		STATE.hostiles[o.guid] = o;
+
+		-- if creature is hostile and (humanoid or undead), we can pickpocket it.
+		-- also, don't try pocketing too high level creatures; large chance of failure.
+		if(STATE.pickpocketSpell and
+			(o.values[UNIT_FIELD_LEVEL] < (STATE.myLevel + 5)) and
+			(k.type == CREATURE_TYPE_HUMANOID or k.type == CREATURE_TYPE_UNDEAD))
+		then
+			--[[
+			local myPos = STATE.myLocation.position;
+			local pos = o.location.position;
+			partyChat(k.name..", "..distance3(myPos, pos).." yards.");
+			send(MSG_MINIMAP_PING, pos);
+			--]]
+			-- not safe until we can avoid other enemies.
+			--STATE.pickpocketables[o.guid] = o;
+		end
 	end
 end
 

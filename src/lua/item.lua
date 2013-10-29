@@ -47,6 +47,10 @@ function itemProtoFromId(id)
 	send(CMSG_ITEM_QUERY_SINGLE, {itemId=id, guid=ZeroGuid});
 end
 
+function itemProtoFromObject(o)
+	return itemProtoFromId(o.values[OBJECT_FIELD_ENTRY]);
+end
+
 function delayedItemProto(id, f)
 	local proto = itemProtoFromId(id);
 	if(proto) then
@@ -513,13 +517,13 @@ function itemLoginComplete()
 		maybeEquip(o.guid);
 	end)
 	investigateBank(function(o)
-		itemProtoFromId(itemIdOfGuid(o.guid));
+		itemProtoFromObject(o);
 	end)
 	investigateBags(function(o)
-		itemProtoFromId(itemIdOfGuid(o.guid));
+		itemProtoFromObject(o);
 	end)
 	investigateBankBags(function(o)
-		itemProtoFromId(itemIdOfGuid(o.guid));
+		itemProtoFromObject(o);
 	end)
 end
 
@@ -718,6 +722,8 @@ function countFreeBankSlots()
 	return investigateBank(function()end)
 end
 
+-- f(o, bagSlot, slot)
+-- emptySlotFunction(bagSlot, slot)
 function investigateEquipment(f, emptySlotFunction)
 	return investigateSlots(PLAYER_FIELD_INV_SLOT_HEAD, PLAYER_FIELD_BAG_SLOT_1-2,
 		INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_START, f, emptySlotFunction)
@@ -776,7 +782,7 @@ local itemColors = {
 
 function itemLink(o)
 	--|cffffffff|Hitem:2886:0:0:0|h[Crag Boar Rib]|h|r
-	local proto = itemProtoFromId(o.values[OBJECT_FIELD_ENTRY]);
+	local proto = itemProtoFromObject(o);
 	local link = "|cff"..itemColors[proto.Quality].."|H"..itemString(o).."|h["..proto.name.."]|h|r";
 	return link;
 end
@@ -789,13 +795,13 @@ function itemLinkFromId(id)
 end
 
 function isFishingPole(o)
-	local proto = itemProtoFromId(o.values[OBJECT_FIELD_ENTRY]);
+	local proto = itemProtoFromObject(o);
 	return (proto.itemClass == ITEM_CLASS_WEAPON and
 		proto.subClass == ITEM_SUBCLASS_WEAPON_FISHING_POLE);
 end
 
 function itemLockSkillEntry(o)
-	local proto = itemProtoFromId(o.values[OBJECT_FIELD_ENTRY]);
+	local proto = itemProtoFromObject(o);
 	if(not proto) then return nil; end
 	if(proto.LockID == 0) then return nil; end
 	return lockSkillEntry(proto.LockID);
