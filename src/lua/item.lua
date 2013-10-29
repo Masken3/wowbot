@@ -404,6 +404,8 @@ local function enchValue(enchId, proto, ci, verbose)
 						v = addDumpIf(v, points, "Health+", verbose)
 					elseif(se.applyAuraName == SPELL_AURA_MOD_RESISTANCE) then
 						-- we don't care about resistances yet.
+					elseif(se.applyAuraName == SPELL_AURA_MOD_DAMAGE_DONE_CREATURE) then
+						-- useless to us.
 					else
 						print("WARN: unhandled aura "..se.applyAuraName..
 							" on spell="..e.spellId.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
