@@ -72,7 +72,7 @@ work = ExeWork.new do
 		GenLuaFromHeaderTask.new('movement', 'src/movement.h',
 			{:includedEnums=>['MonsterMoveType']}),
 		GenLuaFromHeaderTask.new('QuestDef', 'server-code/QuestDef.h',
-			{:includedEnums=>['__QuestGiverStatus']}),
+			{:includedEnums=>['__QuestGiverStatus', 'QuestTypes']}),
 		GenLuaFromHeaderTask.new('ItemPrototype', 'server-code/ItemPrototype.h',
 			{:includedEnums=>['InventoryType', 'ItemClass', 'ItemSubclassWeapon',
 				'ItemModType',

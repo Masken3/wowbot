@@ -14,8 +14,30 @@ function getQuests(giver)
 	end
 end
 
+function sendQuestQuery(questId, callback)
+	local known = STATE.knownQuests[questId];
+	if(known) then
+		callback(known);
+		return;
+	end
+	STATE.questQueryCallbacks[id] = callback;
+	send(CMSG_QUEST_QUERY, {questId=questId});
+end
+
+function hSMSG_QUEST_QUERY_RESPONSE(p)
+	--print("SMSG_QUEST_QUERY_RESPONSE", dump(p));
+	STATE.knownQuests[p.questId] = p;
+	if(STATE.questQueryCallbacks[p.questId]) then
+		STATE.questQueryCallbacks[p.questId](p);
+		STATE.questQueryCallbacks[p.questId] = nil;
+	end
+end
+
 local function wantQuest(p)
-	if(p.title:find('Donation')) then
+	local known = STATE.knownQuests[p.questId];
+	if(p.title:find('Donation') or
+		known.type == QUEST_TYPE_PVP)
+	then
 		local npcId = STATE.knownObjects[p.guid].values[OBJECT_FIELD_ENTRY];
 		partyChat("Avoiding npc="..npcId);
 		PERMASTATE.avoidQuestGivers[npcId] = true;
@@ -28,21 +50,23 @@ end
 function hSMSG_QUESTGIVER_QUEST_LIST(p)
 	print("SMSG_QUESTGIVER_QUEST_LIST", p.guid:hex(), p.title);
 	for i,q in ipairs(p.quests) do
-		if((q.icon == DIALOG_STATUS_AVAILABLE) or
-			(q.icon == DIALOG_STATUS_CHAT)) then
+		sendQuestQuery(q.questId, function(k)
 			if(not wantQuest(q)) then
 				STATE.questGivers[p.guid] = nil;
 				STATE.questFinishers[p.guid] = nil;
 				return;
 			end
-			print("Accpeting quest "..q.title.." ("..q.questId..")...");
-			send(CMSG_QUESTGIVER_ACCEPT_QUEST, {guid=p.guid, questId=q.questId});
-		end
-		if((q.icon == DIALOG_STATUS_REWARD_REP) or
-			(q.icon == DIALOG_STATUS_REWARD2)) then
-			print("Finishing quest "..q.title.." ("..q.questId..")...");
-			send(CMSG_QUESTGIVER_REQUEST_REWARD, {guid=p.guid, questId=q.questId});
-		end
+			if((q.icon == DIALOG_STATUS_AVAILABLE) or
+				(q.icon == DIALOG_STATUS_CHAT)) then
+				print("Accpeting quest "..q.title.." ("..q.questId..")...");
+				send(CMSG_QUESTGIVER_ACCEPT_QUEST, {guid=p.guid, questId=q.questId});
+			end
+			if((q.icon == DIALOG_STATUS_REWARD_REP) or
+				(q.icon == DIALOG_STATUS_REWARD2)) then
+				print("Finishing quest "..q.title.." ("..q.questId..")...");
+				send(CMSG_QUESTGIVER_REQUEST_REWARD, {guid=p.guid, questId=q.questId});
+			end
+		end);
 	end
 	if(STATE.questGivers[p.guid]) then
 		STATE.questGivers[p.guid].bot.chatting = false;
@@ -65,6 +89,12 @@ function hSMSG_QUESTGIVER_OFFER_REWARD(p)
 	if(not p._quiet) then
 		print("SMSG_QUESTGIVER_OFFER_REWARD", dump(p));
 	end
+	sendQuestQuery(p.questId, function(k)
+		handleOfferReward(p)
+	end);
+end
+
+function handleOfferReward(p)
 	if(not wantQuest(p)) then
 		return;
 	end
@@ -157,6 +187,12 @@ end
 
 function hSMSG_QUESTGIVER_QUEST_DETAILS(p)
 	print("SMSG_QUESTGIVER_QUEST_DETAILS", dump(p));
+	sendQuestQuery(p.questId, function(k)
+		handleQuestDetails(p);
+	end);
+end
+
+function handleQuestDetails(p)
 	if(not wantQuest(p)) then
 		return;
 	end
@@ -179,11 +215,6 @@ function questLogin()
 		end
 	end
 	send(CMSG_QUESTGIVER_STATUS_MULTIPLE_QUERY);
-end
-
-function hSMSG_QUEST_QUERY_RESPONSE(p)
-	--print("SMSG_QUEST_QUERY_RESPONSE", dump(p));
-	STATE.knownQuests[p.questId] = p;
 end
 
 function hSMSG_QUESTGIVER_STATUS_MULTIPLE(p)

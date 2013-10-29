@@ -65,6 +65,7 @@ if(rawget(_G, 'STATE') == nil) then
 		repeatSpellCast = RepeatSpellCast.new{id=0, count=0},
 
 		knownQuests = {},
+		questQueryCallbacks = {},
 
 		checkNewObjectsForQuests = false,	-- set to true after login.
 
