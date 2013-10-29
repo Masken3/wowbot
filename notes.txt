@@ -257,3 +257,9 @@ Todo:
 
 14:48 2013-10-20
 uint8 GetBankBagSlotCount() const { return GetByteValue(PLAYER_BYTES_2, 2); }
+
+21:07 2013-10-29
+Long-term idea: it would be nice to have a WoW addon to control the bots.
+Developing an addon is difficult; there's little development support in the client,
+turnaround time is huge (need to restart the client after each change?),
+and one would have to make different versions for each expansion.
