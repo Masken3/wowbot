@@ -96,7 +96,7 @@ work = ExeWork.new do
 		GenLuaFromHeaderTask.new('worldHandlers', 'src/worldHandlers.h',
 			{:includedEnums=>['RaidIcons']}),
 		GenLuaFromHeaderTask.new('Item', 'server-code/Item.h',
-			{:includedEnums=>['EnchantmentSlot', 'EnchantmentOffset']}),
+			{:includedEnums=>['EnchantmentSlot', 'EnchantmentOffset', 'ItemDynFlags']}),
 	]
 	@REQUIREMENTS << GenFfiSdlTask.new()
 	@SPECIFIC_CFLAGS = {

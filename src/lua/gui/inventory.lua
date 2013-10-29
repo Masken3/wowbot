@@ -255,6 +255,9 @@ function drawInvWindow()
 		y = y + drawText(buttonText, SDL_white, x+2, y+2).h
 
 		y = y + drawText(t.proto.name, itemQualityColor, x+2, y+2).h
+		if(bit32.btest(t.o.values[ITEM_FIELD_FLAGS], ITEM_DYNFLAG_BINDED)) then
+			y = y + drawText("Soulbound", SDL_white, x+2, y+2).h
+		end
 		-- TODO: requirements
 		if(#t.proto.description > 0) then
 			drawTextWrap(t.proto.description, SDL_yellow, x+2, y+2, w-4)
