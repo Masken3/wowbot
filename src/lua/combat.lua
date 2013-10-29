@@ -44,9 +44,13 @@ function attack(realTime, enemy)
 		if(attackSpell(dist, realTime, enemy)) then return; end
 	end
 
-	-- todo: if we have a wand or if we're a hunter with bow and arrows, use those.
-
 	if(not STATE.meleeing) then
+		-- todo: if we have a wand or if we're a hunter with bow and arrows, use those.
+		local ss = shootSpell();
+		if(ss and bit32.btest(ss.AttributesEx2, SPELL_ATTR_EX2_AUTOREPEAT_FLAG)) then
+			setTarget(enemy);
+			return doSpell(dist, realTime, enemy, ss);
+		end
 		--print("start melee");
 		setTarget(enemy);
 		if(doSpell(dist, realTime, enemy, STATE.meleeSpell) and (dist < MELEE_DIST)) then
@@ -670,7 +674,7 @@ local function goToPullPosition(realTime)
 	end
 end
 
-local function shootSpell()
+function shootSpell()
 	-- if we have a ranged weapon equipped
 	-- and a spell requires it, then
 	-- that spell is our Shoot spell.
