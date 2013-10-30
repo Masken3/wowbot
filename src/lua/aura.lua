@@ -6,16 +6,18 @@ function investigateAuras(target, f)
 		if(s) then
 			local level = target.values[UNIT_FIELD_AURALEVELS + math.floor(i/4)]
 			level = bit32.extract(level, bit32.band(i, 3) * 8, 8);
-			f(s, level);
+			local res = f(s, level);
+			if(res == false) then return false; end
 		end
 	end
 end
 
-local function investigateAuraEffects(target, f)
+function investigateAuraEffects(target, f)
 	investigateAuras(target, function(s, level)
 		for i, e in ipairs(s.effect) do
 			if((e.id == SPELL_EFFECT_APPLY_AURA)) then
-				f(e, level);
+				local res = f(e, level);
+				if(res == false) then return false; end
 			end
 		end
 	end)

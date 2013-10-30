@@ -49,12 +49,13 @@ function distanceToObject(o)
 	return distance2(STATE.myLocation.position, o.location.position);
 end
 
+-- my, target, dist
 function contactPoint(m, t, dist)
 	local diff = diff3(m, t);
 	local len = length3(diff);
 	if(len < dist) then return m; end
 	local f = (len - dist) / len;
-	return Position.new({x = m.x + d.x*f, y = m.y + d.y*f, z = m.z + d.z*f});
+	return Position.new({x = m.x + diff.x*f, y = m.y + diff.y*f, z = m.z + diff.z*f});
 end
 
 -- In yards, the same unit as world coordinates.
@@ -97,7 +98,7 @@ function fg(guid)
 	return res
 end
 
-local function sendMovement(opcode)
+function sendMovement(opcode)
 	STATE.moving = false;
 	local data = {
 		flags = 0,
@@ -588,4 +589,11 @@ function doMoveToTarget(realTime, mo, maxDist)
 		end
 	end
 	return true;
+end
+
+function moveStop()
+	if(STATE.moving) then
+		sendMovement(MSG_MOVE_STOP);
+		STATE.moving = false;
+	end
 end

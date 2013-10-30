@@ -6,8 +6,10 @@ function decision(realTime)
 	if(STATE.casting) then
 		if(STATE.casting > realTime + 3) then
 			print("casting overdue "..(realTime - STATE.casting));
+			STATE.casting = false;
+		else
+			return;
 		end
-		return;
 	end
 
 	updateEnemyPositions(realTime);
@@ -45,18 +47,12 @@ function decision(realTime)
 	end
 
 	-- if there's an appropriate confusion target, hit it.
-	--[[
+	--
 	if(doCrowdControl(realTime)) then
 		setAction("CrowdControl...");
 		return;
 	end
 	--]]
-
-	-- if we can buff anyone, do that.
-	if(doBuff(realTime)) then
-		setAction("buffing...");
-		return;
-	end
 
 	-- if we're the tank and an enemy targets another party member, taunt them.
 	if(STATE.amTank and doTanking(realTime)) then
@@ -73,8 +69,14 @@ function decision(realTime)
 	end
 	STATE.meleeing = false;
 
+	-- if we can buff anyone, do that.
+	if(doBuff(realTime)) then
+		setAction("buffing...");
+		return;
+	end
+
 	-- if hostiles are near, apply temporary enchantments, if we have any.
-	if(doApplyTempEnchant()) then
+	if(doApplyTempEnchant(realTime)) then
 		return;
 	end
 
@@ -228,6 +230,7 @@ function decision(realTime)
 		investigateInventory(function(o, bagSlot, slot)
 			local itemId = o.values[OBJECT_FIELD_ENTRY];
 			if(STATE.disenchantItems[itemId] and
+				(STATE.currentDisenchant ~= itemId) and
 				(not PERMASTATE.undisenchantable[itemId]))
 			then
 				assert(not found);
@@ -252,7 +255,7 @@ function decision(realTime)
 	end
 
 	-- if we can pick locks and have locks to pick, do so.
-	if(doPickLockOnItem()) then
+	if(doPickLockOnItem(realTime)) then
 		return;
 	end
 
@@ -280,7 +283,7 @@ end
 local function hostilesAreNear()
 	for guid, o in pairs(STATE.hostiles) do
 		local dist = distance3(STATE.my.location.position, o.location.position);
-		if((dist < 40) and (o.values[UNIT_FIELD_HEALTH] > 0)) then return true; end
+		if((dist < 40) and ((o.values[UNIT_FIELD_HEALTH] or 0) > 0)) then return true; end
 	end
 	return false;
 end
@@ -305,6 +308,7 @@ end
 
 local function tempEnchantSpellOnItem(o)
 	local proto = itemProtoFromObject(o);
+	if(not proto) then return nil; end
 	for i,is in ipairs(proto.spells) do
 		if(is.trigger == ITEM_SPELLTRIGGER_ON_USE and is.id ~= 0) then
 			local s = cSpell(is.id);
@@ -317,7 +321,9 @@ local function tempEnchantSpellOnItem(o)
 end
 
 -- use item in slot on item b.
-function useItemOnItem(bagSlot, slot, b)
+function useItemOnItem(realTime, bagSlot, slot, b)
+	moveStop();
+	STATE.casting = realTime;
 	send(CMSG_USE_ITEM, {bag = bagSlot, slot = slot, spellCount = 0,
 		targetFlags = TARGET_FLAG_ITEM, itemTarget = b.guid});
 end
@@ -327,19 +333,19 @@ function hasTempEnchant(o)
 end
 
 -- if hostiles are near, apply temporary enchantments, if we have any.
-function doApplyTempEnchant()
+function doApplyTempEnchant(realTime)
 	if(not hostilesAreNear()) then return false; end
 	-- scan our inventory for enchanter items.
 	local didSomething = false;
 	investigateInventory(function(o, bagSlot, slot)
 		local s = tempEnchantSpellOnItem(o);
-		if(s) then
+		if(s and (not spellIsOnCooldown(realTime, s))) then
 			-- if one is found, see if we have any equipment it'd be usable and useful on.
 			local protoTest = spellCanTargetItemProtoTest(s);
 			investigateEquipment(function(e)
 				local proto = itemProtoFromObject(e);
-				if(protoTest(proto) and (not hasTempEnchant(e))) then
-					useItemOnItem(bagSlot, slot, e);
+				if(proto and protoTest(proto) and (not hasTempEnchant(e))) then
+					useItemOnItem(realTime, bagSlot, slot, e);
 					didSomething = true;
 					return false;
 				end
@@ -442,10 +448,14 @@ function doDrink(realTime)
 		return true;
 	end
 	if(amDrinking()) then
-		print("amDrinking");
+		--print("amDrinking");
 		return true;
 	end
-	if(manaFraction(STATE.me) < 0.25) then
+	if((manaFraction(STATE.me) < 0.25) and
+		true)
+		--((STATE.lastDrinkTime + 30) < realTime))
+	then
+		STATE.lastDrinkTime = realTime;
 		setAction("Drinking "..itemLink(drinkItem), true);
 		gUseItem(id);
 		return true;
@@ -454,9 +464,9 @@ function doDrink(realTime)
 	return false;
 end
 
-function doPickLockOnItem()
+function doPickLockOnItem(realTime)
 	local s = STATE.openLockSpells[LOCKTYPE_PICKLOCK];
-	if(not s) then return false; end
+	if(not s or spellIsOnCooldown(realTime, s)) then return false; end
 	local done = false;
 	investigateInventory(function(o)
 		if(haveSkillToOpenItem(o)) then

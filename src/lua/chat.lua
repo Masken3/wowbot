@@ -63,7 +63,7 @@ local function dropAllItems(p)
 	reply(p, msg)
 end
 
-local function baseListItems(p, name, investigateFunction, testFunction)
+local function baseListItems(p, name, investigateFunction, testFunction, skipFreeSlotCount)
 	local msg = name..': '
 	local items = {}
 	local freeSlotCount = investigateFunction(function(o)
@@ -80,7 +80,9 @@ local function baseListItems(p, name, investigateFunction, testFunction)
 	for id,count in pairs(items) do
 		msg = msg..itemLinkFromId(id).." ("..id..") x"..count.."\n"
 	end
-	msg = msg..freeSlotCount.." slots free."
+	if(not skipFreeSlotCount) then
+		msg = msg..freeSlotCount.." slots free."
+	end
 	reply(p, msg)
 end
 
@@ -95,7 +97,7 @@ end
 local function listQuestItems(p)
 	baseListItems(p, 'Inventory', investigateInventory, function(id)
 		return hasQuestForItem(id)
-	end)
+	end, true)
 end
 
 local function listMoney(p)
@@ -427,6 +429,7 @@ function gUseItem(itemId)
 				print("CMSG_SET_AMMO "..itemId);
 				send(CMSG_SET_AMMO, {itemId=itemId});
 			else
+				STATE.casting = getRealTime();
 				send(CMSG_USE_ITEM, {slot = slot, bag = bagSlot, spellCount = 0, targetFlags = 0})
 			end
 			done = true
@@ -633,14 +636,18 @@ local function buyBankSlot(p)
 end
 
 local function amTank(p)
-	STATE.knownObjects[p.senderGuid].bot.isTank = true
+	local o = STATE.knownObjects[p.senderGuid]
+	if(not o) then return end
+	o.bot.isTank = true
 	-- todo when we start raiding: allow for multiple mainTanks and offTanks.
-	STATE.mainTank = STATE.knownObjects[p.senderGuid]
+	STATE.mainTank = o
 	--print("tank", p.senderGuid:hex())
 end
 
 local function amHealer(p)
-	STATE.knownObjects[p.senderGuid].bot.isHealer = true
+	local o = STATE.knownObjects[p.senderGuid]
+	if(not o) then return end
+	o.bot.isHealer = true
 	--print("healer", p.senderGuid:hex())
 end
 

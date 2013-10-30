@@ -148,6 +148,7 @@ if(rawget(_G, 'STATE') == nil) then
 		waitingForDrink = false,
 		conjureDrinkSpell = false,
 		drinkRecipients = {},	-- guid:true, characters to give drink to.
+		lastDrinkTime = 0,
 
 		-- key: id. value: table. All the spells we can cast.
 		knownSpells = {},

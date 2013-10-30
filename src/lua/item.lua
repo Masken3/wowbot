@@ -363,7 +363,7 @@ end
 
 local function enchValue(enchId, proto, ci, verbose)
 	local ench = cSpellItemEnchantment(enchId);
-	--if(not ench) then return 0; end
+	if(not ench) then return 0; end
 
 	local v = 0;
 	local mods = {};
@@ -407,9 +407,10 @@ local function enchValue(enchId, proto, ci, verbose)
 					elseif(se.applyAuraName == SPELL_AURA_MOD_INCREASE_HEALTH) then
 						v = addDumpIf(v, points, "Health+", verbose)
 					elseif(se.applyAuraName == SPELL_AURA_MOD_RESISTANCE) then
-						-- we don't care about resistances yet.
+						-- we don't care much about resistances yet.
+						v = addDumpIf(v, points, "Resistance", verbose)
 					elseif(se.applyAuraName == SPELL_AURA_MOD_DAMAGE_DONE_CREATURE) then
-						-- useless to us.
+						v = addDumpIf(v, points, "CreatureDmg+", verbose)
 					else
 						print("WARN: unhandled aura "..se.applyAuraName..
 							" on spell="..e.spellId.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
@@ -487,7 +488,7 @@ function valueOfItem(id, guid, verbose)
 	end
 
 	if(v == 0) then
-		return ip.SellPrice;
+		return ip.SellPrice / 1000;
 	end
 
 	return v;

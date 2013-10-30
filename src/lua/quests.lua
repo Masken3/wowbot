@@ -20,7 +20,7 @@ function sendQuestQuery(questId, callback)
 		callback(known);
 		return;
 	end
-	STATE.questQueryCallbacks[id] = callback;
+	STATE.questQueryCallbacks[questId] = callback;
 	send(CMSG_QUEST_QUERY, {questId=questId});
 end
 
@@ -230,7 +230,9 @@ end
 function hSMSG_QUESTGIVER_STATUS(p)
 	--print("SMSG_QUESTGIVER_STATUS", dump(p));
 	local o = STATE.knownObjects[p.guid];
-	if(PERMASTATE.avoidQuestGivers[o.values[OBJECT_FIELD_ENTRY]]) then return; end
+	if(not o) then return; end
+	local id = o.values[OBJECT_FIELD_ENTRY];
+	if((not id) or PERMASTATE.avoidQuestGivers[id]) then return; end
 	if((p.status == DIALOG_STATUS_AVAILABLE) or
 		(p.status == DIALOG_STATUS_CHAT)) then
 		print("Added quest giver "..p.guid:hex());

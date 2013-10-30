@@ -46,11 +46,14 @@ function attack(realTime, enemy)
 
 	if(not STATE.meleeing) then
 		-- todo: if we have a wand or if we're a hunter with bow and arrows, use those.
+		--[[
 		local ss = shootSpell();
 		if(ss and bit32.btest(ss.AttributesEx2, SPELL_ATTR_EX2_AUTOREPEAT_FLAG)) then
 			setTarget(enemy);
+			STATE.meleeing = true;
 			return doSpell(dist, realTime, enemy, ss);
 		end
+		--]]
 		--print("start melee");
 		setTarget(enemy);
 		if(doSpell(dist, realTime, enemy, STATE.meleeSpell) and (dist < MELEE_DIST)) then
@@ -180,7 +183,7 @@ local function spellPoints(s, level)
 	return points;
 end
 
-function spellIsOnCooldown(realTime, s)
+local function spellIsOnGlobalCooldown(realTime, s)
 	if((STATE.spellGlobalCooldowns[s.StartRecoveryCategory] or 0) > realTime) then
 		if(sLog) then
 			print(s.name..": global cooldown "..s.StartRecoveryCategory.." "..
@@ -189,6 +192,10 @@ function spellIsOnCooldown(realTime, s)
 		end
 		return true;
 	end
+	return false;
+end
+
+local function spellIsOnLocalCooldown(realTime, s)
 	if((STATE.spellCategoryCooldowns[s.Category] or 0) > realTime) then
 		if(sLog) then
 			print(s.name..": cat cooldown "..s.Category.." "..
@@ -204,6 +211,11 @@ function spellIsOnCooldown(realTime, s)
 		return true;
 	end
 	return false;
+end
+
+function spellIsOnCooldown(realTime, s)
+	if(spellIsOnGlobalCooldown(realTime, s)) then return true; end
+	if(spellIsOnLocalCooldown(realTime, s)) then return true; end
 end
 
 local function spellRequiresAuraState(s)
@@ -228,12 +240,20 @@ local function haveStanceForSpell(s)
 		formIsGoodForStances(s, shapeshiftForm(STATE.me));
 end
 
+function canCastIgnoreGcd(s, realTime, ignoreLowPower)
+	return canCastBase(s, realTime, ignoreLowPower, spellIsOnLocalCooldown);
+end
+
+function canCast(s, realTime, ignoreLowPower)
+	return canCastBase(s, realTime, ignoreLowPower, spellIsOnCooldown);
+end
+
 -- returns false or
 -- level, duration, cost, powerIndex, availablePower.
-function canCast(s, realTime, ignoreLowPower)
+function canCastBase(s, realTime, ignoreLowPower, coolDownTest)
 	local level, duration, cost, powerIndex, availablePower;
 	-- if spell's cooldown hasn't yet expired, don't try to cast it.
-	if(spellIsOnCooldown(realTime, s)) then return false; end
+	if(coolDownTest(realTime, s)) then return false; end
 
 	-- if the spell requires a special aura that we don't have, skip it.
 	if(spellRequiresAuraState(s)) then
@@ -341,7 +361,7 @@ function mostEffectiveSpell(realTime, spells, ignoreLowPower, target)
 	if(sLog and next(spells)) then print("testing...") end
 	for id, s in pairs(spells) do
 		local level, duration, cost, powerIndex, availablePower =
-			canCast(s, realTime, ignoreLowPower);
+			canCastIgnoreGcd(s, realTime, ignoreLowPower);
 		if(not level) then goto continue; end
 		availP = availablePower;
 
@@ -397,7 +417,7 @@ end
 
 function doSpell(dist, realTime, target, s)
 	assert(s);
-	if(not canCast(s, realTime)) then return false; end
+	if(not canCastIgnoreGcd(s, realTime)) then return false; end
 	-- calculate distance.
 	local behindTarget = false;
 	--print("bestSpell: "..bestSpell.name.." "..bestSpell.rank);
@@ -424,7 +444,7 @@ function doSpell(dist, realTime, target, s)
 		tookAction = true;
 	end
 
-	if(closeEnough) then
+	if(closeEnough and (not spellIsOnGlobalCooldown(realTime, s))) then
 		setTarget(target);
 		print("requiredDistance for "..s.id..": "..requiredDistance);
 		castSpellAtUnit(s.id, target);
@@ -532,6 +552,31 @@ function isTargetOfPartyMember(o)
 	return false;
 end
 
+-- don't try to cc targets with any of these auras
+local ccAuras = {
+	[SPELL_AURA_MOD_CONFUSE]=true,
+	[SPELL_AURA_MOD_STUN]=true,
+	[SPELL_AURA_MOD_TAUNT]=true,
+	[SPELL_AURA_MOD_POSSESS]=true,
+	[SPELL_AURA_MOD_CHARM]=true,
+	[SPELL_AURA_MOD_FEAR]=true,
+	[SPELL_AURA_MOD_PACIFY]=true,
+	[SPELL_AURA_MOD_ROOT]=true,
+	[SPELL_AURA_MOD_PACIFY_SILENCE]=true,
+	[SPELL_AURA_PREVENTS_FLEEING]=true,
+	[SPELL_AURA_MOD_UNATTACKABLE]=true,
+	[SPELL_AURA_PERIODIC_DAMAGE]=true,
+}
+
+local function hasCrowdControlAura(o)
+	local res = false;
+	investigateAuraEffects(o, function(e, level)
+		if(ccAuras[e.applyAuraName]) then res = true; end
+		return false;
+	end)
+	return res;
+end
+
 function doCrowdControl(realTime)
 	if(not STATE.ccSpell) then return false; end
 
@@ -540,9 +585,9 @@ function doCrowdControl(realTime)
 	-- we can perhaps save the last enemy we tried to cc, and just check that one...
 	-- but that won't work if another player of the same class hit it before us.
 	-- still, better than nothing.
-	if(STATE.ccTarget and hasAura(STATE.ccTarget, STATE.ccSpell)) then return false; end
+	if(STATE.ccTarget and hasCrowdControlAura(STATE.ccTarget)) then return false; end
 
-	if(not canCast(STATE.ccSpell, realTime)) then return false; end
+	if(not canCastIgnoreGcd(STATE.ccSpell, realTime)) then return false; end
 
 	local target;
 	local targetInfo;
@@ -556,6 +601,7 @@ function doCrowdControl(realTime)
 		if(bit32.btest(STATE.ccSpell.TargetCreatureType, creatureTypeMask(info)) and
 			(o.values[UNIT_FIELD_HEALTH] == o.values[UNIT_FIELD_MAXHEALTH]) and
 			(not isTargetOfPartyMember(o)) and
+			(not hasCrowdControlAura(o)) and
 			((not targetInfo) or
 				((targetInfo.rank == CREATURE_ELITE_NORMAL) and (info.rank ~= CREATURE_ELITE_NORMAL))
 			))
@@ -722,10 +768,12 @@ function doTanking(realTime)
 
 		-- if we do have it or can't cast it, Charge!
 		STATE.chargeSpell.goCallback = function()
+			print("Charge complete, position updated.");
 			STATE.my.location.position = contactPoint(STATE.my.location.position,
 				enemy.location.position, MELEE_DIST);
 		end
 		if(doStanceSpell(realTime, STATE.chargeSpell, enemy)) then
+			print("Charged!");
 			return true;
 		end
 		-- if we couldn't cast Charge, we'll just run in, the normal way.
