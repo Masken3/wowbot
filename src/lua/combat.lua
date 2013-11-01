@@ -415,10 +415,12 @@ function mostEffectiveSpell(realTime, spells, ignoreLowPower, target)
 	return bestSpell, maxPoints;
 end
 
+-- dist may be false.
 function doSpell(dist, realTime, target, s)
 	assert(s);
 	if(not canCastIgnoreGcd(s, realTime)) then return false; end
 	-- calculate distance.
+	dist = dist or distanceToObject(target)
 	local behindTarget = false;
 	--print("bestSpell: "..bestSpell.name.." "..bestSpell.rank);
 
@@ -510,11 +512,10 @@ local function doBuffSingle(o, realTime)
 		local c = canCast(s, realTime);
 		sLog = false;
 		if(not h and c) then
-			local dist = distanceToObject(o);
 			objectNameQuery(o, function(name)
 				setAction("Buffing "..name);
 			end)
-			return doSpell(dist, realTime, o, s);
+			return doSpell(false, realTime, o, s);
 		else
 			--print("not buffing "..s.name..": "..tostring(h).." "..tostring(c));
 		end
@@ -602,6 +603,7 @@ function doCrowdControl(realTime)
 			(o.values[UNIT_FIELD_HEALTH] == o.values[UNIT_FIELD_MAXHEALTH]) and
 			(not isTargetOfPartyMember(o)) and
 			(not hasCrowdControlAura(o)) and
+			((o.bot.ccTime or 0) + 2 < realTime) and
 			((not targetInfo) or
 				((targetInfo.rank == CREATURE_ELITE_NORMAL) and (info.rank ~= CREATURE_ELITE_NORMAL))
 			))
@@ -612,7 +614,10 @@ function doCrowdControl(realTime)
 	end
 	if(target) then
 		STATE.ccTarget = target;
-		return doSpell(distanceToObject(target), realTime, target, STATE.ccSpell);
+		STATE.ccSpell.goCallback = function()
+			target.bot.ccTime = realTime;
+		end
+		return doSpell(false, realTime, target, STATE.ccSpell);
 	else
 		return false;
 	end
@@ -700,7 +705,7 @@ function doStanceSpell(realTime, s, target)
 
 	-- we're good. cast the spell.
 	if(target) then
-		return doSpell(distanceToObject(target), realTime, target, s);
+		return doSpell(false, realTime, target, s);
 	elseif(canCast(s, realTime)) then
 		castSpellWithoutTarget(s.id);
 		return true;
@@ -757,7 +762,7 @@ function doTanking(realTime)
 			-- Shoot the pullee.
 			-- make sure a ranged weapon and ammo are equipped.
 			-- If they're not, tank is likely to go into a SPELL_FAILED loop.
-			if(doSpell(distanceToObject(enemy), realTime, enemy, shootSpell())) then
+			if(doSpell(false, realTime, enemy, shootSpell())) then
 				return true;
 			else
 				-- then run to leader.
@@ -874,4 +879,18 @@ function chooseEnemy()
 		end
 	end
 	return enemy;
+end
+
+function doInterrupt(realTime)
+	if(not STATE.interruptSpell) then return false; end
+	if(not canCastIgnoreGcd(STATE.interruptSpell, realTime, false)) then return false; end
+	for guid,enemy in pairs(STATE.enemies) do
+		local s = enemy.bot.casting;
+		if(s and bit32.btest(s.InterruptFlags, SPELL_INTERRUPT_FLAG_INTERRUPT) and
+			(s.PreventionType == SPELL_PREVENTION_TYPE_SILENCE))
+		then
+			return doSpell(false, realTime, enemy, STATE.interruptSpell);
+		end
+	end
+	return false;
 end

@@ -990,7 +990,7 @@ enum SpellMissInfo
 	SPELL_MISS_IMMUNE2                 = 8,
 	SPELL_MISS_DEFLECT                 = 9,
 	SPELL_MISS_ABSORB                  = 10,
-	SPELL_MISS_REFLECT                 = 11
+	SPELL_MISS_REFLECT                 = 11,
 };
 
 enum SpellHitType
@@ -1000,7 +1000,7 @@ enum SpellHitType
 	SPELL_HIT_TYPE_UNK3 = 0x00004,
 	SPELL_HIT_TYPE_UNK4 = 0x00008,
 	SPELL_HIT_TYPE_UNK5 = 0x00010,
-	SPELL_HIT_TYPE_UNK6 = 0x00020
+	SPELL_HIT_TYPE_UNK6 = 0x00020,
 };
 
 /**
@@ -1016,14 +1016,14 @@ enum SpellDmgClass
 	/// Melee damage
 	SPELL_DAMAGE_CLASS_MELEE    = 2,
 	/// Ranged damage
-	SPELL_DAMAGE_CLASS_RANGED   = 3
+	SPELL_DAMAGE_CLASS_RANGED   = 3,
 };
 
 enum SpellPreventionType
 {
 	SPELL_PREVENTION_TYPE_NONE      = 0,
 	SPELL_PREVENTION_TYPE_SILENCE   = 1,
-	SPELL_PREVENTION_TYPE_PACIFY    = 2
+	SPELL_PREVENTION_TYPE_PACIFY    = 2,
 };
 
 /// indexes from SpellRange.dbc, listed only special and used in code
@@ -1047,7 +1047,7 @@ enum DamageEffectType
 	HEAL                    = 3,
 	/// used also in case when damage applied to health but not applied to spell channelInterruptFlags/etc
 	NODAMAGE                = 4,
-	SELF_DAMAGE             = 5
+	SELF_DAMAGE             = 5,
 };
 
 enum GameobjectTypes
@@ -1095,7 +1095,7 @@ enum GameObjectFlags
 	GO_FLAG_TRANSPORT       = 0x00000008,                   // any kind of transport? Object can transport (elevator, boat, car)
 	GO_FLAG_NO_INTERACT     = 0x00000010,                   // players cannot interact with this go (often need to remove flag in event)
 	GO_FLAG_NODESPAWN       = 0x00000020,                   // never despawn, typically for doors, they just change state
-	GO_FLAG_TRIGGERED       = 0x00000040                    // typically, summoned objects. Triggered by spell or other events
+	GO_FLAG_TRIGGERED       = 0x00000040,                   // typically, summoned objects. Triggered by spell or other events
 };
 
 enum GameObjectDynamicLowFlags

@@ -142,6 +142,7 @@ if(rawget(_G, 'STATE') == nil) then
 		shapeshiftSpells = {},	-- form:spellTable
 		ccSpell = false,
 		ccTarget = false,	-- KnownObject
+		interruptSpell = false,
 
 		pullPosition = false,	-- Position.
 
@@ -690,6 +691,7 @@ local function updateMovement(o, b)
 		if(not o.location) then
 			o.location = Location.new{mapId=STATE.myLocation.mapId};
 		end
+		o.location.mapId = STATE.myLocation.mapId;
 		o.location.position = Position.new(b.pos);
 		o.location.orientation = b.orientation;
 	end
@@ -847,6 +849,7 @@ local function learnSpell(id)
 		end
 		if(e.id == SPELL_EFFECT_ATTACK) then
 			-- assuming that there's only one melee spell
+			-- there is, but a world-port will cause resend of INITIAL_SPELLS.
 			assert(not STATE.meleeSpell);
 			--print("Melee spell:", id);
 			STATE.meleeSpell = s;
@@ -1005,6 +1008,12 @@ local function learnSpell(id)
 				print("ccSpell", s.id, s.name, s.rank);
 				STATE.ccSpell = s;
 			end
+		end
+		if(e.id == SPELL_EFFECT_INTERRUPT_CAST and
+			e.implicitTargetA == TARGET_CHAIN_DAMAGE)
+		then
+			print("interruptSpell", s.id, s.name, s.rank);
+			STATE.interruptSpell = s;
 		end
 
 		-- direct heals
@@ -1196,8 +1205,9 @@ end
 -- sent when a timed spell cast starts.
 function hSMSG_SPELL_START(p)
 	if(p.casterGuid == STATE.myGuid) then
-		castingOn()
+		castingOn();
 	end
+	STATE.knownObjects[p.casterGuid].bot.casting = cSpell(p.spellId);
 end
 
 -- sent when a spell cast finishes and the spell is actually cast.
@@ -1205,6 +1215,7 @@ end
 -- sent even for spells with zero casting time.
 function hSMSG_SPELL_GO(p)
 	--print("SMSG_SPELL_GO", dump(p));
+	STATE.knownObjects[p.casterGuid].bot.casting = false;
 	local s = STATE.knownSpells[p.spellId]
 	if(p.casterGuid == STATE.myGuid and s) then
 		STATE.casting = false;
@@ -1226,6 +1237,7 @@ function hSMSG_SPELL_GO(p)
 end
 
 function hSMSG_SPELL_FAILURE(p)
+	STATE.knownObjects[p.casterGuid].bot.casting = false;
 	if(p.casterGuid == STATE.myGuid) then
 		STATE.casting = false;
 		setAction("not casting. SMSG_SPELL_FAILURE");

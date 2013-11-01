@@ -1208,7 +1208,7 @@ void pSMSG_SPELL_START(pLUA_ARGS) {
 	MV(PackedGuid, casterGuid);
 	M(uint32, spellId);
 	M(uint16, castFlags);
-	M(uint32, timer);
+	M(uint32, timer);	// milliseconds it will take to cast the spell.
 	// todo: targets et.al
 }
 
@@ -1248,4 +1248,11 @@ void pSMSG_QUEST_CONFIRM_ACCEPT(pLUA_ARGS) {
 	M(uint32, questId);
 	MV(string, title);
 	M(Guid, starterGuid);
+}
+
+void pSMSG_NEW_WORLD(pLUA_ARGS) {
+	PL_START;
+	M(uint32, mapId);
+	M(Vector3, pos);
+	M(float, o);
 }

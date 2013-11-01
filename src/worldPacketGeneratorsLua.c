@@ -547,6 +547,12 @@ static uint16 genCMSG_SET_AMMO(lua_State* L, byte* buf) {
 	GL_END;
 }
 
+static uint16 genCMSG_PLAYER_LOGIN(lua_State* L, byte* buf) {
+	GL_START;
+	M(Guid, guid);
+	GL_END;
+}
+
 PacketGenerator getPacketGenerator(int opcode) {
 #define MOVEMENT_CASE(name) case name: return genMovement;
 #define GEN_CASE(name) case name: return gen##name;
@@ -599,6 +605,7 @@ PacketGenerator getPacketGenerator(int opcode) {
 		GEN_CASE(CMSG_BUY_BANK_SLOT);
 		GEN_CASE(CMSG_QUEST_CONFIRM_ACCEPT);
 		GEN_CASE(CMSG_SET_AMMO);
+		GEN_CASE(CMSG_PLAYER_LOGIN);
 		default: return NULL;
 	}
 }

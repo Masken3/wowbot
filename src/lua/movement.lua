@@ -139,6 +139,21 @@ local function movementTimerCallback(t)
 	--print("movementTimerCallback ends", t)
 end
 
+function hSMSG_NEW_WORLD(p)
+	print("SMSG_NEW_WORLD", dump(p));
+	STATE.myLocation.mapId = p.mapId;
+	STATE.myLocation.position = Position.new(p.pos);
+	STATE.myLocation.orientation = p.o;
+	-- prep for re-initialize.
+	STATE.meleeSpell = false;
+	STATE.pickpocketSpell = false;
+	--STATE.leader = false;
+	STATE.checkNewObjectsForQuests = false;
+	-- ought to work.
+	send(MSG_MOVE_WORLDPORT_ACK);
+	moveStop();
+end
+
 function hMSG_MOVE_TELEPORT_ACK(p)
 	print("MSG_MOVE_TELEPORT_ACK", dump(p));
 	STATE.myLocation.position = Position.new(p.pos);
@@ -154,8 +169,7 @@ function hMSG_MOVE_TELEPORT_ACK(p)
 	end
 
 	send(MSG_MOVE_TELEPORT_ACK, p);
-	sendMovement(MSG_MOVE_STOP);
-	STATE.moving = false;
+	moveStop();
 end
 
 function hMovement(opcode, p)

@@ -54,6 +54,12 @@ function decision(realTime)
 	end
 	--]]
 
+	-- if we can interrupt an enemy spell, do so.
+	if(doInterrupt(realTime)) then
+		setAction("doInterrupt");
+		return;
+	end
+
 	-- if we're the tank and an enemy targets another party member, taunt them.
 	if(STATE.amTank and doTanking(realTime)) then
 		setAction("tanking...");
@@ -264,7 +270,9 @@ function decision(realTime)
 	end
 
 	-- don't try following the leader if we don't know where he is.
-	if(STATE.inGroup and STATE.leader and STATE.leader.location.position.x) then
+	if(STATE.inGroup and STATE.leader and STATE.leader.location.position.x and
+		STATE.leader.location.mapId == STATE.myLocation.mapId)
+	then
 		if(STATE.currentAction ~= "Following leader") then
 			print("Cancel cast...");
 			-- ought to cancel any spell currently being cast.

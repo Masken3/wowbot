@@ -239,6 +239,7 @@ void enterWorld(WorldSession* session, uint64 guid, uint8 level) {
 	m(MSG_MOVE_SET_SWIM_SPEED)\
 	m(MSG_MOVE_SET_RUN_SPEED)\
 	m(SMSG_FORCE_RUN_SPEED_CHANGE)\
+	m(SMSG_SEND_UNLEARN_SPELLS)\
 
 #define EMPTY_PACKET_LUA_HANDLERS(m)\
 	m(SMSG_ATTACKSWING_NOTINRANGE)\
