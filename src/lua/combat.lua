@@ -46,17 +46,21 @@ function attack(realTime, enemy)
 
 	if(not STATE.meleeing) then
 		-- todo: if we have a wand or if we're a hunter with bow and arrows, use those.
-		--[[
+		--
 		local ss = shootSpell();
 		if(ss and bit32.btest(ss.AttributesEx2, SPELL_ATTR_EX2_AUTOREPEAT_FLAG)) then
 			setTarget(enemy);
-			STATE.meleeing = true;
-			return doSpell(dist, realTime, enemy, ss);
+			if(doSpell(dist, realTime, enemy, ss) and (not STATE.moving)) then
+				STATE.meleeing = true;
+			end
+			return;
 		end
 		--]]
 		--print("start melee");
 		setTarget(enemy);
-		if(doSpell(dist, realTime, enemy, STATE.meleeSpell) and (dist < MELEE_DIST)) then
+		if(doSpell(dist, realTime, enemy, STATE.meleeSpell) and
+			(dist < MELEE_RANGE) and (not STATE.moving))
+		then
 			send(CMSG_ATTACKSWING, {target=enemy.guid});
 			STATE.meleeing = true;
 		end
@@ -572,14 +576,17 @@ local ccAuras = {
 local function hasCrowdControlAura(o)
 	local res = false;
 	investigateAuraEffects(o, function(e, level)
-		if(ccAuras[e.applyAuraName]) then res = true; end
+		if(ccAuras[e.applyAuraName]) then
+			print("hasCrowdControlAura:", o.guid:hex());
+			res = true;
+		end
 		return false;
 	end)
 	return res;
 end
 
 function doCrowdControl(realTime)
-	if(not STATE.ccSpell) then return false; end
+	if((not STATE.ccSpell) or (not PERMASTATE.eliteCombat)) then return false; end
 
 	-- no other enemy must be afflicted by our cc already.
 	-- unfortunately, we have no way to know which enemy aura is ours.
@@ -601,9 +608,11 @@ function doCrowdControl(realTime)
 		local info = STATE.knownCreatures[o.values[OBJECT_FIELD_ENTRY]];
 		if(bit32.btest(STATE.ccSpell.TargetCreatureType, creatureTypeMask(info)) and
 			(o.values[UNIT_FIELD_HEALTH] == o.values[UNIT_FIELD_MAXHEALTH]) and
+			(not isRaidTarget(RAID_ICON_SKULL)) and
+			(not isRaidTarget(RAID_ICON_SQUARE)) and
 			(not isTargetOfPartyMember(o)) and
 			(not hasCrowdControlAura(o)) and
-			((o.bot.ccTime or 0) + 2 < realTime) and
+			((o.bot.ccTime or 0) + 3 < realTime) and
 			((not targetInfo) or
 				((targetInfo.rank == CREATURE_ELITE_NORMAL) and (info.rank ~= CREATURE_ELITE_NORMAL))
 			))
@@ -845,9 +854,9 @@ local function raidTarget()
 	o = isRaidTarget(RAID_ICON_SQUARE);
 	if(o) then return o; end
 	o = isRaidTarget(RAID_ICON_MOON);
-	if(o) then return o; end
+	if(o and not(hasCrowdControlAura(o))) then return o; end
 	o = isRaidTarget(RAID_ICON_DIAMOND);
-	if(o) then return o; end
+	if(o and not(hasCrowdControlAura(o))) then return o; end
 	return nil;
 end
 
@@ -863,7 +872,13 @@ end
 function chooseEnemy()
 	-- if an enemy targets a party member, attack that enemy.
 	-- if there are several enemies, pick any one.
-	local i, enemy = next(STATE.enemies);
+	local enemy;
+	for i,e in pairs(STATE.enemies) do
+		if(not(hasCrowdControlAura(e))) then
+			enemy = e;
+			break;
+		end
+	end
 	if(STATE.amTank) then
 		enemy = raidTarget() or enemy;
 		enemy = chooseTankTarget() or enemy;
@@ -872,7 +887,8 @@ function chooseEnemy()
 		enemy = raidTarget() or enemy;
 		enemy = STATE.enemies[mainTankTarget()] or enemy;
 		-- if enemy is attacking tank but doesn't have sunder yet, don't attack.
-		if(enemy and tankIsWarrior() and (not hasSunder(enemy)) and
+		if(enemy and PERMASTATE.eliteCombat and
+			tankIsWarrior() and (not hasSunder(enemy)) and
 			unitTarget(enemy) == STATE.mainTank.guid)
 		then
 			enemy = false;

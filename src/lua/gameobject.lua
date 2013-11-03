@@ -158,6 +158,7 @@ function hSMSG_GAMEOBJECT_DESPAWN_ANIM(p)
 		STATE.openables[p.guid].bot.reported = false;
 
 		STATE.openables[p.guid] = nil;
+		STATE.casting = false;
 	end
 end
 

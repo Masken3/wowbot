@@ -233,6 +233,8 @@ if(rawget(_G, 'STATE') == nil) then
 		-- they may still be visited manually.
 		avoidQuestGivers = {},
 
+		eliteCombat = false,
+
 		-- set of itemIds.
 		undisenchantable = {},
 		shouldLoot = {},
@@ -1156,9 +1158,16 @@ function castSpellWithoutTarget(spellId)
 end
 
 function hSMSG_ATTACKSTART(p)
-	print("victim:", p.victim:hex());
+	--print("victim:", p.victim:hex());
 	if(isAlly(STATE.knownObjects[p.victim])) then
 		print("enemy:", p.attacker:hex());
+		STATE.enemies[p.attacker] = STATE.knownObjects[p.attacker];
+	end
+end
+
+function hSMSG_ATTACKERSTATEUPDATE(p)
+	if(isAlly(STATE.knownObjects[p.victim]) and not STATE.enemies[p.attacker]) then
+		print("update enemy:", p.attacker:hex());
 		STATE.enemies[p.attacker] = STATE.knownObjects[p.attacker];
 	end
 end
@@ -1189,6 +1198,7 @@ function hSMSG_CAST_FAILED(p)
 		send(CMSG_CANCEL_CAST, p);
 
 		STATE.casting = false;	-- correct?
+		STATE.meleeing = false;	-- correct?
 		setAction("not casting. SMSG_CAST_FAILED");
 	end
 	STATE.skinning = false;
@@ -1207,7 +1217,8 @@ function hSMSG_SPELL_START(p)
 	if(p.casterGuid == STATE.myGuid) then
 		castingOn();
 	end
-	STATE.knownObjects[p.casterGuid].bot.casting = cSpell(p.spellId);
+	local o = STATE.knownObjects[p.casterGuid]
+	if(o) then o.bot.casting = cSpell(p.spellId); end
 end
 
 -- sent when a spell cast finishes and the spell is actually cast.
@@ -1215,10 +1226,13 @@ end
 -- sent even for spells with zero casting time.
 function hSMSG_SPELL_GO(p)
 	--print("SMSG_SPELL_GO", dump(p));
-	STATE.knownObjects[p.casterGuid].bot.casting = false;
+	local o = STATE.knownObjects[p.casterGuid]
+	if(o) then o.bot.casting = false; end
+
 	local s = STATE.knownSpells[p.spellId]
 	if(p.casterGuid == STATE.myGuid and s) then
 		STATE.casting = false;
+		--STATE.meleeing = false;
 		if(s) then
 			setLocalSpellCooldown(getRealTime(), s)
 			if(s.goCallback) then
@@ -1237,9 +1251,12 @@ function hSMSG_SPELL_GO(p)
 end
 
 function hSMSG_SPELL_FAILURE(p)
-	STATE.knownObjects[p.casterGuid].bot.casting = false;
+	local o = STATE.knownObjects[p.casterGuid]
+	if(o) then o.bot.casting = false; end
+
 	if(p.casterGuid == STATE.myGuid) then
 		STATE.casting = false;
+		STATE.meleeing = false;
 		setAction("not casting. SMSG_SPELL_FAILURE");
 		print("SMSG_SPELL_FAILURE: spell "..p.spellId..", result "..p.result);
 	end

@@ -1256,3 +1256,12 @@ void pSMSG_NEW_WORLD(pLUA_ARGS) {
 	M(Vector3, pos);
 	M(float, o);
 }
+
+void pSMSG_ATTACKERSTATEUPDATE(pLUA_ARGS) {
+	PL_START;
+	M(uint32, hitInfo);
+	MV(PackedGuid, attacker);
+	MV(PackedGuid, victim);
+	M(uint32, damage);
+	// there's more, but we don't need it.
+}

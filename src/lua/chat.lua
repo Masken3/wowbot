@@ -218,7 +218,8 @@ function hSMSG_LOGOUT_COMPLETE(p)
 end
 
 local function invite(p)
-	STATE.newLeader = p.senderGuid;
+	print("invite", dump(p))
+	STATE.newLeader = p.senderGuid
 	send(CMSG_NAME_QUERY, {guid=p.senderGuid})
 	PERMASTATE.invitee = p.senderGuid:hex()
 	saveState()
@@ -228,6 +229,7 @@ function hSMSG_NAME_QUERY_RESPONSE(p)
 	local o = STATE.knownObjects[p.guid]
 	o.bot.nameData = p
 	if(STATE.newLeader == p.guid and (not isGroupMember(o))) then
+		print("CMSG_GROUP_INVITE", dump(p))
 		send(CMSG_GROUP_INVITE, p)
 	end
 	if(o.bot.nameCallback) then
@@ -256,48 +258,48 @@ local function leave(p)
 end
 
 local function gameobject(p)
-	local myPos = STATE.myLocation.position;
+	local myPos = STATE.myLocation.position
 	-- find nearest usable gameobject.
-	local closestPos;
-	local closestObject;
-	local count = 0;
+	local closestPos
+	local closestObject
+	local count = 0
 	for guid, o in pairs(STATE.knownObjects) do
 		if(isGameObject(o) and
 			o.values[GAMEOBJECT_POS_X])
 			--bit32.btest(o.values[GAMEOBJECT_DYN_FLAGS], GO_DYNFLAG_LO_ACTIVATE))
 		then
-			count = count + 1;
+			count = count + 1
 			-- problematic; stored as uint32, but are really float. how to convert? Use C.
-			local pos = goPos(o);
+			local pos = goPos(o)
 			if((not closestObject) or (distance3(myPos, pos) < distance3(myPos, closestPos))) then
-				closestPos = pos;
-				closestObject = o;
+				closestPos = pos
+				closestObject = o
 			end
 		end
 	end
-	print("Found "..count.." objects.");
+	print("Found "..count.." objects.")
 	if(closestObject) then
-		partyChat(closestObject.guid:hex()..": "..distance3(myPos, closestPos).." yards.");
-		--send(CMSG_GAMEOBJ_USE, {guid=closestObject.guid});
-		--castSpellAtGO(22810, closestObject);
+		partyChat(closestObject.guid:hex()..": "..distance3(myPos, closestPos).." yards.")
+		--send(CMSG_GAMEOBJ_USE, {guid=closestObject.guid})
+		--castSpellAtGO(22810, closestObject)
 
-		openGameobject(closestObject);
+		openGameobject(closestObject)
 	else
-		partyChat("No objects found.");
+		partyChat("No objects found.")
 	end
 end
 
 local function train(p)
 	if(p.type ~= CHAT_MSG_WHISPER) then
-		reply(p, "Must whisper this command.");
+		reply(p, "Must whisper this command.")
 	end
 	local trainerGuid = guidFromValues(STATE.knownObjects[p.senderGuid], UNIT_FIELD_TARGET)
-	local trainer = STATE.knownObjects[trainerGuid];
+	local trainer = STATE.knownObjects[trainerGuid]
 	if(not trainer) then
-		reply(p, "No valid target!");
-		return;
+		reply(p, "No valid target!")
+		return
 	end
-	goTrain(trainer);
+	goTrain(trainer)
 end
 
 local function gather(p)
@@ -400,6 +402,16 @@ local function stop(p)
 	end
 end
 
+function itemIsOnCooldown(proto)
+	for i,is in ipairs(proto.spells) do
+		if(is.trigger == ITEM_SPELLTRIGGER_ON_USE and is.id ~= 0) then
+			local s = cSpell(is.id)
+			if(spellIsOnCooldown(getRealTime(), s)) then return true end
+		end
+	end
+	return false
+end
+
 function gUseItem(itemId)
 	local msg = 'Using item:'
 	local done = false
@@ -416,20 +428,22 @@ function gUseItem(itemId)
 				investigateBankBags(function()end, function(bankBagSlot)
 					if(done) then return end
 					done = true
-					--print("CMSG_AUTOEQUIP_ITEM_SLOT "..bankBagSlot);
-					--send(CMSG_AUTOEQUIP_ITEM_SLOT, {itemGuid=o.guid, dstSlot=bankBagSlot});
+					--print("CMSG_AUTOEQUIP_ITEM_SLOT "..bankBagSlot)
+					--send(CMSG_AUTOEQUIP_ITEM_SLOT, {itemGuid=o.guid, dstSlot=bankBagSlot})
 					local p = {dstbag=INVENTORY_SLOT_BAG_0, dstslot=bankBagSlot,
 						srcbag=bagSlot, srcslot=slot}
-					print("CMSG_SWAP_ITEM ", dump(p));
+					print("CMSG_SWAP_ITEM ", dump(p))
 					send(CMSG_SWAP_ITEM, p)
 				end)
 			elseif(bit32.btest(proto.Flags, ITEM_FLAG_LOOTABLE)) then
 				send(CMSG_OPEN_ITEM, {slot = slot, bagSlot = bagSlot})
 			elseif(proto.InventoryType == INVTYPE_AMMO) then
-				print("CMSG_SET_AMMO "..itemId);
-				send(CMSG_SET_AMMO, {itemId=itemId});
+				print("CMSG_SET_AMMO "..itemId)
+				send(CMSG_SET_AMMO, {itemId=itemId})
+			elseif(itemIsOnCooldown(proto)) then
+				return false
 			else
-				STATE.casting = getRealTime();
+				STATE.casting = getRealTime()
 				send(CMSG_USE_ITEM, {slot = slot, bag = bagSlot, spellCount = 0, targetFlags = 0})
 			end
 			done = true
@@ -471,7 +485,7 @@ function storeItemInBank(itemId)
 		if(itemId == o.values[OBJECT_FIELD_ENTRY]) then
 			msg = msg..' '..o.guid:hex()
 			send(CMSG_AUTOSTORE_BANK_ITEM, {bag=bagSlot, slot=slot})
-			count = count + o.values[ITEM_FIELD_STACK_COUNT];
+			count = count + o.values[ITEM_FIELD_STACK_COUNT]
 		end
 	end)
 	msg = msg..', total '..count
@@ -490,7 +504,7 @@ function fetchItemFromBank(itemId)
 		if(itemId == o.values[OBJECT_FIELD_ENTRY]) then
 			msg = msg..' '..o.guid:hex()
 			send(CMSG_AUTOSTORE_BANK_ITEM, {bag=bagSlot, slot=slot})
-			count = count + o.values[ITEM_FIELD_STACK_COUNT];
+			count = count + o.values[ITEM_FIELD_STACK_COUNT]
 		end
 	end)
 	return msg..', total '..count
@@ -526,16 +540,16 @@ end
 
 local function equip(p)
 	local itemId = tonumber(p.text:sub(7))
-	local found = false;
+	local found = false
 	investigateInventory(function(o, bagSlot, slot)
 		if(itemId == o.values[OBJECT_FIELD_ENTRY]) then
-			found = true;
-			reply(p, "Testing "..o.guid:hex());
-			maybeEquip(o.guid, true);
+			found = true
+			reply(p, "Testing "..o.guid:hex())
+			maybeEquip(o.guid, true)
 		end
 	end)
 	if(not found) then
-		reply(p, "Not found!");
+		reply(p, "Not found!")
 	end
 end
 
@@ -579,30 +593,38 @@ local function profession(p)
 	doProfessionWindow(skillLine)
 end
 
-local function autoQuestGet(p)
-	local state = p.text:sub(5)
+local function permaToggle(p, len, stateName)
+	local state = p.text:sub(len)
 	if(state == "off") then
-		PERMASTATE.autoQuestGet = false
+		PERMASTATE[stateName] = false
 	elseif(state == "on") then
-		PERMASTATE.autoQuestGet = true
+		PERMASTATE[stateName] = true
 	else
 		reply(p, "Invalid state ("..state.."). Must be 'on' or 'off'.")
 		return
 	end
 	saveState()
-	reply(p, "autoQuestGet set to '"..state.."'.")
+	reply(p, stateName.." set to '"..state.."'.")
+end
+
+local function autoQuestGet(p)
+	permaToggle(p, 5, 'autoQuestGet')
+end
+
+local function eliteCombat(p)
+	permaToggle(p, 4, 'eliteCombat')
 end
 
 local function gq(p)
 	local targetGuid = guidFromValues(STATE.knownObjects[p.senderGuid], UNIT_FIELD_TARGET)
-	local target = STATE.knownObjects[targetGuid];
+	local target = STATE.knownObjects[targetGuid]
 	if(not target) then
-		reply(p, "No valid target!");
-		STATE.questFinishers = {};
-		return;
+		reply(p, "No valid target!")
+		STATE.questFinishers = {}
+		return
 	end
-	--getQuests(target);
-	STATE.questFinishers[targetGuid] = target;
+	--getQuests(target)
+	STATE.questFinishers[targetGuid] = target
 end
 
 local function listBags(p)
@@ -626,13 +648,13 @@ local function listBankBags(p)
 end
 
 local function report(p)
-	reply(p, STATE.currentAction)
+	reply(p, tostring(STATE.currentAction))
 end
 
 local function buyBankSlot(p)
 	local targetGuid = guidFromValues(STATE.knownObjects[p.senderGuid], UNIT_FIELD_TARGET)
 	send(CMSG_BUY_BANK_SLOT, {guid=targetGuid})
-	reply(p, "buyBankSlot @ "..targetGuid:hex());
+	reply(p, "buyBankSlot @ "..targetGuid:hex())
 end
 
 local function amTank(p)
@@ -745,6 +767,8 @@ function handleChatMessage(p)
 		amTank(p)
 	elseif(p.text == 'amHealer') then
 		amHealer(p)
+	elseif(p.text:startWith('ec ')) then
+		eliteCombat(p)
 	elseif(p.text == 'test') then
 		test(p)
 	else
@@ -757,7 +781,7 @@ function handleChatMessage(p)
 end
 
 function partyChat(msg)
-	print("partyChat("..msg..")");
+	print("partyChat("..msg..")")
 	send(CMSG_MESSAGECHAT, {type=CHAT_MSG_PARTY, language=LANG_UNIVERSAL, msg=msg})
 end
 

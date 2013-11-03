@@ -236,13 +236,13 @@ function decision(realTime)
 		investigateInventory(function(o, bagSlot, slot)
 			local itemId = o.values[OBJECT_FIELD_ENTRY];
 			if(STATE.disenchantItems[itemId] and
-				(STATE.currentDisenchant ~= itemId) and
+				(STATE.currentDisenchant ~= o) and
 				(not PERMASTATE.undisenchantable[itemId]))
 			then
 				assert(not found);
 				partyChat("Dis: "..itemLink(o));
 				-- if disenchant fails, remember that.
-				STATE.currentDisenchant = itemId;
+				STATE.currentDisenchant = o;
 				castSpellAtItem(STATE.disenchantSpell, o);
 				found = true
 				return false;
@@ -381,17 +381,18 @@ end
 
 -- returns the regen points of the drink, or nil.
 function isDrinkItem(itemId)
+	local s;
 	local points = nil;
 	local proto = itemProtoFromId(itemId);
 	if(not proto) then return false; end
 	for i,is in ipairs(proto.spells) do
 		if(is.trigger == ITEM_SPELLTRIGGER_ON_USE and is.id ~= 0) then
-			local s = cSpell(is.id);
+			s = cSpell(is.id);
 			local level = spellLevel(s);
 			points = isDrinkSpell(s, level) or points;
 		end
 	end
-	return points;
+	return points, s;
 end
 
 -- returns item KnownObject, id or false.
@@ -465,8 +466,7 @@ function doDrink(realTime)
 	then
 		STATE.lastDrinkTime = realTime;
 		setAction("Drinking "..itemLink(drinkItem), true);
-		gUseItem(id);
-		return true;
+		return gUseItem(id);
 	end
 	--print("doneDrink()");
 	return false;

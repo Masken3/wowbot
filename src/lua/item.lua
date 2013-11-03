@@ -515,7 +515,8 @@ function itemLoginComplete()
 	investigateInventory(function(o)
 		local id = itemIdOfGuid(o.guid);
 		--print(id, o.guid:hex(), o.values[ITEM_FIELD_STACK_COUNT]);
-		maybeEquip(o.guid);
+		itemProtoFromId(id);
+		--maybeEquip(o.guid);
 	end)
 	investigateBank(function(o)
 		itemProtoFromObject(o);
