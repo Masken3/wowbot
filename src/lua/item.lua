@@ -93,13 +93,13 @@ function hSMSG_ITEM_QUERY_SINGLE_RESPONSE(p)
 end
 
 local function canDualWield()
-	return STATE.knownSpells[674]
+	return STATE.knownSpells[674] and not STATE.amTank
 end
 
 -- returns one of enum EquipmentSlots.
 function itemEquipSlot(proto)
 	--print("itemSlotIndex("..proto.InventoryType..")", dump(itemInventoryToEquipmentSlot));
-	if((proto.InventoryType == INVTYPE_WEAPON) and ((not canDualWield()) or STATE.amTank)) then
+	if((proto.InventoryType == INVTYPE_WEAPON) and (not canDualWield())) then
 		return EQUIPMENT_SLOT_MAINHAND;
 	end
 	return itemInventoryToEquipmentSlot[proto.InventoryType];
@@ -120,18 +120,18 @@ end
 function itemSkillSpell(proto)
 	if(proto.itemClass == ITEM_CLASS_WEAPON) then
 		if(proto.subClass == ITEM_SUBCLASS_WEAPON_AXE) then return 196; end
-		if(proto.subClass == ITEM_SUBCLASS_WEAPON_AXE2) then return 197; end
+		if(proto.subClass == ITEM_SUBCLASS_WEAPON_AXE2 and not STATE.amTank) then return 197; end
 		if(proto.subClass == ITEM_SUBCLASS_WEAPON_BOW) then return 264; end
 		if(proto.subClass == ITEM_SUBCLASS_WEAPON_GUN) then return 266; end
 		if(proto.subClass == ITEM_SUBCLASS_WEAPON_MACE) then return 198; end
-		if(proto.subClass == ITEM_SUBCLASS_WEAPON_MACE2) then return 199; end
-		if(proto.subClass == ITEM_SUBCLASS_WEAPON_POLEARM) then return 200; end
+		if(proto.subClass == ITEM_SUBCLASS_WEAPON_MACE2 and not STATE.amTank) then return 199; end
+		if(proto.subClass == ITEM_SUBCLASS_WEAPON_POLEARM and not STATE.amTank) then return 200; end
 		if(proto.subClass == ITEM_SUBCLASS_WEAPON_SWORD) then return 201; end
-		if(proto.subClass == ITEM_SUBCLASS_WEAPON_SWORD2) then return 202; end
-		if(proto.subClass == ITEM_SUBCLASS_WEAPON_STAFF) then return 227; end
+		if(proto.subClass == ITEM_SUBCLASS_WEAPON_SWORD2 and not STATE.amTank) then return 202; end
+		if(proto.subClass == ITEM_SUBCLASS_WEAPON_STAFF and not STATE.amTank) then return 227; end
 		if(proto.subClass == ITEM_SUBCLASS_WEAPON_DAGGER) then return 1180; end
 		if(proto.subClass == ITEM_SUBCLASS_WEAPON_THROWN) then return 2567; end
-		if(proto.subClass == ITEM_SUBCLASS_WEAPON_SPEAR) then return 3386; end
+		if(proto.subClass == ITEM_SUBCLASS_WEAPON_SPEAR and not STATE.amTank) then return 3386; end
 		if(proto.subClass == ITEM_SUBCLASS_WEAPON_CROSSBOW) then return 5011; end
 		if(proto.subClass == ITEM_SUBCLASS_WEAPON_WAND) then return 5009; end
 	elseif(proto.itemClass == ITEM_CLASS_ARMOR) then

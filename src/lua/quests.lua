@@ -33,12 +33,14 @@ function hSMSG_QUEST_QUERY_RESPONSE(p)
 	end
 end
 
-local function wantQuest(p)
-	local known = STATE.knownQuests[p.questId];
-	if(p.title:find('Donation') or
+local function wantQuest(q, p)
+	local known = STATE.knownQuests[q.questId];
+	if(q.title:find('Donation') or
 		known.type == QUEST_TYPE_PVP)
 	then
-		local npcId = STATE.knownObjects[p.guid].values[OBJECT_FIELD_ENTRY];
+		local giver = STATE.knownObjects[p.guid];
+		local npcId = giver.values[OBJECT_FIELD_ENTRY];
+		if(giver.bot.questOverride) then return true; end
 		partyChat("Avoiding npc="..npcId);
 		PERMASTATE.avoidQuestGivers[npcId] = true;
 		saveState();
@@ -51,7 +53,7 @@ function hSMSG_QUESTGIVER_QUEST_LIST(p)
 	print("SMSG_QUESTGIVER_QUEST_LIST", p.guid:hex(), p.title);
 	for i,q in ipairs(p.quests) do
 		sendQuestQuery(q.questId, function(k)
-			if(not wantQuest(q)) then
+			if(not wantQuest(q, p)) then
 				STATE.questGivers[p.guid] = nil;
 				STATE.questFinishers[p.guid] = nil;
 				return;
@@ -95,7 +97,7 @@ function hSMSG_QUESTGIVER_OFFER_REWARD(p)
 end
 
 function handleOfferReward(p)
-	if(not wantQuest(p)) then
+	if(not wantQuest(p, p)) then
 		return;
 	end
 	local rewardIndex = nil;
@@ -193,7 +195,7 @@ function hSMSG_QUESTGIVER_QUEST_DETAILS(p)
 end
 
 function handleQuestDetails(p)
-	if(not wantQuest(p)) then
+	if(not wantQuest(p, p)) then
 		return;
 	end
 	send(CMSG_QUESTGIVER_ACCEPT_QUEST, p);
@@ -232,7 +234,11 @@ function hSMSG_QUESTGIVER_STATUS(p)
 	local o = STATE.knownObjects[p.guid];
 	if(not o) then return; end
 	local id = o.values[OBJECT_FIELD_ENTRY];
-	if((not id) or PERMASTATE.avoidQuestGivers[id]) then return; end
+	if((not id) or (PERMASTATE.avoidQuestGivers[id] and
+		(not o.bot.questOverride)))
+	then
+		return;
+	end
 	if((p.status == DIALOG_STATUS_AVAILABLE) or
 		(p.status == DIALOG_STATUS_CHAT)) then
 		print("Added quest giver "..p.guid:hex());

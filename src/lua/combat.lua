@@ -839,7 +839,7 @@ local function mainTankTarget()
 	return unitTarget(STATE.mainTank);
 end
 
-local function isRaidTarget(iconId)
+function isRaidTarget(iconId)
 	local guid = STATE.raidIcons[iconId]
 	if(isValidGuid(guid)) then
 		return STATE.knownObjects[guid] and STATE.enemies[guid];

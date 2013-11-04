@@ -60,7 +60,7 @@ function goPos(o)
 	return Position.new{
 		x=cIntAsFloat(o.values[GAMEOBJECT_POS_X]),
 		y=cIntAsFloat(o.values[GAMEOBJECT_POS_Y]),
-		z=cIntAsFloat(o.values[GAMEOBJECT_POS_Z]),
+		z=cIntAsFloat(o.values[GAMEOBJECT_POS_Z] or 0),
 	}
 end
 

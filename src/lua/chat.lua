@@ -624,6 +624,7 @@ local function gq(p)
 		return
 	end
 	--getQuests(target)
+	target.bot.questOverride = true
 	STATE.questFinishers[targetGuid] = target
 end
 

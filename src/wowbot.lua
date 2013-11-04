@@ -1188,7 +1188,7 @@ function hSMSG_CAST_FAILED(p)
 		print("SMSG_CAST_FAILED", tostring(hex), dump(p));
 
 		if(p.result == 0x0C) then --SPELL_FAILED_CANT_BE_DISENCHANTED
-			PERMASTATE.undisenchantable[STATE.currentDisenchant] = true;
+			PERMASTATE.undisenchantable[STATE.currentDisenchant.values[OBJECT_FIELD_ENTRY]] = true;
 			saveState();
 		end
 
