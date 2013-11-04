@@ -101,3 +101,88 @@ function auraLoginComplete()
 		print("We're stealthed!");
 	end
 end
+
+local function negativeEffect(e)
+	return e.basePoints < 0;
+end
+
+local function positiveEffect(e)
+	return e.basePoints > 0;
+end
+
+local function alwaysPositive(e)
+	return true;
+end
+
+local function alwaysNegative(e)
+	return true;
+end
+
+local negativeMechanicImmunities = {
+	[MECHANIC_BANDAGE] = true,
+	[MECHANIC_SHIELD] = true,
+	[MECHANIC_MOUNT] = true,
+	[MECHANIC_INVULNERABILITY] = true,
+}
+
+local function modEffect(e)
+	if(e.miscValue == SPELLMOD_COST) then
+		return negativeEffect(e);
+	else
+		error("Unknown mod effect "..e.miscValue);
+	end
+end
+
+local auraEffectIsPositiveTable = {
+	[SPELL_AURA_MOD_DAMAGE_DONE] = positiveEffect,
+	[SPELL_AURA_MOD_RESISTANCE] = positiveEffect,
+	[SPELL_AURA_MOD_STAT] = positiveEffect,
+	[SPELL_AURA_MOD_SKILL] = positiveEffect,
+	[SPELL_AURA_MOD_DODGE_PERCENT] = positiveEffect,
+	[SPELL_AURA_MOD_HEALING_PCT] = positiveEffect,
+	[SPELL_AURA_MOD_HEALING_DONE] = positiveEffect,
+	[SPELL_AURA_MOD_SPELL_CRIT_CHANCE] = positiveEffect,
+	[SPELL_AURA_MOD_INCREASE_HEALTH_PERCENT] = positiveEffect,
+	[SPELL_AURA_MOD_DAMAGE_PERCENT_DONE] = positiveEffect,
+	[SPELL_AURA_MOD_ATTACK_POWER] = positiveEffect,
+	[SPELL_AURA_PERIODIC_ENERGIZE] = positiveEffect,
+
+	[SPELL_AURA_MOD_DAMAGE_TAKEN] = negativeEffect,
+
+	-- always positive
+	[SPELL_AURA_ADD_TARGET_TRIGGER] = alwaysPositive,
+
+	-- always negative?
+	[SPELL_AURA_MOD_STUN] = alwaysNegative,
+	[SPELL_AURA_MOD_PACIFY_SILENCE] = alwaysNegative,
+	[SPELL_AURA_MOD_ROOT] = alwaysNegative,
+	[SPELL_AURA_MOD_SILENCE] = alwaysNegative,
+	[SPELL_AURA_PERIODIC_LEECH] = alwaysNegative,
+	[SPELL_AURA_MOD_STALKED] = alwaysNegative,
+	[SPELL_AURA_PERIODIC_DAMAGE_PERCENT] = alwaysNegative,
+	[SPELL_AURA_PERIODIC_DAMAGE] = alwaysNegative,
+	[SPELL_AURA_MOD_DECREASE_SPEED] = alwaysNegative,
+	[SPELL_AURA_DUMMY] = alwaysNegative,
+
+	[SPELL_AURA_MECHANIC_IMMUNITY] = function(e)
+		return not negativeMechanicImmunities[e.miscValue];
+	end,
+	[SPELL_AURA_ADD_FLAT_MODIFIER] = modEffect,
+	[SPELL_AURA_ADD_PCT_MODIFIER] = modEffect,
+};
+
+function isPositiveAura(s)
+	if(bit32.btest(s.AttributesEx, SPELL_ATTR_EX_NEGATIVE)) then return false; end
+	-- assuming here that if the spell has at least one positive effect, it's good.
+	local hasPositiveEffect = false;
+	for i, e in ipairs(s.effect) do
+		if(e.id == SPELL_EFFECT_APPLY_AURA) then
+			local f = auraEffectIsPositiveTable[e.applyAuraName]
+			if(not f) then
+				error("Unhandled aura "..e.applyAuraName);
+			end
+			if(f(e)) then hasPositiveEffect = true; end
+		end
+	end
+	return hasPositiveEffect;
+end

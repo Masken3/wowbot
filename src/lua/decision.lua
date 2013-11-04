@@ -66,6 +66,11 @@ function decision(realTime)
 		return;
 	end
 
+	if(doDispel(realTime)) then
+		setAction("dispelling...");
+		return;
+	end
+
 	-- attack an enemy.
 	local enemy = chooseEnemy();
 	if(enemy and not STATE.stealthed) then

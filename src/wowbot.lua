@@ -143,6 +143,8 @@ if(rawget(_G, 'STATE') == nil) then
 		ccSpell = false,
 		ccTarget = false,	-- KnownObject
 		interruptSpell = false,
+		friendDispelSpells = {},	--id:spellTable
+		enemyDispelSpells = {},
 
 		pullPosition = false,	-- Position.
 
@@ -1016,6 +1018,24 @@ local function learnSpell(id)
 		then
 			print("interruptSpell", s.id, s.name, s.rank);
 			STATE.interruptSpell = s;
+		end
+		-- Dispel
+		if(e.id == SPELL_EFFECT_DISPEL) then
+			-- TARGET_DUELVSPLAYER means either one enemy or one friendly target.
+			if((e.implicitTargetA == TARGET_SINGLE_FRIEND) or
+				(e.implicitTargetA == TARGET_DUELVSPLAYER))
+			then
+				print("Friendly dispel:", s.id, s.name, s.rank);
+				STATE.friendDispelSpells[s.id] = s;
+			end
+			if((e.implicitTargetA == TARGET_CHAIN_DAMAGE) or
+				(e.implicitTargetA == TARGET_DUELVSPLAYER))
+			then
+				print("Enemy dispel:", s.id, s.name, s.rank);
+				STATE.enemyDispelSpells[s.id] = s;
+			else
+				print("Unhandled dispel target "..e.implicitTargetA, s.id, s.name, s.rank);
+			end
 		end
 
 		-- direct heals

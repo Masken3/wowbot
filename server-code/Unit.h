@@ -106,7 +106,7 @@ enum SpellModOp
 	// spellmod 25 unused
 	// SPELLMOD_FREQUENCY_OF_SUCCESS   = 26,                // not used in 2.4.3
 	SPELLMOD_MULTIPLE_VALUE         = 27,
-	SPELLMOD_RESIST_DISPEL_CHANCE   = 28
+	SPELLMOD_RESIST_DISPEL_CHANCE   = 28,
 };
 
 #define MAX_SPELLMOD 32

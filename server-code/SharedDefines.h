@@ -843,7 +843,7 @@ enum Mechanics
 	MECHANIC_DAZE             = 27,
 	MECHANIC_DISCOVERY        = 28,
 	MECHANIC_IMMUNE_SHIELD    = 29,                         // Divine (Blessing) Shield/Protection and Ice Block
-	MECHANIC_SAPPED           = 30
+	MECHANIC_SAPPED           = 30,
 };
 
 #define FIRST_MECHANIC          1

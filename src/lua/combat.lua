@@ -910,3 +910,62 @@ function doInterrupt(realTime)
 	end
 	return false;
 end
+
+local function matchDispel(realTime, o, s, enemy)
+	if(not o) then return false; end
+	local res = false;
+	investigateAuras(o, function(aura, level)
+		for i, e in ipairs(s.effect) do
+			if(e.id == SPELL_EFFECT_DISPEL) then
+				local effectMask;
+				if(e.miscValue == DISPEL_ALL) then
+					effectMask = 0x1E;
+				else
+					effectMask = 2^e.miscValue;
+				end
+				if(bit32.btest(2^aura.Dispel, effectMask) and
+					(enemy == isPositiveAura(aura)))
+				then
+					objectNameQuery(o, function(name)
+						print("dispelling "..aura.name.." from "..name);
+					end);
+					res = doSpell(false, realTime, o, s);
+					return false;
+				end
+			end
+		end
+	end);
+	return res;
+end
+
+-- for each ally, check if they have any auras this spell can dispel.
+local function friendlyDispel(s, realTime)
+	if(not canCastIgnoreGcd(s, realTime, false)) then return false; end
+	for i,m in ipairs(STATE.groupMembers) do
+		local o = STATE.knownObjects[m.guid];
+		if(matchDispel(realTime, o, s, false)) then
+			return true;
+		end
+	end
+	return false;
+end
+
+local function enemyDispel(s, realTime)
+	if(not canCastIgnoreGcd(s, realTime, false)) then return false; end
+	for guid,o in pairs(STATE.enemies) do
+		if(matchDispel(realTime, o, s, true)) then
+			return true;
+		end
+	end
+	return false;
+end
+
+function doDispel(realTime)
+	for id,s in pairs(STATE.friendDispelSpells) do
+		if(friendlyDispel(s, realTime)) then return true; end
+	end
+	for id,s in pairs(STATE.enemyDispelSpells) do
+		if(enemyDispel(s, realTime)) then return true; end
+	end
+	return false;
+end
