@@ -119,7 +119,7 @@ function giveDrinkTo(drinkId, targetGuid)
 end
 
 local function giveDrink(p)
-	local drinkId = findDrinkItem()
+	local drinkItem, drinkId = findDrinkItem()
 	if(drinkId) then
 		giveDrinkTo(drinkId, p.senderGuid)
 	else
@@ -172,7 +172,7 @@ function hSMSG_TRADE_STATUS(p)
 				end
 			end
 		end)
-		print("giving "..tradeSlot.." items...")
+		print("giving "..tradeSlot.." items...", dump(STATE.tradeGiveItems))
 		STATE.tradeGiveItems = {}
 		send(CMSG_ACCEPT_TRADE, {padding=0})
 	elseif(p.status == TRADE_STATUS_TRADE_CANCELED) then

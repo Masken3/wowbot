@@ -406,14 +406,15 @@ end
 -- returns item KnownObject, id or false.
 function findDrinkItem()
 	local item = false;
+	local id;
 	investigateInventory(function(o)
-		local id = o.values[OBJECT_FIELD_ENTRY];
+		id = o.values[OBJECT_FIELD_ENTRY];
 		if(isDrinkItem(id)) then
 			item = o;
 			return false;
 		end
 	end);
-	return item;
+	return item, id;
 end
 
 function amDrinking()
@@ -438,10 +439,10 @@ end
 function doDrink(realTime)
 	if(not getClassInfo(STATE.me).drink) then return false; end
 
-	local drinkItem = findDrinkItem();
+	local drinkItem, id = findDrinkItem();
 	--print("doDrink()");
 	if(not drinkItem) then
-		--print("doDrink not");
+		print("doDrink not");
 		if(STATE.conjureDrinkSpell) then
 			if(spellIsOnCooldown(realTime, STATE.conjureDrinkSpell)) then return false; end
 			castSpellWithoutTarget(STATE.conjureDrinkSpell.id);

@@ -102,6 +102,9 @@ function itemEquipSlot(proto)
 	if((proto.InventoryType == INVTYPE_WEAPON) and (not canDualWield())) then
 		return EQUIPMENT_SLOT_MAINHAND;
 	end
+	if(STATE.amTank and proto.InventoryType == INVTYPE_2HWEAPON) then
+		return nil;
+	end
 	return itemInventoryToEquipmentSlot[proto.InventoryType];
 end
 
@@ -411,6 +414,10 @@ local function enchValue(enchId, proto, ci, verbose)
 						v = addDumpIf(v, points, "Resistance", verbose)
 					elseif(se.applyAuraName == SPELL_AURA_MOD_DAMAGE_DONE_CREATURE) then
 						v = addDumpIf(v, points, "CreatureDmg+", verbose)
+					elseif(se.applyAuraName == SPELL_AURA_MOD_HEALING_DONE) then
+						if(STATE.amHealer) then
+							v = addDumpIf(v, points*10, "Healing+", verbose)
+						end
 					else
 						print("WARN: unhandled aura "..se.applyAuraName..
 							" on spell="..e.spellId.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");

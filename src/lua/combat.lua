@@ -38,7 +38,11 @@ function attack(realTime, enemy)
 	-- if we have a good ranged attack, use that.
 	-- otherwise, go to melee.
 
-	if((not STATE.amHealer) and (not (STATE.amTank and not hasSunder(enemy)))) then
+	local shouldUseSpells = true;
+	if(STATE.amHealer) then shouldUseSpells = false; end
+	if(STATE.amTank and not hasSunder(enemy)) then shouldUseSpells = false; end
+
+	if(shouldUseSpells) then
 		-- todo: set stance, cast area buffs.
 
 		if(attackSpell(dist, realTime, enemy)) then return; end
@@ -577,7 +581,7 @@ local function hasCrowdControlAura(o)
 	local res = false;
 	investigateAuraEffects(o, function(e, level)
 		if(ccAuras[e.applyAuraName]) then
-			print("hasCrowdControlAura:", o.guid:hex());
+			--print("hasCrowdControlAura:", o.guid:hex());
 			res = true;
 		end
 		return false;
@@ -612,7 +616,7 @@ function doCrowdControl(realTime)
 			(not isRaidTarget(RAID_ICON_SQUARE)) and
 			(not isTargetOfPartyMember(o)) and
 			(not hasCrowdControlAura(o)) and
-			((o.bot.ccTime or 0) + 3 < realTime) and
+			((o.bot.ccTime or 0) + 10 < realTime) and
 			((not targetInfo) or
 				((targetInfo.rank == CREATURE_ELITE_NORMAL) and (info.rank ~= CREATURE_ELITE_NORMAL))
 			))

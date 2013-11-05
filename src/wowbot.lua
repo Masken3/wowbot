@@ -551,7 +551,7 @@ local function valueUpdated(o, idx)
 		if(STATE.myMoney) then
 			local diff = o.values[idx] - STATE.myMoney;
 			-- small increases are not interesting.
-			if(diff > STATE.myLevel or diff < 0) then
+			if((diff > STATE.myLevel^2) or (diff < 0)) then
 				if(diff > 0) then msg=msg.." +";
 				else msg=msg.." "; end
 				msg=msg..diff;

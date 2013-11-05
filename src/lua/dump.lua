@@ -52,7 +52,7 @@ function dump(o, level)
 			else
 				vs = dump(v, level + 1);
 			end
-			s = s..' ['..k..']'..'='..vs..','
+			s = s..' ['..tostring(k)..']'..'='..vs..','
 		end
 		return s..'}'
 	elseif type(o) == 'number' then
