@@ -927,7 +927,7 @@ local function matchDispel(realTime, o, s, enemy)
 					(enemy == isPositiveAura(aura)))
 				then
 					objectNameQuery(o, function(name)
-						print("dispelling "..aura.name.." from "..name);
+						print("dispelling "..aura.name.." ("..aura.id..") from "..name);
 					end);
 					res = doSpell(false, realTime, o, s);
 					return false;
@@ -941,6 +941,9 @@ end
 -- for each ally, check if they have any auras this spell can dispel.
 local function friendlyDispel(s, realTime)
 	if(not canCastIgnoreGcd(s, realTime, false)) then return false; end
+	if(matchDispel(realTime, STATE.me, s, false)) then
+		return true;
+	end
 	for i,m in ipairs(STATE.groupMembers) do
 		local o = STATE.knownObjects[m.guid];
 		if(matchDispel(realTime, o, s, false)) then

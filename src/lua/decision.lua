@@ -196,9 +196,12 @@ function decision(realTime)
 	local minDist = PERMASTATE.gatherRadius;
 	local openable;
 	for guid, o in pairs(STATE.openables) do
-		local dist = distance3(leaderPos, o.location.position);
-		if((dist < minDist) and haveSkillToOpenGO(o)) then
-			minDist = dist;
+		local distFromLeader = distance3(leaderPos, o.location.position);
+		local distFromMe = distance3(STATE.my.location.position, o.location.position);
+		if((distFromLeader < PERMASTATE.gatherRadius) and
+			(distFromMe < minDist) and haveSkillToOpenGO(o))
+		then
+			minDist = distFromMe;
 			openable = o;
 		end
 	end

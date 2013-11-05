@@ -1021,20 +1021,25 @@ local function learnSpell(id)
 		end
 		-- Dispel
 		if(e.id == SPELL_EFFECT_DISPEL) then
+			local handled = false;
 			-- TARGET_DUELVSPLAYER means either one enemy or one friendly target.
 			if((e.implicitTargetA == TARGET_SINGLE_FRIEND) or
 				(e.implicitTargetA == TARGET_DUELVSPLAYER))
 			then
+				handled = true;
 				print("Friendly dispel:", s.id, s.name, s.rank);
 				STATE.friendDispelSpells[s.id] = s;
 			end
 			if((e.implicitTargetA == TARGET_CHAIN_DAMAGE) or
 				(e.implicitTargetA == TARGET_DUELVSPLAYER))
 			then
+			handled = true;
 				print("Enemy dispel:", s.id, s.name, s.rank);
 				STATE.enemyDispelSpells[s.id] = s;
-			else
+			end
+			if(not handled) then
 				print("Unhandled dispel target "..e.implicitTargetA, s.id, s.name, s.rank);
+				error("yo");
 			end
 		end
 

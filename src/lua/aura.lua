@@ -115,7 +115,7 @@ local function alwaysPositive(e)
 end
 
 local function alwaysNegative(e)
-	return true;
+	return false;
 end
 
 local negativeMechanicImmunities = {
@@ -146,6 +146,7 @@ local auraEffectIsPositiveTable = {
 	[SPELL_AURA_MOD_DAMAGE_PERCENT_DONE] = positiveEffect,
 	[SPELL_AURA_MOD_ATTACK_POWER] = positiveEffect,
 	[SPELL_AURA_PERIODIC_ENERGIZE] = positiveEffect,
+	[SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK] = positiveEffect,
 
 	[SPELL_AURA_MOD_DAMAGE_TAKEN] = negativeEffect,
 
@@ -162,7 +163,10 @@ local auraEffectIsPositiveTable = {
 	[SPELL_AURA_PERIODIC_DAMAGE_PERCENT] = alwaysNegative,
 	[SPELL_AURA_PERIODIC_DAMAGE] = alwaysNegative,
 	[SPELL_AURA_MOD_DECREASE_SPEED] = alwaysNegative,
-	[SPELL_AURA_DUMMY] = alwaysNegative,
+	[SPELL_AURA_TRANSFORM] = alwaysNegative,
+
+	-- neither positive or negative.
+	[SPELL_AURA_DUMMY] = function(e) return nil; end,
 
 	[SPELL_AURA_MECHANIC_IMMUNITY] = function(e)
 		return not negativeMechanicImmunities[e.miscValue];
@@ -181,7 +185,12 @@ function isPositiveAura(s)
 			if(not f) then
 				error("Unhandled aura "..e.applyAuraName);
 			end
-			if(f(e)) then hasPositiveEffect = true; end
+			local res = f(e);
+			if(res == true) then
+				hasPositiveEffect = true;
+			elseif((res ~= false) and (hasPositiveEffect ~= true)) then
+				hasPositiveEffect = res;
+			end
 		end
 	end
 	return hasPositiveEffect;
