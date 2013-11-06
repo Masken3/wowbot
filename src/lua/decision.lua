@@ -702,26 +702,32 @@ function doPickpocket(realTime)
 	return false;
 end
 
-function pickpocket(realTime, target)
+-- returns true iff the spell was cast.
+function doStealthSpell(realTime, target, spell)
 	local dist = distanceToObject(target);
 	local stealthDist = (MELEE_DIST*2 + aggroRadius(target));
 	doMoveToTarget(realTime, target, stealthDist);
 	if((dist <= stealthDist) and not STATE.stealthed) then
-		if(spellIsOnCooldown(realTime, STATE.stealthSpell)) then return; end
+		if(spellIsOnCooldown(realTime, STATE.stealthSpell)) then return false; end
 		castSpellAtUnit(STATE.stealthSpell.id, STATE.me);
 		--todo: make sure to set this to false on spell fail or aura removed.
 		--also: on stealth fail, remove all pickpocketing targets, because we'll be stuck in combat.
 		STATE.stealthed = true;
 	end
 	if(STATE.stealthed) then
-		if(doStealthMoveBehindTarget(realTime, target, MELEE_DIST) and
-			not target.bot.pickpocketed)
-		then
-			partyChat("Pickpocketed "..target.guid:hex());
-			castSpellAtUnit(STATE.pickpocketSpell.id, target);
-			target.bot.pickpocketed = true;
-			STATE.pickpocketables[target.guid] = nil;
+		if(doStealthMoveBehindTarget(realTime, target, MELEE_DIST)) then
+			castSpellAtUnit(spell.id, target);
+			return true;
 		end
+	end
+	return false;
+end
+
+function pickpocket(realTime, target)
+	if(doStealthSpell(realTime, target, STATE.pickpocketSpell)) then
+		partyChat("Pickpocketed "..target.guid:hex());
+		target.bot.pickpocketed = true;
+		STATE.pickpocketables[target.guid] = nil;
 	end
 end
 

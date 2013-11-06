@@ -148,6 +148,7 @@ local auraEffectIsPositiveTable = {
 	[SPELL_AURA_PERIODIC_ENERGIZE] = positiveEffect,
 	[SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK] = positiveEffect,
 	[SPELL_AURA_MOD_RESISTANCE_PCT] = positiveEffect,
+	[SPELL_AURA_PERIODIC_HEAL] = positiveEffect,
 
 	[SPELL_AURA_MOD_DAMAGE_TAKEN] = negativeEffect,
 

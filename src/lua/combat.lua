@@ -115,14 +115,8 @@ local function avgMainhandDamage()
 end
 
 function spellLevel(s)
-	local level = STATE.myLevel - s.spellLevel;
+	local level = math.max(0, math.min(STATE.myLevel, s.maxLevel) - s.spellLevel);
 	--assert(s.spellLevel == s.baseLevel);
-
-	if (level > s.maxLevel and s.maxLevel > 0) then
-		level = s.maxLevel;
-	elseif (level < s.baseLevel) then
-		level = s.baseLevel;
-	end
 
 	return level;
 end
@@ -365,12 +359,15 @@ function mostEffectiveSpell(realTime, spells, ignoreLowPower, target)
 	if(target) then
 		dist = distanceToObject(target);
 	end
-	--sLog = true
+	if(STATE.myClassName == 'Rogue') then
+		--sLog = true
+	end
 	if(sLog and next(spells)) then print("testing...") end
 	for id, s in pairs(spells) do
 		local level, duration, cost, powerIndex, availablePower =
 			canCastIgnoreGcd(s, realTime, ignoreLowPower);
 		if(not level) then goto continue; end
+		if(s == STATE.interruptSpell) then goto continue; end
 		availP = availablePower;
 
 		-- if we're too close, ignore the spell.
@@ -378,11 +375,14 @@ function mostEffectiveSpell(realTime, spells, ignoreLowPower, target)
 		if(rangeMin and (dist > rangeMin)) then goto continue; end
 
 		local points = spellPoints(s, level);
+		local ppc = points / cost;
 
 		if(sLog) then
 			print("ap("..powerIndex.."): "..tostring(availablePower)..
 				" cost("..s.powerType.."): "..cost..
+				" level: "..level..
 				" points: "..points..
+				" ppc: "..ppc..
 				" id: "..id..
 				" name: "..s.name.." "..s.rank);
 		end
@@ -400,7 +400,6 @@ function mostEffectiveSpell(realTime, spells, ignoreLowPower, target)
 					" name: "..s.name.." "..s.rank);
 			end
 		elseif(maxPointsForFree == 0) then
-			local ppc = points / cost;
 			if(ppc > maxPpc) then
 				maxPpc = ppc;
 				bestSpell = s;
@@ -419,7 +418,12 @@ function mostEffectiveSpell(realTime, spells, ignoreLowPower, target)
 		::continue::
 	end
 	if(sLog and next(spells)) then print("test complete.") end
-	if(bestSpell and (bestCost > availP)) then return nil, 0; end
+	if(bestSpell and (bestCost > availP) and (not ignoreLowPower)) then
+		if(sLog) then
+			print(bestSpell.name.." Not enough power!", availP.." < "..bestCost);
+		end
+		return nil, 0;
+	end
 	return bestSpell, maxPoints;
 end
 
@@ -430,11 +434,19 @@ function doSpell(dist, realTime, target, s)
 	-- calculate distance.
 	dist = dist or distanceToObject(target)
 	local behindTarget = false;
-	--print("bestSpell: "..bestSpell.name.." "..bestSpell.rank);
+	if(STATE.myClassName == 'Rogue') then
+		--sLog = true
+	end
+	if(sLog) then
+		print("s: "..s.name.." "..s.rank);
+	end
 
 	if(bit32.btest(s.AttributesEx, SPELL_ATTR_EX_BEHIND_TARGET_1) and
 		bit32.btest(s.AttributesEx2, SPELL_ATTR_EX2_BEHIND_TARGET_2))
 	then	-- Backstab or equivalent.
+		if(sLog) then
+			print("BehindTarget");
+		end
 		behindTarget = true;
 		-- todo: if we have aggro from this target, this kind of spell won't work,
 		-- so we must disregard it from our selection of attack spells.
@@ -590,6 +602,16 @@ local function hasCrowdControlAura(o)
 end
 
 function doCrowdControl(realTime)
+	-- Sap
+	if(STATE.sapSpell) then
+		local o = raidTargetByIcon(RAID_ICON_DIAMOND, true);
+		--print("sapTest", tostring(o), dump(STATE.raidIcons));
+		if(o and (not hasCrowdControlAura(o)) and (not STATE.enemies[o.guid])) then
+			doStealthSpell(realTime, o, STATE.sapSpell);
+			return true;
+		end
+	end
+
 	if((not STATE.ccSpell) or (not PERMASTATE.eliteCombat)) then return false; end
 
 	-- no other enemy must be afflicted by our cc already.
@@ -611,18 +633,26 @@ function doCrowdControl(realTime)
 	for guid,o in pairs(STATE.enemies) do
 		local info = STATE.knownCreatures[o.values[OBJECT_FIELD_ENTRY]];
 		if(bit32.btest(STATE.ccSpell.TargetCreatureType, creatureTypeMask(info)) and
-			(o.values[UNIT_FIELD_HEALTH] == o.values[UNIT_FIELD_MAXHEALTH]) and
-			(not isRaidTarget(RAID_ICON_SKULL)) and
-			(not isRaidTarget(RAID_ICON_SQUARE)) and
-			(not isTargetOfPartyMember(o)) and
-			(not hasCrowdControlAura(o)) and
-			((o.bot.ccTime or 0) + 10 < realTime) and
-			((not targetInfo) or
-				((targetInfo.rank == CREATURE_ELITE_NORMAL) and (info.rank ~= CREATURE_ELITE_NORMAL))
-			))
+			(not hasCrowdControlAura(o)))
 		then
-			target = o;
-			targetInfo = info;
+			-- moon icon takes priority.
+			if(raidTargetByIcon(RAID_ICON_MOON) == o) then
+				target = o;
+				targetInfo = info;
+			elseif(
+				(o.values[UNIT_FIELD_HEALTH] == o.values[UNIT_FIELD_MAXHEALTH]) and
+				(raidTargetByIcon(RAID_ICON_SKULL) ~= o) and
+				(raidTargetByIcon(RAID_ICON_SQUARE) ~= o) and
+				(raidTargetByIcon(RAID_ICON_MOON) ~= o) and
+				(not isTargetOfPartyMember(o)) and
+				((o.bot.ccTime or 0) + 10 < realTime) and
+				((not targetInfo) or
+					((targetInfo.rank == CREATURE_ELITE_NORMAL) and (info.rank ~= CREATURE_ELITE_NORMAL))
+				))
+			then
+				target = o;
+				targetInfo = info;
+			end
 		end
 	end
 	if(target) then
@@ -665,7 +695,7 @@ local function tankTargetTest(enemyFilter)
 	local chosen = nil;
 	for guid,o in pairs(STATE.enemies) do
 		local info = STATE.knownCreatures[o.values[OBJECT_FIELD_ENTRY]];
-		if(info and enemyFilter(info)) then
+		if(info and enemyFilter(info) and (raidTargetByIcon(RAID_ICON_MOON) ~= o)) then
 			local tGuid = unitTarget(o);
 			local prio;
 			if(not tGuid) then
@@ -843,23 +873,24 @@ local function mainTankTarget()
 	return unitTarget(STATE.mainTank);
 end
 
-function isRaidTarget(iconId)
+function raidTargetByIcon(iconId, needntBeEnemy)
 	local guid = STATE.raidIcons[iconId]
 	if(isValidGuid(guid)) then
-		return STATE.knownObjects[guid] and STATE.enemies[guid];
+		if(not needntBeEnemy and not STATE.enemies[guid]) then return false; end
+		return STATE.knownObjects[guid];
 	end
 	return false;
 end
 
 -- Skull, Moon, Diamond
 local function raidTarget()
-	local o = isRaidTarget(RAID_ICON_SKULL);
+	local o = raidTargetByIcon(RAID_ICON_SKULL);
 	if(o) then return o; end
-	o = isRaidTarget(RAID_ICON_SQUARE);
+	o = raidTargetByIcon(RAID_ICON_SQUARE);
 	if(o) then return o; end
-	o = isRaidTarget(RAID_ICON_MOON);
+	o = raidTargetByIcon(RAID_ICON_MOON);
 	if(o and not(hasCrowdControlAura(o))) then return o; end
-	o = isRaidTarget(RAID_ICON_DIAMOND);
+	o = raidTargetByIcon(RAID_ICON_DIAMOND);
 	if(o and not(hasCrowdControlAura(o))) then return o; end
 	return nil;
 end

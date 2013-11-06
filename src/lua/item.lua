@@ -288,7 +288,7 @@ ClassInfo = {
 	},
 	Warrior = {
 		ranged=false,
-		primary=STAT_STRENGTH,
+		primary={STAT_STRENGTH, STAT_STAMINA},
 		secondaries={STAT_AGILITY, STAT_STAMINA},
 	},
 	Paladin = {
@@ -347,7 +347,15 @@ local function addDamageValueFromItem(v, dps, p, ci, verbose)
 end
 
 local function addModValues(v, mods, p, ci, verbose)
-	local primaryStatValue = mods[itemModStat[ci.primary]] or 0;
+	local primaryStatValue;
+	if(ci.primary == 'table') then
+		primaryStatValue = 0;
+		for i, s in ipairs(ci.primary) do
+			primaryStatValue = primaryStatValue + (mods[itemModStat[s]] or 0);
+		end
+	else
+		primaryStatValue = mods[itemModStat[ci.primary]] or 0;
+	end
 	local combinedSecondaryStatValue = 0;
 	local hasSecondaryIntellect = false;
 	for i, s in ipairs(ci.secondaries) do

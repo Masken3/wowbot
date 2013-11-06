@@ -145,6 +145,7 @@ if(rawget(_G, 'STATE') == nil) then
 		interruptSpell = false,
 		friendDispelSpells = {},	--id:spellTable
 		enemyDispelSpells = {},
+		sapSpell = false,
 
 		pullPosition = false,	-- Position.
 
@@ -845,7 +846,9 @@ local function learnSpell(id)
 	--print(id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
 	for i, e in ipairs(s.effect) do
 		--print(e.id, SPELL_ATTACK_EFFECTS[e.id]);
-		if(SPELL_ATTACK_EFFECTS[e.id]) then
+		if(SPELL_ATTACK_EFFECTS[e.id] and
+			(not bit32.btest(s.Attributes, SPELL_ATTR_ONLY_STEALTHED)))
+		then
 			if(not STATE.attackSpells[id]) then
 				print("a"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
 			end
@@ -1002,6 +1005,7 @@ local function learnSpell(id)
 		if(e.id == SPELL_EFFECT_APPLY_AURA and
 			(e.applyAuraName == SPELL_AURA_MOD_CONFUSE or
 			e.applyAuraName == SPELL_AURA_MOD_STUN) and
+			(not bit32.btest(s.Attributes, SPELL_ATTR_ONLY_STEALTHED)) and
 			e.implicitTargetA == TARGET_CHAIN_DAMAGE)
 		then
 			local level = spellLevel(s);
@@ -1013,6 +1017,16 @@ local function learnSpell(id)
 				STATE.ccSpell = s;
 			end
 		end
+		-- Sap
+		if(e.id == SPELL_EFFECT_APPLY_AURA and
+			e.applyAuraName == SPELL_AURA_MOD_STUN and
+			bit32.btest(s.Attributes, SPELL_ATTR_ONLY_STEALTHED) and
+			e.implicitTargetA == TARGET_CHAIN_DAMAGE)
+		then
+			print("sap", s.id);
+			STATE.sapSpell = s;
+		end
+		-- Interrupt
 		if(e.id == SPELL_EFFECT_INTERRUPT_CAST and
 			e.implicitTargetA == TARGET_CHAIN_DAMAGE)
 		then
