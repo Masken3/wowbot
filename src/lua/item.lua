@@ -289,7 +289,7 @@ ClassInfo = {
 	Warrior = {
 		ranged=false,
 		primary={STAT_STRENGTH, STAT_STAMINA},
-		secondaries={STAT_AGILITY, STAT_STAMINA},
+		secondaries={STAT_AGILITY},
 	},
 	Paladin = {
 		ranged=false,
@@ -348,7 +348,7 @@ end
 
 local function addModValues(v, mods, p, ci, verbose)
 	local primaryStatValue;
-	if(ci.primary == 'table') then
+	if(type(ci.primary) == 'table') then
 		primaryStatValue = 0;
 		for i, s in ipairs(ci.primary) do
 			primaryStatValue = primaryStatValue + (mods[itemModStat[s]] or 0);
