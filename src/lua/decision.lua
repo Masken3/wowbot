@@ -213,6 +213,7 @@ function decision(realTime)
 		return;
 	end
 
+	-- Fishing
 	if(STATE.fishing) then
 		doFish(realTime);
 		return;
@@ -237,6 +238,7 @@ function decision(realTime)
 		return;
 	end
 
+	-- Disenchant
 	if(STATE.disenchantItems and not STATE.tempSkipDisenchant) then
 		local s = STATE.knownSpells[STATE.disenchantSpell];
 		if(spellIsOnCooldown(realTime, s)) then return; end
@@ -264,6 +266,7 @@ function decision(realTime)
 	end
 	STATE.tempSkipDisenchant = false;
 
+	-- equip better bags
 	if(doBags()) then
 		return;
 	end
@@ -524,6 +527,7 @@ local function baseDoBags(bif, iif, minBagCount)
 	local freeSlotCount = 0;
 	local itemsInSmallestBagCount = 0;
 	iif(function(o, bagSlot, slot)
+		--print("compare "..bagSlot..", "..smallestBag.bagSlot);
 		if(bagSlot == smallestBag.bagSlot) then
 			itemsInSmallestBagCount = itemsInSmallestBagCount + 1;
 			itemsInSmallestBag[o] = slot;
@@ -558,9 +562,18 @@ local function baseDoBags(bif, iif, minBagCount)
 		i = i + 1;
 		send(CMSG_SWAP_ITEM, {dstbag=freeSlots[i].bagSlot, dstslot=freeSlots[i].slot,
 			srcbag=smallestBag.bagSlot, srcslot=slot});
+		if(biggestBag.bagSlot == smallestBag.bagSlot and biggestBag.slot == slot) then
+			biggestBag.bagSlot = freeSlots[i].bagSlot;
+			biggestBag.slot = freeSlots[i].slot;
+		end
 	end
-	print(biggestBag.o.guid:hex()..", "..smallestBag.bagSlot);
-	send(CMSG_AUTOEQUIP_ITEM_SLOT, {itemGuid=biggestBag.o.guid, dstSlot=smallestBag.bagSlot});
+	print("Moved "..i.." items.");
+	--print(biggestBag.o.guid:hex()..", "..smallestBag.bagSlot);
+	--send(CMSG_AUTOEQUIP_ITEM_SLOT, {itemGuid=biggestBag.o.guid, dstSlot=smallestBag.bagSlot});
+	local p = {dstbag=INVENTORY_SLOT_BAG_0, dstslot=smallestBag.bagSlot,
+		srcbag=biggestBag.bagSlot, srcslot=biggestBag.slot}
+	print("CMSG_SWAP_ITEM ", dump(p))
+	send(CMSG_SWAP_ITEM, p)
 
 	-- avoid spam repeats
 	STATE.doBags = false;
@@ -654,6 +667,7 @@ function doFish(realTime)
 	if(not STATE.fishingBobber) then
 		local s = STATE.knownSpells[STATE.fishingSpell];
 		if(spellIsOnCooldown(realTime, s)) then return; end
+		-- todo: set orientation
 		castSpellWithoutTarget(STATE.fishingSpell);
 		return;
 	end
