@@ -514,6 +514,7 @@ function itemLoginComplete()
 	--print("Equipped items:");
 
 	--STATE.itemDataCallbacks["temp"] = doInventoryWindow;
+	STATE.itemDataCallbacks[STATE.attackSpells] = dumpMostEffectiveSpell;
 
 	-- Engineering
 	--STATE.itemDataCallbacks[cSkillLine(202)] = doProfessionWindow;

@@ -181,6 +181,14 @@ local function spellPoints(s, level)
 				points = points + comboPoints() * e.pointsPerComboPoint;
 			end
 		end
+		if(e.id == SPELL_EFFECT_APPLY_AURA and
+			e.applyAuraName == SPELL_AURA_PERIODIC_TRIGGER_SPELL)
+		then
+			local ts = cSpell(e.triggerSpell);
+			local duration = getDuration(s.DurationIndex, level);
+			local multiplier = duration / (e.amplitude / 1000);
+			points = points + spellPoints(ts, level) * multiplier;
+		end
 	end
 	return points;
 end
@@ -346,6 +354,12 @@ local function spellRange(s, target)
 	end
 end
 
+function dumpMostEffectiveSpell(spells)
+	sLog = true
+	mostEffectiveSpell(getRealTime(), spells, true)
+	sLog = false
+end
+
 -- if ignoreLowPower, don't ignore spells we don't have enough power for.
 -- instead, if we can't cast the best, don't cast anything.
 function mostEffectiveSpell(realTime, spells, ignoreLowPower, target)
@@ -371,8 +385,10 @@ function mostEffectiveSpell(realTime, spells, ignoreLowPower, target)
 		availP = availablePower;
 
 		-- if we're too close, ignore the spell.
-		local rangeMax, rangeMin = spellRange(s, target);
-		if(rangeMin and (dist > rangeMin)) then goto continue; end
+		if(target) then
+			local rangeMax, rangeMin = spellRange(s, target);
+			if(rangeMin and (dist > rangeMin)) then goto continue; end
+		end
 
 		local points = spellPoints(s, level);
 		local ppc = points / cost;

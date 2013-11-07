@@ -841,6 +841,13 @@ local SPELL_ATTACK_EFFECTS = {
 	[SPELL_EFFECT_NORMALIZED_WEAPON_DMG]=true,
 }
 
+local function newAttackSpell(id, s)
+	if(not STATE.attackSpells[id]) then
+		print("a"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+	end
+	STATE.attackSpells[id] = s;
+end
+
 local function learnSpell(id)
 	local s = cSpell(id);
 	--print(id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
@@ -849,10 +856,22 @@ local function learnSpell(id)
 		if(SPELL_ATTACK_EFFECTS[e.id] and
 			(not bit32.btest(s.Attributes, SPELL_ATTR_ONLY_STEALTHED)))
 		then
-			if(not STATE.attackSpells[id]) then
-				print("a"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+			newAttackSpell(id, s);
+		end
+		-- channel periodic trigger	(Arcane Missiles)
+		if(e.id == SPELL_EFFECT_APPLY_AURA and
+			--bit32.btest(s.AttributesEx,
+				--bit32.bor(SPELL_ATTR_EX_CHANNELED_1,SPELL_ATTR_EX_CHANNELED_2)) and
+			e.applyAuraName == SPELL_AURA_PERIODIC_TRIGGER_SPELL)
+		then
+			local ts = cSpell(e.triggerSpell);
+			for i, e in ipairs(ts.effect) do
+				if(SPELL_ATTACK_EFFECTS[e.id] and
+					e.implicitTargetA == TARGET_CHAIN_DAMAGE)
+				then
+					newAttackSpell(id, s);
+				end
 			end
-			STATE.attackSpells[id] = s;
 		end
 		if(e.id == SPELL_EFFECT_ATTACK) then
 			-- assuming that there's only one melee spell
