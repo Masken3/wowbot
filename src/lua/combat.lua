@@ -385,6 +385,15 @@ function mostEffectiveSpell(realTime, spells, ignoreLowPower, target)
 	if(target) then
 		dist = distanceToObject(target);
 	end
+
+	-- if we're the target of more than one enemy, don't try channeled spells.
+	local countOfEnemiesTargetingUs = 0;
+	for guid,o in pairs(STATE.enemies) do
+		if(guidFromValues(o, UNIT_FIELD_TARGET) == STATE.myGuid) then
+			countOfEnemiesTargetingUs = countOfEnemiesTargetingUs + 1;
+		end
+	end
+
 	if(STATE.myClassName == 'Rogue') then
 		--sLog = true
 	end
@@ -396,6 +405,13 @@ function mostEffectiveSpell(realTime, spells, ignoreLowPower, target)
 		if(s == STATE.interruptSpell) then goto continue; end
 		availP = availablePower;
 
+		if(countOfEnemiesTargetingUs > 1 and
+			bit32.btest(s.AttributesEx, bit32.bor(SPELL_ATTR_EX_CHANNELED_1, SPELL_ATTR_EX_CHANNELED_2)))
+		then
+			if(sLog) then print("Skipped due to "..countOfEnemiesTargetingUs.." enemies targeting us."); end
+			goto continue;
+		end
+
 		-- if we're too close, ignore the spell.
 		if(target) then
 			local rangeMax, rangeMin = spellRange(s, target);
@@ -404,6 +420,7 @@ function mostEffectiveSpell(realTime, spells, ignoreLowPower, target)
 
 		local points = spellPoints(s, level);
 		local ppc = points / cost;
+		s.ppc = ppc;
 
 		if(sLog) then
 			print("ap("..powerIndex.."): "..tostring(availablePower)..
@@ -456,7 +473,7 @@ function mostEffectiveSpell(realTime, spells, ignoreLowPower, target)
 end
 
 -- dist may be false.
-function doSpell(dist, realTime, target, s)
+function doSpell(dist, realTime, target, s, customRange)
 	assert(s);
 	if(not canCastIgnoreGcd(s, realTime)) then return false; end
 	-- calculate distance.
@@ -480,7 +497,7 @@ function doSpell(dist, realTime, target, s)
 		-- so we must disregard it from our selection of attack spells.
 	end
 
-	local requiredDistance = spellRange(s, target) or MELEE_DIST;
+	local requiredDistance = customRange or spellRange(s, target) or MELEE_DIST;
 
 	-- start moving.
 	local closeEnough = true;
@@ -510,6 +527,8 @@ function attackSpell(dist, realTime, enemy)
 	if(not bestSpell) then
 		return false;
 	end
+	-- if an AoE attack would serve us better, do that.
+	if(doAoeAttack(realTime, bestSpell)) then return true; end
 	return doSpell(dist, realTime, enemy, bestSpell);
 end
 
@@ -1034,4 +1053,47 @@ function doDispel(realTime)
 		if(enemyDispel(s, realTime)) then return true; end
 	end
 	return false;
+end
+
+function doAoeAttack(realTime, singleTargetSpell)
+	if(STATE.eliteCombat) then return false; end
+	-- Find our best AoE spell.
+	local s = mostEffectiveSpell(realTime, STATE.aoeAttackSpells, true);
+	-- Count enemies.
+	local count = 0;
+	for guid,o in pairs(STATE.enemies) do
+		count = count + 1;
+	end
+	-- If there aren't enough enemies to make the AoE spell more efficient, skip it.
+	if(s.ppc * count < singleTargetSpell.ppc) then return false; end
+	-- If there are, check which ones are close enough together
+	-- that the AoE spell will hit as many as possible.
+
+	local radius = cSpellRadius(s.effect[1].radiusIndex);
+
+	-- This is an NP-complete problem of complexity O((n+1)!).
+	-- Given that we may face up to 20 enemies at once, attempting a complete solution would be useless.
+	-- Instead, test the positions of each of our allies. This will take O(n*m) and,
+	-- given that at least one ally is human, should give us a decent result.
+	local target
+	local targetCount = 0
+	for i,m in ipairs(STATE.groupMembers) do
+		local o = STATE.knownObjects[m.guid];
+		if(o) then
+			local c = 0
+			for guid,e in pairs(STATE.enemies) do
+				if(distance3(o.location.position, e.location.position) < radius) then
+					c = c + 1
+				end
+			end
+			if(c > targetCount) then
+				target = o;
+				targetCount = c;
+			end
+		end
+	end
+	if(s.ppc * targetCount < singleTargetSpell.ppc) then return false; end
+
+	-- Go to ally and cast spell.
+	return doSpell(false, realTime, target, s, 1);
 end

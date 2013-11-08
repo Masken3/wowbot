@@ -546,6 +546,7 @@ function itemLoginComplete()
 
 	--STATE.itemDataCallbacks["temp"] = doInventoryWindow;
 	STATE.itemDataCallbacks[STATE.attackSpells] = dumpMostEffectiveSpell;
+	STATE.itemDataCallbacks[STATE.aoeAttackSpells] = dumpMostEffectiveSpell;
 
 	-- Engineering
 	--STATE.itemDataCallbacks[cSkillLine(202)] = doProfessionWindow;

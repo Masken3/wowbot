@@ -146,6 +146,7 @@ if(rawget(_G, 'STATE') == nil) then
 		friendDispelSpells = {},	--id:spellTable
 		enemyDispelSpells = {},
 		sapSpell = false,
+		aoeAttackSpells = {},
 
 		pullPosition = false,	-- Position.
 
@@ -833,7 +834,6 @@ local SPELL_ATTACK_EFFECTS = {
 	[SPELL_EFFECT_FORCE_CRITICAL_HIT]=true,
 	[SPELL_EFFECT_GUARANTEE_HIT]=true,
 	[SPELL_EFFECT_WEAPON_DAMAGE]=true,	--?
-	[SPELL_EFFECT_ATTACK]=true,
 	[SPELL_EFFECT_ADD_COMBO_POINTS]=true,
 	[SPELL_EFFECT_SCHOOL_DAMAGE]=true,
 	[SPELL_EFFECT_ADD_EXTRA_ATTACKS]=true,
@@ -848,17 +848,39 @@ local function newAttackSpell(id, s)
 	STATE.attackSpells[id] = s;
 end
 
+local function newAoeAttackSpell(id, s)
+	if(not STATE.aoeAttackSpells[id]) then
+		print("aoe"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+	end
+	STATE.aoeAttackSpells[id] = s;
+end
+
+local function dumpSpell(s)
+	print(s.id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+end
+
 local function learnSpell(id)
 	local s = cSpell(id);
 	if(STATE.myClassName == 'Mage') then
-		--print(id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+		dumpSpell(s);
 	end
 	for i, e in ipairs(s.effect) do
 		--print(e.id, SPELL_ATTACK_EFFECTS[e.id]);
 		if(SPELL_ATTACK_EFFECTS[e.id] and
 			(not bit32.btest(s.Attributes, SPELL_ATTR_ONLY_STEALTHED)))
 		then
-			newAttackSpell(id, s);
+			if(e.implicitTargetA == TARGET_CHAIN_DAMAGE) then
+				newAttackSpell(id, s);
+			elseif(e.implicitTargetB == TARGET_ALL_ENEMY_IN_AREA or
+				e.implicitTargetA == TARGET_ALL_ENEMY_IN_AREA_INSTANT)
+			then
+				newAoeAttackSpell(id, s);
+			elseif(e.implicitTargetA == TARGET_IN_FRONT_OF_CASTER) then
+				-- ignore these for now (Cone of Cold, Cleave)
+			else
+				dumpSpell(s);
+				error("ERROR: unhandled target:");
+			end
 		end
 		-- channel periodic trigger	(Arcane Missiles)
 		if(e.id == SPELL_EFFECT_APPLY_AURA and
@@ -880,7 +902,7 @@ local function learnSpell(id)
 			e.applyAuraName == SPELL_AURA_PERIODIC_DAMAGE)
 			-- TARGET_ALL_ENEMY_IN_AREA_CHANNELED
 		then
-			newAttackSpell(id, s);
+			newAoeAttackSpell(id, s);
 		end
 		-- Melee Attack
 		if(e.id == SPELL_EFFECT_ATTACK) then
