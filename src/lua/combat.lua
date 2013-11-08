@@ -189,6 +189,13 @@ local function spellPoints(s, level)
 			local multiplier = duration / (e.amplitude / 1000);
 			points = points + spellPoints(ts, level) * multiplier;
 		end
+		if(e.id == SPELL_EFFECT_PERSISTENT_AREA_AURA and
+			e.applyAuraName == SPELL_AURA_PERIODIC_DAMAGE)
+		then
+			local duration = getDuration(s.DurationIndex, level);
+			local multiplier = duration / (e.amplitude / 1000);
+			points = points + calcAvgEffectPoints(level, e) * multiplier;
+		end
 	end
 	return points;
 end
@@ -331,6 +338,11 @@ end
 
 local BASE_MELEERANGE_OFFSET = 1.333;
 
+local function intAsFloat(int, default)
+	if(not int) then return default; end
+	return cIntAsFloat(int);
+end
+
 -- returns rangeMax, rangeMin, or nil.
 local function spellRange(s, target)
 	local ri = s.rangeIndex;
@@ -343,8 +355,8 @@ local function spellRange(s, target)
 		-- algo copied from mangos.
 		return (math.max(MELEE_RANGE,
 			BASE_MELEERANGE_OFFSET +
-			(cIntAsFloat(STATE.my.values[UNIT_FIELD_COMBATREACH]) or 1.5) +
-			(cIntAsFloat(target.values[UNIT_FIELD_COMBATREACH]) or 1.5)) - 1), nil
+			intAsFloat(STATE.my.values[UNIT_FIELD_COMBATREACH], 1.5) +
+			intAsFloat(target.values[UNIT_FIELD_COMBATREACH], 1.5)) - 1), nil
 	else
 		local range = cSpellRange(ri);
 		if(range) then
@@ -649,6 +661,7 @@ function doCrowdControl(realTime)
 	for guid,o in pairs(STATE.enemies) do
 		local info = STATE.knownCreatures[o.values[OBJECT_FIELD_ENTRY]];
 		if(bit32.btest(STATE.ccSpell.TargetCreatureType, creatureTypeMask(info)) and
+			((o.bot.ccTime or 0) + 5 < realTime) and
 			(not hasCrowdControlAura(o)))
 		then
 			-- moon icon takes priority.
@@ -661,7 +674,6 @@ function doCrowdControl(realTime)
 				(raidTargetByIcon(RAID_ICON_SQUARE) ~= o) and
 				(raidTargetByIcon(RAID_ICON_MOON) ~= o) and
 				(not isTargetOfPartyMember(o)) and
-				((o.bot.ccTime or 0) + 10 < realTime) and
 				((not targetInfo) or
 					((targetInfo.rank == CREATURE_ELITE_NORMAL) and (info.rank ~= CREATURE_ELITE_NORMAL))
 				))

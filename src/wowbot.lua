@@ -850,7 +850,9 @@ end
 
 local function learnSpell(id)
 	local s = cSpell(id);
-	--print(id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+	if(STATE.myClassName == 'Mage') then
+		--print(id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+	end
 	for i, e in ipairs(s.effect) do
 		--print(e.id, SPELL_ATTACK_EFFECTS[e.id]);
 		if(SPELL_ATTACK_EFFECTS[e.id] and
@@ -873,6 +875,14 @@ local function learnSpell(id)
 				end
 			end
 		end
+		-- Persistent Area Aura (Blizzard)
+		if(e.id == SPELL_EFFECT_PERSISTENT_AREA_AURA and
+			e.applyAuraName == SPELL_AURA_PERIODIC_DAMAGE)
+			-- TARGET_ALL_ENEMY_IN_AREA_CHANNELED
+		then
+			newAttackSpell(id, s);
+		end
+		-- Melee Attack
 		if(e.id == SPELL_EFFECT_ATTACK) then
 			-- assuming that there's only one melee spell
 			-- there is, but a world-port will cause resend of INITIAL_SPELLS.
