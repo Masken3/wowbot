@@ -97,7 +97,7 @@ work = ExeWork.new do
 		GenLuaFromHeaderTask.new('SpellAuraDefines', 'server-code/SpellAuraDefines.h',
 			{:includedEnums=>['AuraType', 'AuraConstants']}),
 		GenLuaFromHeaderTask.new('worldHandlers', 'src/worldHandlers.h',
-			{:includedEnums=>['RaidIcons']}),
+			),#{:includedEnums=>['RaidIcons']}),
 		GenLuaFromHeaderTask.new('Item', 'server-code/Item.h',
 			{:includedEnums=>['EnchantmentSlot', 'EnchantmentOffset', 'ItemDynFlags']}),
 	]

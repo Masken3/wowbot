@@ -131,6 +131,7 @@ if(rawget(_G, 'STATE') == nil) then
 		-- id:spellTable
 		healingSpells = {},
 		buffSpells = {},	-- name:spellTable
+		selfBuffSpells = {},
 		combatBuffSpells = {},	-- name:spellTable	-- like a warrior's Shouts
 		focusSpells = {},
 		tauntSpell = false,	-- spellTable
@@ -841,22 +842,31 @@ local SPELL_ATTACK_EFFECTS = {
 	[SPELL_EFFECT_NORMALIZED_WEAPON_DMG]=true,
 }
 
+local function dumpSpell(s, prefix)
+	print((prefix or '')..s.id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+end
+
 local function newAttackSpell(id, s)
 	if(not STATE.attackSpells[id]) then
-		print("a"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+		dumpSpell(s, "a");
 	end
 	STATE.attackSpells[id] = s;
 end
 
 local function newAoeAttackSpell(id, s)
 	if(not STATE.aoeAttackSpells[id]) then
-		print("aoe"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+		dumpSpell(s, "aoe");
 	end
 	STATE.aoeAttackSpells[id] = s;
 end
 
-local function dumpSpell(s)
-	print(s.id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+local function spellSubClass(s)
+	if(s.SpellFamilyName == SPELLFAMILY_MAGE) then
+		if(bit32.btest(s.SpellFamilyFlags, 0x12000000)) then
+			return SPELL_MAGE_ARMOR;
+		end
+	end
+	return nil;
 end
 
 local function learnSpell(id)
@@ -944,28 +954,30 @@ local function learnSpell(id)
 				end
 			end
 		end
+
+		local buffAuras = {
+			[SPELL_AURA_MOD_ATTACKSPEED]=true,
+			[SPELL_AURA_MOD_DAMAGE_DONE]=true,
+			[SPELL_AURA_MOD_RESISTANCE]=true,
+			[SPELL_AURA_PERIODIC_ENERGIZE]=true,
+			[SPELL_AURA_MOD_STAT]=true,
+			[SPELL_AURA_MOD_SKILL]=true,
+			--[SPELL_AURA_MOD_INCREASE_SPEED]=true,
+			[SPELL_AURA_MOD_INCREASE_HEALTH]=true,
+			[SPELL_AURA_MOD_INCREASE_ENERGY]=true,
+		}
+
+		--print("aura: "..e.applyAuraName, dump(buffAuras));
 		if((e.id == SPELL_EFFECT_APPLY_AURA) and
 			(e.implicitTargetA == TARGET_SINGLE_FRIEND))
 		then
 			-- buffs
-			local buffAuras = {
-				[SPELL_AURA_MOD_ATTACKSPEED]=true,
-				[SPELL_AURA_MOD_DAMAGE_DONE]=true,
-				[SPELL_AURA_MOD_RESISTANCE]=true,
-				[SPELL_AURA_PERIODIC_ENERGIZE]=true,
-				[SPELL_AURA_MOD_STAT]=true,
-				[SPELL_AURA_MOD_SKILL]=true,
-				[SPELL_AURA_MOD_INCREASE_SPEED]=true,
-				[SPELL_AURA_MOD_INCREASE_HEALTH]=true,
-				[SPELL_AURA_MOD_INCREASE_ENERGY]=true,
-			}
-			--print("aura: "..e.applyAuraName, dump(buffAuras));
 			if(buffAuras[e.applyAuraName]) then
 				if(not STATE.buffSpells[s.name]) then
-					print("b"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+					dumpSpell(s, "b");
 					STATE.buffSpells[s.name] = s;
 				elseif(STATE.buffSpells[s.name].rank < s.rank) then
-					print("b"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+					dumpSpell(s, "b");
 					STATE.buffSpells[s.name] = s;
 				end
 			end
@@ -977,6 +989,23 @@ local function learnSpell(id)
 				STATE.healingSpells[id] = s;
 			end
 		end
+		-- self buffs
+		if((e.id == SPELL_EFFECT_APPLY_AURA) and
+			(not bit32.btest(s.Attributes, bit32.bor(SPELL_ATTR_PASSIVE, SPELL_ATTR_UNK7))) and
+			(e.implicitTargetA == TARGET_SELF))
+		then
+			if(buffAuras[e.applyAuraName]) then
+				local name = spellSubClass(s) or s.name;
+				if(not STATE.selfBuffSpells[name]) then
+					dumpSpell(s, "sb");
+					STATE.selfBuffSpells[name] = s;
+				elseif(positiveSpellPoints(STATE.selfBuffSpells[name]) < positiveSpellPoints(s)) then
+					dumpSpell(s, "sb");
+					STATE.selfBuffSpells[name] = s;
+				end
+			end
+		end
+		-- debuffs
 		if((e.id == SPELL_EFFECT_APPLY_AURA) and
 			(e.implicitTargetA == TARGET_CHAIN_DAMAGE))	-- single enemy
 		then

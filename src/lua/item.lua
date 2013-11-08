@@ -377,7 +377,7 @@ local function addModValues(v, mods, p, ci, verbose)
 	return v;
 end
 
-local function addItemSpellValue(v, s, proto, verbose)
+local function addItemSpellValue(v, mods, s, proto, verbose)
 --print(s.name, e.spellId);
 	local level = spellLevel(s);
 	for j,se in ipairs(s.effect) do
@@ -434,6 +434,16 @@ local function addItemSpellValue(v, s, proto, verbose)
 	return v;
 end
 
+function positiveSpellPoints(s, verbose)
+	local v = 0;
+	local mods = {};
+	local ci = ClassInfo[STATE.myClassName];
+	local proto = {itemId='nil',name='nil'};
+	v = addItemSpellValue(v, mods, s, proto, verbose);
+	v = addModValues(v, mods, proto, ci, verbose and 1);
+	return v;
+end
+
 local function enchValue(enchId, proto, ci, verbose)
 	local ench = cSpellItemEnchantment(enchId);
 	if(not ench) then return 0; end
@@ -454,7 +464,7 @@ local function enchValue(enchId, proto, ci, verbose)
 		end
 		if(e.type == ITEM_ENCHANTMENT_TYPE_EQUIP_SPELL) then
 			local s = cSpell(e.spellId);
-			v = addItemSpellValue(v, s, proto, verbose);
+			v = addItemSpellValue(v, mods, s, proto, verbose);
 		end
 		if(e.type == ITEM_ENCHANTMENT_TYPE_STAT) then
 			mods[e.spellId] = (mods[e.spellId] or 0) + e.amount;
@@ -465,11 +475,13 @@ local function enchValue(enchId, proto, ci, verbose)
 end
 
 local function addSpellValueFromItem(v, proto, ci, verbose)
+	local mods = {};
 	for i,spell in ipairs(proto.spells) do
 		if(spell.trigger == ITEM_SPELLTRIGGER_ON_EQUIP and spell.id ~= 0) then
-			v = addItemSpellValue(v, cSpell(spell.id), proto, verbose);
+			v = addItemSpellValue(v, mods, cSpell(spell.id), proto, verbose);
 		end
 	end
+	v = addModValues(v, mods, proto, ci, verbose and 1);
 	return v;
 end
 

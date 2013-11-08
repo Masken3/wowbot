@@ -155,6 +155,8 @@ end
 local function spellPoints(s, level)
 	local points = 0;
 
+	level = level or spellLevel(s);
+
 	-- if we're the tank, allocate bonus points to threatening spells.
 	if(STATE.amTank) then
 		points = points + (SPELL_THREAT[s.id] or 0);
@@ -571,9 +573,12 @@ function doHeal(realTime)
 	return doHealSingle(STATE.me, healSpell, points, realTime);
 end
 
-local function doBuffSingle(o, realTime)
+local function doBuffSingle(o, realTime, buffSpells)
+	-- if target is dead, don't bother.
+	if(o.values[UNIT_FIELD_HEALTH] == 0) then return false; end
+
 	-- check all auras. if there's one aura of ours they DON'T have, give it.
-	for buffName, s in pairs(STATE.buffSpells) do
+	for buffName, s in pairs(buffSpells) do
 		local h = hasAura(o, s.id);
 		--sLog = true;
 		local c = canCast(s, realTime);
@@ -591,16 +596,20 @@ local function doBuffSingle(o, realTime)
 end
 
 function doBuff(realTime)
+	-- if we're dead, don't bother.
+	if(STATE.my.values[UNIT_FIELD_HEALTH] == 0) then return false; end
+	-- buff ourselves first.
+	if(doBuffSingle(STATE.me, realTime, STATE.selfBuffSpells)) then return true; end
 	-- check each party member
 	for i,m in ipairs(STATE.groupMembers) do
 		local o = STATE.knownObjects[m.guid];
 		if(o) then
 			--print("doBuff "..m.guid:hex());
-			local res = doBuffSingle(o, realTime);
+			local res = doBuffSingle(o, realTime, STATE.buffSpells);
 			if(res) then return res; end
 		end
 	end
-	return doBuffSingle(STATE.me, realTime);
+	return doBuffSingle(STATE.me, realTime, STATE.buffSpells);
 end
 
 local function creatureTypeMask(info)

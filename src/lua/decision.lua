@@ -687,6 +687,7 @@ local function allHealersHaveAtLeastHalfMana()
 end
 
 function doPickpocket(realTime)
+	if(not STATE.stealthSpell) then return false; end
 	if(not STATE.pickpocketSpell) then return false; end
 	local minDist = PERMASTATE.gatherRadius * 1.5;
 	if(not STATE.leader) then return false; end
