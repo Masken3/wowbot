@@ -102,7 +102,11 @@ function itemEquipSlot(proto)
 	if((proto.InventoryType == INVTYPE_WEAPON) and (not canDualWield())) then
 		return EQUIPMENT_SLOT_MAINHAND;
 	end
-	if(STATE.amTank and proto.InventoryType == INVTYPE_2HWEAPON) then
+	if(STATE.amTank and (
+		proto.InventoryType == INVTYPE_2HWEAPON or
+		proto.InventoryType == INVTYPE_WEAPONOFFHAND or
+		proto.InventoryType == INVTYPE_HOLDABLE))
+	then
 		return nil;
 	end
 	return itemInventoryToEquipmentSlot[proto.InventoryType];
@@ -288,7 +292,7 @@ ClassInfo = {
 	},
 	Warrior = {
 		ranged=false,
-		primary={STAT_STRENGTH, STAT_STAMINA},
+		primary={[STAT_STAMINA]=20, [STAT_STRENGTH]=15},
 		secondaries={STAT_AGILITY},
 	},
 	Paladin = {
@@ -350,9 +354,10 @@ local function addModValues(v, mods, p, ci, verbose)
 	local primaryStatValue;
 	if(type(ci.primary) == 'table') then
 		primaryStatValue = 0;
-		for i, s in ipairs(ci.primary) do
-			primaryStatValue = primaryStatValue + (mods[itemModStat[s]] or 0);
+		for s, v in pairs(ci.primary) do
+			primaryStatValue = primaryStatValue + (mods[itemModStat[s]] or 0) * v;
 		end
+		primaryStatValue = primaryStatValue / 20;
 	else
 		primaryStatValue = mods[itemModStat[ci.primary]] or 0;
 	end
@@ -369,6 +374,63 @@ local function addModValues(v, mods, p, ci, verbose)
 	end
 
 	v = addDumpIf(v, mods[ITEM_MOD_HEALTH] or 0, "Health", verbose);
+	return v;
+end
+
+local function addItemSpellValue(v, s, proto, verbose)
+--print(s.name, e.spellId);
+	local level = spellLevel(s);
+	for j,se in ipairs(s.effect) do
+		local points = calcAvgEffectPoints(level, se);
+		if(se.id == SPELL_EFFECT_APPLY_AURA) then
+			if(se.applyAuraName == SPELL_AURA_MOD_STAT) then
+				-- for this aura, miscValue is one of the STAT_ defines (0-4).
+				local m = itemModStat[se.miscValue];
+				-- assuming level 0 here. may need modification.
+				mods[m] = (mods[m] or 0) + calcAvgEffectPoints(0, se);
+			elseif(se.applyAuraName == SPELL_AURA_MOD_DAMAGE_DONE) then
+				-- se.miscValue is schoolMask (1 << enum SpellSchools)
+
+				-- it's really hard to assign a reasonable value to this effect;
+				-- you have to know if you would more damage with it than without.
+				-- that requires you to know if you have any spells in this school
+				-- that you're actually using.
+				-- for now, we'll just ignore it.
+			elseif(se.applyAuraName == SPELL_AURA_MOD_ATTACK_POWER) then
+				v = addDamageValueRaw(v, points / 14, false, ci, verbose)
+			elseif(se.applyAuraName == SPELL_AURA_MOD_RANGED_ATTACK_POWER) then
+				v = addDamageValueRaw(v, points / 14, true, ci, verbose)
+			elseif(se.applyAuraName == SPELL_AURA_MOD_INCREASE_ENERGY) then
+				v = addDumpIf(v, points, "Mana+", verbose)
+			elseif(se.applyAuraName == SPELL_AURA_MOD_INCREASE_HEALTH) then
+				v = addDumpIf(v, points, "Health+", verbose)
+			elseif(se.applyAuraName == SPELL_AURA_MOD_RESISTANCE) then
+				-- we don't care much about resistances yet.
+				v = addDumpIf(v, points, "Resistance", verbose)
+			elseif(se.applyAuraName == SPELL_AURA_MOD_DAMAGE_DONE_CREATURE) then
+				v = addDumpIf(v, points, "CreatureDmg+", verbose)
+			elseif(se.applyAuraName == SPELL_AURA_MOD_HEALING_DONE) then
+				if(STATE.amHealer) then
+					v = addDumpIf(v, points*10, "Healing+", verbose)
+				end
+			elseif(se.applyAuraName == SPELL_AURA_MOD_SKILL) then
+				if(se.miscValue == 95) then	-- Defense
+					if(STATE.amTank) then
+						v = addDumpIf(v, points*20, "Defense+", verbose)
+					end
+				else
+					print("WARN: unhandled skill "..se.miscValue..
+						" on spell="..s.id.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
+				end
+			else
+				print("WARN: unhandled aura "..se.applyAuraName..
+					" on spell="..s.id.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
+			end
+		elseif(se.id ~= 0) then
+			print("WARN: unhandled effect "..se.id..
+				" on spell="..s.id.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
+		end
+	end
 	return v;
 end
 
@@ -392,55 +454,22 @@ local function enchValue(enchId, proto, ci, verbose)
 		end
 		if(e.type == ITEM_ENCHANTMENT_TYPE_EQUIP_SPELL) then
 			local s = cSpell(e.spellId);
-			local level = spellLevel(s);
-			for j,se in ipairs(s.effect) do
-				local points = calcAvgEffectPoints(level, se);
-				if(se.id == SPELL_EFFECT_APPLY_AURA) then
-					if(se.applyAuraName == SPELL_AURA_MOD_STAT) then
-						-- for this aura, miscValue is one of the STAT_ defines (0-4).
-						local m = itemModStat[se.miscValue];
-						-- assuming level 0 here. may need modification.
-						mods[m] = (mods[m] or 0) + calcAvgEffectPoints(0, se);
-					elseif(se.applyAuraName == SPELL_AURA_MOD_DAMAGE_DONE) then
-						-- se.miscValue is schoolMask (1 << enum SpellSchools)
-
-						-- it's really hard to assign a reasonable value to this effect;
-						-- you have to know if you would more damage with it than without.
-						-- that requires you to know if you have any spells in this school
-						-- that you're actually using.
-						-- for now, we'll just ignore it.
-					elseif(se.applyAuraName == SPELL_AURA_MOD_ATTACK_POWER) then
-						v = addDamageValueRaw(v, points / 14, false, ci, verbose)
-					elseif(se.applyAuraName == SPELL_AURA_MOD_RANGED_ATTACK_POWER) then
-						v = addDamageValueRaw(v, points / 14, true, ci, verbose)
-					elseif(se.applyAuraName == SPELL_AURA_MOD_INCREASE_ENERGY) then
-						v = addDumpIf(v, points, "Mana+", verbose)
-					elseif(se.applyAuraName == SPELL_AURA_MOD_INCREASE_HEALTH) then
-						v = addDumpIf(v, points, "Health+", verbose)
-					elseif(se.applyAuraName == SPELL_AURA_MOD_RESISTANCE) then
-						-- we don't care much about resistances yet.
-						v = addDumpIf(v, points, "Resistance", verbose)
-					elseif(se.applyAuraName == SPELL_AURA_MOD_DAMAGE_DONE_CREATURE) then
-						v = addDumpIf(v, points, "CreatureDmg+", verbose)
-					elseif(se.applyAuraName == SPELL_AURA_MOD_HEALING_DONE) then
-						if(STATE.amHealer) then
-							v = addDumpIf(v, points*10, "Healing+", verbose)
-						end
-					else
-						print("WARN: unhandled aura "..se.applyAuraName..
-							" on spell="..e.spellId.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
-					end
-				elseif(se.id ~= 0) then
-					print("WARN: unhandled effect "..se.id..
-						" on spell="..e.spellId.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
-				end
-			end
+			v = addItemSpellValue(v, s, proto, verbose);
 		end
 		if(e.type == ITEM_ENCHANTMENT_TYPE_STAT) then
 			mods[e.spellId] = (mods[e.spellId] or 0) + e.amount;
 		end
 	end
 	v = addModValues(v, mods, proto, ci, verbose and 1);
+	return v;
+end
+
+local function addSpellValueFromItem(v, proto, ci, verbose)
+	for i,spell in ipairs(proto.spells) do
+		if(spell.trigger == ITEM_SPELLTRIGGER_ON_EQUIP and spell.id ~= 0) then
+			v = addItemSpellValue(v, cSpell(spell.id), proto, verbose);
+		end
+	end
 	return v;
 end
 
@@ -480,6 +509,8 @@ function valueOfItem(id, guid, verbose)
 	v = addModValues(v, mods, p, ci, verbose);
 
 	v = addDamageValueFromItem(v, avgItemDps(p), p, ci, verbose);
+
+	v = addSpellValueFromItem(v, p, ci, verbose);
 
 	if(guid) then
 		local o = STATE.knownObjects[guid];
