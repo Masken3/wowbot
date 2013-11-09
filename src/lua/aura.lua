@@ -149,11 +149,13 @@ local auraEffectIsPositiveTable = {
 	[SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK] = positiveEffect,
 	[SPELL_AURA_MOD_RESISTANCE_PCT] = positiveEffect,
 	[SPELL_AURA_PERIODIC_HEAL] = positiveEffect,
+	[SPELL_AURA_MOD_MANA_REGEN_INTERRUPT] = positiveEffect,
 
 	[SPELL_AURA_MOD_DAMAGE_TAKEN] = negativeEffect,
 
 	-- always positive
 	[SPELL_AURA_ADD_TARGET_TRIGGER] = alwaysPositive,
+	[SPELL_AURA_SCHOOL_IMMUNITY] = alwaysPositive,
 
 	-- always negative?
 	[SPELL_AURA_MOD_STUN] = alwaysNegative,
@@ -169,10 +171,12 @@ local auraEffectIsPositiveTable = {
 	[SPELL_AURA_MOD_CONFUSE] = alwaysNegative,
 	[SPELL_AURA_MOD_FEAR] = alwaysNegative,
 	[SPELL_AURA_PREVENTS_FLEEING] = alwaysNegative,
+	[SPELL_AURA_PROC_TRIGGER_DAMAGE] = alwaysNegative,
 
 	-- neither positive or negative.
 	[SPELL_AURA_DUMMY] = function(e) return nil; end,
 	[SPELL_AURA_PROC_TRIGGER_SPELL] = function(e) return nil; end,
+	[SPELL_AURA_PERIODIC_TRIGGER_SPELL] = function(e) return nil; end,
 
 	[SPELL_AURA_MECHANIC_IMMUNITY] = function(e)
 		return not negativeMechanicImmunities[e.miscValue];

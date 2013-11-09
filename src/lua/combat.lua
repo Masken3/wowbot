@@ -191,6 +191,7 @@ local function spellPoints(s, level)
 			local multiplier = duration / (e.amplitude / 1000);
 			points = points + spellPoints(ts, level) * multiplier;
 		end
+		--[[
 		if(e.id == SPELL_EFFECT_PERSISTENT_AREA_AURA and
 			e.applyAuraName == SPELL_AURA_PERIODIC_DAMAGE)
 		then
@@ -198,6 +199,7 @@ local function spellPoints(s, level)
 			local multiplier = duration / (e.amplitude / 1000);
 			points = points + calcAvgEffectPoints(level, e) * multiplier;
 		end
+		--]]
 	end
 	return points;
 end
@@ -1065,9 +1067,10 @@ function doDispel(realTime)
 end
 
 function doAoeAttack(realTime, singleTargetSpell)
-	if(STATE.eliteCombat) then return false; end
+	if(PERMASTATE.eliteCombat) then return false; end
 	-- Find our best AoE spell.
 	local s = mostEffectiveSpell(realTime, STATE.aoeAttackSpells, true);
+	if(not s) then return false; end
 	-- Count enemies.
 	local count = 0;
 	for guid,o in pairs(STATE.enemies) do
@@ -1078,7 +1081,7 @@ function doAoeAttack(realTime, singleTargetSpell)
 	-- If there are, check which ones are close enough together
 	-- that the AoE spell will hit as many as possible.
 
-	local radius = cSpellRadius(s.effect[1].radiusIndex);
+	local radius = cSpellRadius(s.effect[1].radiusIndex).radius;
 
 	-- This is an NP-complete problem of complexity O((n+1)!).
 	-- Given that we may face up to 20 enemies at once, attempting a complete solution would be useless.

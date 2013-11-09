@@ -536,6 +536,7 @@ local function valueUpdated(o, idx)
 	end
 	-- finished drinking
 	if(o == STATE.me and STATE.casting and idx == UNIT_FIELD_POWER1 and
+		amDrinking() and
 		o.values[idx] == o.values[UNIT_FIELD_MAXPOWER1])
 	then
 		partyChat("max mana reached, stop drink.");
@@ -912,7 +913,7 @@ local function learnSpell(id)
 			e.applyAuraName == SPELL_AURA_PERIODIC_DAMAGE)
 			-- TARGET_ALL_ENEMY_IN_AREA_CHANNELED
 		then
-			newAoeAttackSpell(id, s);
+			--newAoeAttackSpell(id, s);
 		end
 		-- Melee Attack
 		if(e.id == SPELL_EFFECT_ATTACK) then

@@ -413,6 +413,10 @@ local function addItemSpellValue(v, mods, s, proto, verbose)
 				if(STATE.amHealer) then
 					v = addDumpIf(v, points*10, "Healing+", verbose)
 				end
+			elseif(se.applyAuraName == SPELL_AURA_PROC_TRIGGER_SPELL) then
+				-- ignore for now
+			elseif(se.applyAuraName == SPELL_AURA_MOD_MANA_REGEN_INTERRUPT) then
+				v = addDumpIf(v, points*20, "Casting Mana Regen+%", verbose)
 			elseif(se.applyAuraName == SPELL_AURA_MOD_SKILL) then
 				if(se.miscValue == 95) then	-- Defense
 					if(STATE.amTank) then
