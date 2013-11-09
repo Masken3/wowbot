@@ -813,7 +813,7 @@ function newUnit(k, o)
 			send(MSG_MINIMAP_PING, pos);
 			--]]
 			-- not safe until we can avoid other enemies.
-			--STATE.pickpocketables[o.guid] = o;
+			STATE.pickpocketables[o.guid] = o;
 		end
 	end
 end
@@ -1437,18 +1437,16 @@ function hMSG_RAID_TARGET_UPDATE(p)
 		if(isValidGuid(p.guid)) then
 			STATE.pickpocketables[p.guid] = STATE.knownObjects[p.guid];
 		end
-		decision();
 	end
 	if(STATE.amTank and (p.id == RAID_ICON_SKULL)) then
 		STATE.enemies[p.guid] = STATE.knownObjects[p.guid];
-		decision();
 	end
 	-- leader's position when SQUARE is set is the pull position.
 	if(STATE.amTank and (p.id == RAID_ICON_SQUARE)) then
 		STATE.pullPosition = STATE.leader.location.position;
 		STATE.enemies[p.guid] = STATE.knownObjects[p.guid];
-		decision();
 	end
+	decision();
 end
 
 function hMSG_MINIMAP_PING(p)

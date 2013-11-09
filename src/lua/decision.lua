@@ -8,6 +8,7 @@ function decision(realTime)
 			print("casting overdue "..(realTime - STATE.casting));
 			STATE.casting = false;
 		else
+			--print("casting.");
 			return;
 		end
 	end
@@ -17,7 +18,10 @@ function decision(realTime)
 	updateLeaderPosition(realTime);
 
 	local leaderPos = STATE.leader and STATE.leader.location.position;
-	if(not leaderPos) then return; end
+	if(not leaderPos) then
+		print("not leaderPos");
+		return;
+	end
 
 	--print("decision...");
 	-- if we're already attacking someone, keep at it.
@@ -88,6 +92,7 @@ function decision(realTime)
 
 	-- if hostiles are near, apply temporary enchantments, if we have any.
 	if(doApplyTempEnchant(realTime)) then
+		setAction("doApplyTempEnchant...");
 		return;
 	end
 
@@ -135,6 +140,7 @@ function decision(realTime)
 		else
 			castSpellWithoutTarget(STATE.repeatSpellCast.id);
 		end
+		--print("trade?");
 		return;
 	end
 
@@ -485,6 +491,7 @@ function doDrink(realTime)
 end
 
 function doPickLockOnItem(realTime)
+	if(STATE.stealthed) then return false; end
 	local s = STATE.openLockSpells[LOCKTYPE_PICKLOCK];
 	if(not s or spellIsOnCooldown(realTime, s)) then return false; end
 	local done = false;
@@ -695,15 +702,31 @@ function doPickpocket(realTime)
 	if(not STATE.stealthed and not canCast(STATE.stealthSpell, realTime)) then return false; end
 	local leaderPos = STATE.leader.location.position;
 	local tar;
+	-- find the closest one.
 	for guid, o in pairs(STATE.pickpocketables) do
+		-- if the target is dead, disregard it.
+		if((o.values[UNIT_FIELD_HEALTH] or 0) == 0) then
+			goto continue;
+		end
+		-- if there are any hostiles within 20 yards of the target, disregard it.
+		for hg, ho in pairs(STATE.hostiles) do
+			if(ho ~= o and
+				(ho.values[UNIT_FIELD_HEALTH] or 0) > 0 and
+				distance3(ho.location.position, o.location.position) < 20)
+			then
+				goto continue;
+			end
+		end
+
 		local dist = distance3(leaderPos, o.location.position);
 		if(dist < minDist) then
 			minDist = dist;
 			tar = o;
 		end
+		::continue::
 	end
 	if(tar) then
-		setAction("Pickpocketing "..tar.guid:hex());
+		setAction("Pickpocketing "..tar.guid:hex(), true);
 		pickpocket(realTime, tar);
 		return true;
 	elseif(STATE.stealthed) then
@@ -864,7 +887,7 @@ local function wantToLoot(itemId)
 end
 
 function hSMSG_LOOT_RESPONSE(p)
-	--print("SMSG_LOOT_RESPONSE");
+	print("SMSG_LOOT_RESPONSE", dump(p));
 	if(p.gold > 0) then
 		send(CMSG_LOOT_MONEY)
 	end
