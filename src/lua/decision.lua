@@ -83,7 +83,7 @@ function decision(realTime)
 
 	-- attack an enemy.
 	local enemy = chooseEnemy();
-	if(enemy and not STATE.stealthed) then
+	if(enemy) then
 		setAction("Attacking "..enemy.guid:hex());
 		attack(realTime, enemy);
 		return;
@@ -732,7 +732,9 @@ function doPickpocket(realTime)
 		::continue::
 	end
 	if(tar) then
-		setAction("Pickpocketing "..tar.guid:hex(), true);
+		objectNameQuery(tar, function(name)
+			setAction("Pickpocketing "..name, true);
+		end)
 		pickpocket(realTime, tar);
 		return true;
 	elseif(STATE.stealthed) then

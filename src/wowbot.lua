@@ -641,6 +641,7 @@ function hSMSG_CREATURE_QUERY_RESPONSE(p)
 	end
 end
 
+-- callback(name)
 function objectNameQuery(o, callback)
 	if(isPlayer(o)) then
 		if(o.bot.nameData) then
