@@ -107,6 +107,8 @@ if(rawget(_G, 'STATE') == nil) then
 
 		casting = false,	-- boolean.
 
+		freeze = false,	-- false or realTime.
+
 		spellCooldowns = {},	-- id:targetTime
 		spellCategoryCooldowns = {},	-- spell.Category:targetTime
 		spellGlobalCooldowns = {},	-- spell.StartRecoveryCategory:targetTime

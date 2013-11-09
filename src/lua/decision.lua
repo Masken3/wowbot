@@ -2,6 +2,12 @@
 -- implementation of the decision tree from notes.txt
 function decision(realTime)
 	realTime = realTime or getRealTime();
+
+	if((STATE.freeze or 0) > realTime) then
+		print("Frozen for "..(STATE.freeze - realTime).." more seconds.");
+		return;
+	end
+
 	-- if we're currently casting a spell, don't try anything else until it's complete.
 	if(STATE.casting) then
 		if(STATE.casting > realTime + 3) then
@@ -755,6 +761,7 @@ function doStealthSpell(realTime, target, spell)
 	if(STATE.stealthed) then
 		if(doStealthMoveBehindTarget(realTime, target, MELEE_DIST)) then
 			castSpellAtUnit(spell.id, target);
+			STATE.freeze = realTime + 1;
 			return true;
 		end
 	end
