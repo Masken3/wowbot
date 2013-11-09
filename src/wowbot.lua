@@ -1434,18 +1434,19 @@ end
 function hMSG_RAID_TARGET_UPDATE(p)
 	print("MSG_RAID_TARGET_UPDATE", dump(p));
 	STATE.raidIcons[p.id] = p.guid;
+	local o = STATE.knownObjects[p.guid];
 	if(STATE.stealthSpell and (p.id == RAID_ICON_STAR)) then
 		-- todo: also check STATE.pickpocketSpell
 		--STATE.pickpocketables = {};	--hack
 		if(isValidGuid(p.guid)) then
-			STATE.pickpocketables[p.guid] = STATE.knownObjects[p.guid];
+			STATE.pickpocketables[p.guid] = o;
 		end
 	end
-	if(STATE.amTank and (p.id == RAID_ICON_SKULL)) then
-		STATE.enemies[p.guid] = STATE.knownObjects[p.guid];
+	if(STATE.amTank and (p.id == RAID_ICON_SKULL) and not isAlly(o)) then
+		STATE.enemies[p.guid] = o;
 	end
 	-- leader's position when SQUARE is set is the pull position.
-	if(STATE.amTank and (p.id == RAID_ICON_SQUARE)) then
+	if(STATE.amTank and (p.id == RAID_ICON_SQUARE) and not isAlly(o)) then
 		STATE.pullPosition = STATE.leader.location.position;
 		STATE.enemies[p.guid] = STATE.knownObjects[p.guid];
 	end

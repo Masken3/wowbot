@@ -935,7 +935,9 @@ function raidTargetByIcon(iconId, needntBeEnemy)
 	local guid = STATE.raidIcons[iconId]
 	if(isValidGuid(guid)) then
 		if(not needntBeEnemy and not STATE.enemies[guid]) then return false; end
-		return STATE.knownObjects[guid];
+		local o = STATE.knownObjects[guid];
+		if(isAlly(o)) then return false; end
+		return o;
 	end
 	return false;
 end
