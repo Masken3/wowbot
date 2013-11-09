@@ -287,8 +287,8 @@ ClassInfo = {
 	},
 	Rogue = {
 		ranged=false,
-		primary=STAT_AGILITY,
-		secondaries={STAT_STRENGTH, STAT_STAMINA},
+		primary={[STAT_AGILITY]=20, [STAT_STRENGTH]=15},
+		secondaries={STAT_STAMINA},
 	},
 	Warrior = {
 		ranged=false,
