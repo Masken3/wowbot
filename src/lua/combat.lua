@@ -269,9 +269,13 @@ function canCast(s, realTime, ignoreLowPower)
 	return canCastBase(s, realTime, ignoreLowPower, spellIsOnCooldown);
 end
 
+function canCastIgnoreStance(s, realTime)
+	return canCastBase(s, realTime, false, spellIsOnCooldown, true);
+end
+
 -- returns false or
 -- level, duration, cost, powerIndex, availablePower.
-function canCastBase(s, realTime, ignoreLowPower, coolDownTest)
+function canCastBase(s, realTime, ignoreLowPower, coolDownTest, ignoreStance)
 	local level, duration, cost, powerIndex, availablePower;
 	-- if spell's cooldown hasn't yet expired, don't try to cast it.
 	if(coolDownTest(realTime, s)) then return false; end
@@ -286,7 +290,7 @@ function canCastBase(s, realTime, ignoreLowPower, coolDownTest)
 
 	-- if the spell requires that we be in a different form, skip it.
 	local myForm = shapeshiftForm(STATE.me);
-	if(not haveStanceForSpell(s)) then
+	if((not ignoreStance) and (not haveStanceForSpell(s))) then
 		if(sLog) then
 			print(s.name.." Needs form "..hex(s.Stances).." (have "..myForm..")");
 		end
@@ -843,6 +847,25 @@ function shootSpell()
 	return nil;
 end
 
+-- find the Charge spell with the lowest cooldown that is immediately castable.
+local function getChargeSpell(realTime)
+	local best = nil;
+	--sLog = true;
+	for id,s in pairs(STATE.chargeSpells) do
+		print("getChargeSpell", s.name);
+		if(not canCastIgnoreStance(s, realTime)) then goto continue; end
+		if(not best) then
+			best = s;
+		elseif(s.CategoryRecoveryTime < best.CategoryRecoveryTime) then
+			best = s;
+		end
+		::continue::
+	end
+	--sLog = false;
+	print("result:", tostring(best and best.name));
+	return best;
+end
+
 -- return true if we did something useful.
 function doTanking(realTime)
 	assert(STATE.amTank);
@@ -873,14 +896,17 @@ function doTanking(realTime)
 		end
 
 		-- if we do have it or can't cast it, Charge!
-		STATE.chargeSpell.goCallback = function()
-			print("Charge complete, position updated.");
-			STATE.my.location.position = contactPoint(STATE.my.location.position,
-				enemy.location.position, MELEE_DIST);
-		end
-		if(doStanceSpell(realTime, STATE.chargeSpell, enemy)) then
-			print("Charged!");
-			return true;
+		local chargeSpell = getChargeSpell(realTime);
+		if(chargeSpell) then
+			chargeSpell.goCallback = function()
+				print("Charge complete, position updated.");
+				STATE.my.location.position = contactPoint(STATE.my.location.position,
+					enemy.location.position, MELEE_DIST);
+			end
+			if(doStanceSpell(realTime, chargeSpell, enemy)) then
+				print("Charged!");
+				return true;
+			end
 		end
 		-- if we couldn't cast Charge, we'll just run in, the normal way.
 	end

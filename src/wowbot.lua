@@ -138,7 +138,7 @@ if(rawget(_G, 'STATE') == nil) then
 		focusSpells = {},
 		tauntSpell = false,	-- spellTable
 		energizeSelfSpell = false,	-- Energize must be the only effect except Trigger Spell.
-		chargeSpell = false,
+		chargeSpells = {},
 		pbAoeSpell = false,
 		sunderSpell = false,
 		blockBuffSpell = false,
@@ -1048,7 +1048,7 @@ local function learnSpell(id)
 		-- Charge
 		if(e.id == SPELL_EFFECT_CHARGE) then
 			print("chargeSpell", s.id);
-			STATE.chargeSpell = s;
+			STATE.chargeSpells[id] = s;
 		end
 		-- Thunder Clap
 		if(e.id == SPELL_EFFECT_SCHOOL_DAMAGE and
