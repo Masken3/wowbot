@@ -23,6 +23,11 @@ function decision(realTime)
 	updateMyPosition(realTime);
 	updateLeaderPosition(realTime);
 
+	-- update stealth state.
+	if(STATE.stealthSpell) then
+		STATE.stealthed = hasAura(STATE.me, STATE.stealthSpell.id);
+	end
+
 	local leaderPos = STATE.leader and STATE.leader.location.position;
 	if(not leaderPos) then
 		print("not leaderPos");
@@ -159,10 +164,6 @@ function decision(realTime)
 		return;
 	end
 
-	if(doPickpocket(realTime)) then
-		return;
-	end
-
 	-- if there are units that can be looted, go get them.
 	local minDist = PERMASTATE.gatherRadius;
 	local lootable;
@@ -222,6 +223,11 @@ function decision(realTime)
 			setAction("Gathering "..info.name);
 		end);
 		goOpen(realTime, openable);
+		return;
+	end
+
+	-- Pick Pocket
+	if(doPickpocket(realTime)) then
 		return;
 	end
 
@@ -705,13 +711,17 @@ function doPickpocket(realTime)
 	local minDist = PERMASTATE.gatherRadius * 1.5;
 	if(not STATE.leader) then return false; end
 	if(not allHealersHaveAtLeastHalfMana()) then return false; end
-	if(not STATE.stealthed and not canCast(STATE.stealthSpell, realTime)) then return false; end
+	if((not STATE.stealthed) and (not canCast(STATE.stealthSpell, realTime))) then return false; end
 	local leaderPos = STATE.leader.location.position;
 	local tar;
+	local skipDead = 0;
+	local skipFriend = 0;
+	local skipDist = 0;
 	-- find the closest one.
 	for guid, o in pairs(STATE.pickpocketables) do
 		-- if the target is dead, disregard it.
 		if((o.values[UNIT_FIELD_HEALTH] or 0) == 0) then
+			skipDead = skipDead + 1;
 			goto continue;
 		end
 		-- if there are any hostiles within 20 yards of the target, disregard it.
@@ -720,6 +730,7 @@ function doPickpocket(realTime)
 				(ho.values[UNIT_FIELD_HEALTH] or 0) > 0 and
 				distance3(ho.location.position, o.location.position) < 20)
 			then
+				skipFriend = skipFriend + 1;
 				goto continue;
 			end
 		end
@@ -728,9 +739,12 @@ function doPickpocket(realTime)
 		if(dist < minDist) then
 			minDist = dist;
 			tar = o;
+		else
+			skipDist = skipDist + 1;
 		end
 		::continue::
 	end
+	--print("pp: dead "..skipDead..", friend "..skipFriend..", dist "..skipDist);
 	if(tar) then
 		objectNameQuery(tar, function(name)
 			setAction("Pickpocketing "..name, true);
@@ -742,8 +756,8 @@ function doPickpocket(realTime)
 		--[[
 		partyChat("Canceling stealth...");
 		send(CMSG_CANCEL_AURA, {spellId=STATE.stealthSpell.id});
-		--]]
 		STATE.stealthed = false;
+		--]]
 	end
 	return false;
 end
