@@ -693,7 +693,7 @@ function doFish(realTime)
 	if(not STATE.fishingBobber) then
 		local s = STATE.knownSpells[STATE.fishingSpell];
 		if(spellIsOnCooldown(realTime, s)) then return; end
-		-- todo: set orientation
+		stopMoveWithOrientation(STATE.fishingOrientation);
 		castSpellWithoutTarget(STATE.fishingSpell);
 		return;
 	end

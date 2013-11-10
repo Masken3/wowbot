@@ -391,6 +391,7 @@ local function fish(p)
 			return
 		end
 	end
+	STATE.fishingOrientation = STATE.my.location.orientation;
 	STATE.fishing = true
 	reply(p, "Started Fishing.")
 end

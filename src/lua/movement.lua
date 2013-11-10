@@ -110,6 +110,18 @@ function sendMovement(opcode)
 	send(opcode, data);
 end
 
+function stopMoveWithOrientation(o)
+	STATE.moving = false;
+	local data = {
+		flags = 0,
+		pos = STATE.myLocation.position,
+		o = o,
+		time = 0,
+		fallTime = 0,
+	}
+	send(MSG_MOVE_STOP, data);
+end
+
 function updateMyPosition(realTime)
 	if(not STATE.moving) then
 		return;

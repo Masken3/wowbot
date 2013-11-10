@@ -122,6 +122,7 @@ if(rawget(_G, 'STATE') == nil) then
 		fishing = false,
 		fishingSpell = false,	-- spellId.
 		fishingBobber = false, -- KnownObject.
+		fishingOrientation = false,
 
 		disenchantSpell = false,	-- spellId.
 		disenchantItems = false,	-- or itemId:true.
