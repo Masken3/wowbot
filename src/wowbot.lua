@@ -153,6 +153,7 @@ if(rawget(_G, 'STATE') == nil) then
 
 		pullPosition = false,	-- Position.
 
+		readyToDrink = false,	-- set to true once all item info is fetched.
 		waitingForDrink = false,
 		conjureDrinkSpell = false,
 		drinkRecipients = {},	-- guid:true, characters to give drink to.

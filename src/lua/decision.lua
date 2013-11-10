@@ -459,6 +459,7 @@ end
 -- drink up if we're low on mana.
 function doDrink(realTime)
 	if(not getClassInfo(STATE.me).drink) then return false; end
+	if(not STATE.readyToDrink) then return false; end
 
 	local drinkItem, id = findDrinkItem();
 	--print("doDrink()");
