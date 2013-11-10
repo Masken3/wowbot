@@ -852,7 +852,7 @@ local function getChargeSpell(realTime)
 	local best = nil;
 	--sLog = true;
 	for id,s in pairs(STATE.chargeSpells) do
-		print("getChargeSpell", s.name);
+		--print("getChargeSpell", s.name);
 		if(not canCastIgnoreStance(s, realTime)) then goto continue; end
 		if(not best) then
 			best = s;
@@ -862,7 +862,7 @@ local function getChargeSpell(realTime)
 		::continue::
 	end
 	--sLog = false;
-	print("result:", tostring(best and best.name));
+	--print("result:", tostring(best and best.name));
 	return best;
 end
 

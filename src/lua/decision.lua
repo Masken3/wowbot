@@ -202,7 +202,6 @@ function decision(realTime)
 	if(trainer and (bit32.band(STATE.myLevel, bit32.bnot(1)) >
 		PERMASTATE.classTrainingCompleteForLevel))
 	then
-		setAction("training...");
 		goTrain(trainer);
 		return;
 	end
@@ -836,7 +835,9 @@ function goSell(itemId)
 end
 
 function goTrain(trainer)
-	setAction("Training at "..trainer.guid:hex());
+	objectNameQuery(trainer, function(name)
+		setAction("Training at "..name);
+	end);
 	if(doMoveToTarget(getRealTime(), trainer, MELEE_DIST)) then
 		if(not trainer.bot.chatting) then
 			send(CMSG_TRAINER_LIST, trainer);
