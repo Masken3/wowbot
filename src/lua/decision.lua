@@ -184,15 +184,17 @@ function decision(realTime)
 	-- if we have quest finishers or givers, go to them.
 	local i, finisher = next(STATE.questFinishers);
 	if(finisher) then
-		setAction("Finishing quests at "..finisher.guid:hex());
-		finishQuests(finisher);
-		return;
+		if(finishQuests(finisher)) then
+			setAction("Finishing quests at "..finisher.guid:hex());
+			return;
+		end
 	end
 	local i, giver = next(STATE.questGivers);
 	if(giver and PERMASTATE.autoQuestGet) then
-		setAction("Getting quests at "..giver.guid:hex());
-		getQuests(giver);
-		return;
+		if(getQuests(giver)) then
+			setAction("Getting quests at "..giver.guid:hex());
+			return;
+		end
 	end
 
 	-- visit our class trainer at even levels.
@@ -317,10 +319,14 @@ function decision(realTime)
 	setAction("Noting to do...");
 end
 
+function isAlive(o)
+	return ((o.values[UNIT_FIELD_HEALTH] or 0) > 0);
+end
+
 local function hostilesAreNear()
 	for guid, o in pairs(STATE.hostiles) do
 		local dist = distance3(STATE.my.location.position, o.location.position);
-		if((dist < 40) and ((o.values[UNIT_FIELD_HEALTH] or 0) > 0)) then return true; end
+		if((dist < 40) and isAlive(o)) then return true; end
 	end
 	return false;
 end
@@ -505,6 +511,7 @@ end
 
 function doPickLockOnItem(realTime)
 	if(STATE.stealthed) then return false; end
+	if(hostilesAreNear()) then return false; end
 	local s = STATE.openLockSpells[LOCKTYPE_PICKLOCK];
 	if(not s or spellIsOnCooldown(realTime, s)) then return false; end
 	local done = false;

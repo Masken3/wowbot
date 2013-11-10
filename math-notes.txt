@@ -105,7 +105,13 @@ ax¹+by¹=ax²+by²
 a(x¹-x²)=b(y²-y¹)
 a=b(y²-y¹)/(x¹-x²)
 c=bx¹((y²-y¹)/(x¹-x²))+by¹
-c = x¹((y²-y¹)/(x¹-x²))+y¹ if(b != 0)
+c = x¹((y²-y¹)/(x¹-x²))+y¹ if(a != 0)
 b = 0 if(y¹ == y²)
 a = 0 if(x¹ == x²)
 m = (x¹-x²)/(y¹-y²)
+
+16:05 2013-11-10
+Line equation on form ax + by + c = 0 from two points x¹,y¹ x²,y²:
+First check if slope form is possible: x¹ != x²
+If so, then get slope form and convert it.
+If not, it's a vertical line, which allows us a shortcut.

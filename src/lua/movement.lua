@@ -500,7 +500,54 @@ function doMoveToPoint(realTime, tarPos, tarDist)
 	return false;
 end
 
--- returns true if we're stopped in a proper position.
+-- returns a, b, c in ax + by = c
+-- see math-notes.txt, 16:05 2013-11-10
+local function lineFromPoints(p1, p2)
+	local a, b, c;
+	if(p1.x == p2.x) then	-- vertical
+		a = 1;
+		b = 0;
+		c = -p1.x;
+	else
+		local m = (p1.y - p2.y) / (p1.x - p2.x);
+		a = m;
+		b = -1;
+		-- (mx - y = c) for all x,y pairs on the line, so we can just pick one of the pairs we know.
+		c = (m*p1.x) - p1.y;
+	end
+	return a, b, c;
+end
+
+-- returns true if we've arrived, false if still moving,
+-- nil if enemies are nearby or it's otherwise impossible to move to target.
+function doMoveToTargetIfNoHostilesAreNear(realTime, mo, maxDist)
+	local myPos = STATE.my.location.position;
+	local tarPos = mo.location.position;
+	local diff = diff3(myPos, tarPos);
+
+	-- our calculations are 2D, so don't move in 3D.
+	if(math.abs(diff.z) > 10) then return nil; end
+
+	-- if we're close enough, ignore hostiles.
+	local dist = length2(diff);
+	if(dist < maxDist) then goto continue; end
+
+	do
+		local a, b, c = lineFromPoints(myPos, tarPos);
+		for guid,o in pairs(STATE.hostiles) do
+			if(isAlive(o)) then
+				local p = o.location.position;
+				local distToLine = (a*p.x + b*p.y - c) / ((a^2 + b^2)^0.5);
+				local distToMe = distanceToObject(o);
+				if((distToLine < 40) and (distToMe < 80)) then return nil; end
+			end
+		end
+	end
+	::continue::
+	return doMoveToTarget(realTime, mo, maxDist);
+end
+
+-- returns true if we're stopped in a proper position, false otherwise.
 function doMoveToTarget(realTime, mo, maxDist)
 	local myPos = STATE.myLocation.position;
 	local tarPos = mo.location.position;

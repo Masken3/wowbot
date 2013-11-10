@@ -1,7 +1,8 @@
 
 function getQuests(giver)
 	local dist = distanceToObject(giver);
-	doMoveToTarget(getRealTime(), giver, MELEE_DIST);
+	local res = doMoveToTargetIfNoHostilesAreNear(getRealTime(), giver, MELEE_DIST);
+	if(res == nil) then return false; end
 	if(dist <= MELEE_DIST) then
 		if(not giver.bot.chatting) then
 			if(isUnit(giver)) then
@@ -12,6 +13,7 @@ function getQuests(giver)
 			giver.bot.chatting = true;
 		end
 	end
+	return true;
 end
 
 function sendQuestQuery(questId, callback)
@@ -164,7 +166,8 @@ end
 
 function finishQuests(finisher)
 	local dist = distanceToObject(finisher);
-	doMoveToTarget(getRealTime(), finisher, MELEE_DIST);
+	local res = doMoveToTargetIfNoHostilesAreNear(getRealTime(), finisher, MELEE_DIST);
+	if(res == nil) then return false; end
 	if(dist <= MELEE_DIST) then
 		if(not finisher.bot.chatting) then
 			if(isUnit(finisher)) then
@@ -175,6 +178,7 @@ function finishQuests(finisher)
 			finisher.bot.chatting = true;
 		end
 	end
+	return true;
 end
 
 function hSMSG_QUESTGIVER_REQUEST_ITEMS(p)
