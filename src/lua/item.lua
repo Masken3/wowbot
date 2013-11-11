@@ -422,6 +422,8 @@ local function addItemSpellValue(v, mods, s, proto, verbose)
 					if(STATE.amTank) then
 						v = addDumpIf(v, points*20, "Defense+", verbose)
 					end
+				elseif(se.miscValue == 356) then	-- Fishing
+					v = addDumpIf(v, points, "Fishing+", verbose)
 				else
 					print("WARN: unhandled skill "..se.miscValue..
 						" on spell="..s.id.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
