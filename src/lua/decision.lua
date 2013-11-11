@@ -469,7 +469,7 @@ function doDrink(realTime)
 	local drinkItem, id = findDrinkItem();
 	--print("doDrink()");
 	if(not drinkItem) then
-		print("doDrink not");
+		--print("doDrink not");
 		if(STATE.conjureDrinkSpell) then
 			if(spellIsOnCooldown(realTime, STATE.conjureDrinkSpell)) then return false; end
 			castSpellWithoutTarget(STATE.conjureDrinkSpell.id);
@@ -488,7 +488,11 @@ function doDrink(realTime)
 	--print("doDrink id "..id);
 	local guid,dummy = next(STATE.drinkRecipients);
 	if(guid) then
-		print("giveDrinkTo "..guid:hex());
+		objectNameQuery(STATE.knownObjects[guid], function(recName)
+			objectNameQuery(drinkItem, function(drinkName)
+				print("giveDrink "..drinkName.." to "..recName);
+			end);
+		end);
 		giveDrinkTo(id, guid);
 		return true;
 	end
