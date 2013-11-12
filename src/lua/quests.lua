@@ -276,6 +276,11 @@ local function questItemCheck(itemId, objectiveTestFunction)
 end
 
 function needsItemForQuest(itemId)
+	-- we want all quest items.
+	local proto = itemProtoFromId(itemId);
+	if(proto and proto.StartQuest ~= 0) then return true; end
+	if(proto and proto.Bonding == BIND_QUEST_ITEM) then return true; end
+
 	return questItemCheck(itemId, function(o)
 		return itemInventoryCountById(itemId) < o.itemCount;
 	end);
