@@ -681,6 +681,21 @@ local function test(p)
 	reply(p, tostring(isTargetOfPartyMember(target)))
 end
 
+local function chat(p)
+	local targetGuid = guidFromValues(STATE.knownObjects[p.senderGuid], UNIT_FIELD_TARGET)
+	local target = STATE.knownObjects[targetGuid]
+	if(not target) then
+		reply(p, "No valid target!")
+		return
+	end
+	target.bot.chat = true
+	target.bot.questOverride = true
+	STATE.questFinishers[targetGuid] = target
+	objectNameQuery(target, function(name)
+		reply(p, "Chatting with "..name)
+	end)
+end
+
 function handleChatMessage(p)
 	if(not p.text) then return end
 	if(p.text == 'lq') then
@@ -773,6 +788,8 @@ function handleChatMessage(p)
 		eliteCombat(p)
 	elseif(p.text == 'test') then
 		test(p)
+	elseif(p.text == 'chat') then
+		chat(p)
 	else
 		if(p.type == CHAT_MSG_WHISPER or p.type == CHAT_MSG_WHISPER_INFORM) then
 			print("Whisper: "..p.text)
