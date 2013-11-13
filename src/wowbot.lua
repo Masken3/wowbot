@@ -581,7 +581,7 @@ local function valueUpdated(o, idx)
 			max = bit32.extract(o.values[baseIdx+1], 16, 16);
 		end
 		local val = skillLevelByIndex(baseIdx);
-		if(STATE.checkNewObjectsForQuests) then
+		if(STATE.checkNewObjectsForQuests and skillLine ~= 0) then
 			partyChat("Skill "..((skillLine and skillLine.name) or skillId)..": "..tostring(val).."/"..tostring(max));
 		end
 	end
