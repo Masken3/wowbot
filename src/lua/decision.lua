@@ -200,7 +200,8 @@ function decision(realTime)
 	-- visit our class trainer at even levels.
 	local i, trainer = next(STATE.classTrainers);
 	if(trainer and (bit32.band(STATE.myLevel, bit32.bnot(1)) >
-		PERMASTATE.classTrainingCompleteForLevel))
+		PERMASTATE.classTrainingCompleteForLevel) and
+		not STATE.hostiles[trainer.guid])
 	then
 		goTrain(trainer);
 		return;
