@@ -428,6 +428,10 @@ local function addItemSpellValue(v, mods, s, proto, verbose)
 					print("WARN: unhandled skill "..se.miscValue..
 						" on spell="..s.id.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
 				end
+			elseif(se.applyAuraName == SPELL_AURA_MOD_BLOCK_PERCENT) then
+				if(STATE.amTank) then
+					v = addDumpIf(v, points*100, "Block%+", verbose)
+				end
 			else
 				print("WARN: unhandled aura "..se.applyAuraName..
 					" on spell="..s.id.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
