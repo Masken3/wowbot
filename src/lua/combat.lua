@@ -974,8 +974,8 @@ local function raidTarget()
 	if(o) then return o; end
 	o = raidTargetByIcon(RAID_ICON_SQUARE);
 	if(o) then return o; end
-	o = raidTargetByIcon(RAID_ICON_MOON);
-	if(o and not(hasCrowdControlAura(o))) then return o; end
+	--o = raidTargetByIcon(RAID_ICON_MOON);
+	--if(o and not(hasCrowdControlAura(o))) then return o; end
 	o = raidTargetByIcon(RAID_ICON_DIAMOND);
 	if(o and not(hasCrowdControlAura(o))) then return o; end
 	return nil;
