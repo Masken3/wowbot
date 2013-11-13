@@ -923,12 +923,20 @@ local function wantToLoot(itemId)
 end
 
 function hSMSG_LOOT_RESPONSE(p)
-	print("SMSG_LOOT_RESPONSE", dump(p));
+	if(not p._quiet) then
+		print("SMSG_LOOT_RESPONSE", dump(p));
+	end
 	if(p.gold > 0) then
 		send(CMSG_LOOT_MONEY)
 	end
 	for i, item in ipairs(p.items) do
 		print("item "..item.itemId.." x"..item.count);
+		local proto = itemProtoFromId(item.itemId);
+		if(not proto) then
+			p._quiet = true;
+			STATE.itemDataCallbacks[p] = hSMSG_LOOT_RESPONSE;
+			return;
+		end
 		if((p.lootType ~= LOOT_CORPSE) or
 			-- couldn't find a lootType for items, so doing isUnit check.
 			(not isUnit(STATE.knownObjects[p.guid])) or
