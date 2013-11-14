@@ -651,11 +651,25 @@ local ccAuras = {
 	[SPELL_AURA_PERIODIC_DAMAGE]=true,
 }
 
+local ccTransforms = {
+	[620]=true,
+	[1933]=true,
+	[14801]=true,
+	[16371]=true,
+	[16372]=true,
+	[16377]=true,
+	[16479]=true,
+	[16779]=true,
+}
+
 local function hasCrowdControlAura(o)
 	local res = false;
 	investigateAuraEffects(o, function(e, level)
 		if(ccAuras[e.applyAuraName]) then
 			--print("hasCrowdControlAura:", o.guid:hex());
+			res = true;
+		end
+		if(e.applyAuraName == SPELL_AURA_TRANSFORM and ccTransforms[e.miscValue]) then
 			res = true;
 		end
 		return false;
