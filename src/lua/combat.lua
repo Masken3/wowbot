@@ -93,7 +93,7 @@ do
 	}
 
 	function normalizationSpeed(proto)
-		if(proto._class ~= ITEM_CLASS_WEAPON) then return 0; end
+		if(proto.itemClass ~= ITEM_CLASS_WEAPON) then return 0; end
 		local speed = weaponSubclassNormalizationSpeeds[proto.subClass];
 		if(speed) then
 			return speed;

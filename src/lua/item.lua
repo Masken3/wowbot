@@ -337,7 +337,7 @@ local function addDamageValueRaw(v, dps, isRangedDamage, ci, verbose)
 	if(isRangedDamage and ci.ranged)
 	then
 		v = addDumpIf(v, dps * 100, "DPS ranged", verbose);
-	elseif(not ci.ranged) then
+	elseif(not isRangedDamage and not ci.ranged) then
 		v = addDumpIf(v, dps * 100, "DPS melee", verbose);
 	else
 		v = addDumpIf(v, dps, "DPS useless", verbose);
@@ -347,7 +347,7 @@ end
 
 local function addDamageValueFromItem(v, dps, p, ci, verbose)
 	return addDamageValueRaw(v, dps,
-		(p._class == ITEM_CLASS_WEAPON and rangedSubclass[p.subClass]), ci, verbose);
+		(p.itemClass == ITEM_CLASS_WEAPON and rangedSubclass[p.subClass]), ci, verbose);
 end
 
 local function addModValues(v, mods, p, ci, verbose)
@@ -377,7 +377,7 @@ local function addModValues(v, mods, p, ci, verbose)
 	return v;
 end
 
-local function addItemSpellValue(v, mods, s, proto, verbose)
+local function addItemSpellValue(v, mods, s, proto, ci, verbose)
 --print(s.name, e.spellId);
 	local level = spellLevel(s);
 	for j,se in ipairs(s.effect) do
@@ -400,6 +400,10 @@ local function addItemSpellValue(v, mods, s, proto, verbose)
 				v = addDamageValueRaw(v, points / 14, false, ci, verbose)
 			elseif(se.applyAuraName == SPELL_AURA_MOD_RANGED_ATTACK_POWER) then
 				v = addDamageValueRaw(v, points / 14, true, ci, verbose)
+			elseif(se.applyAuraName == SPELL_AURA_MOD_MELEE_ATTACK_POWER_VERSUS) then
+				v = addDamageValueRaw(v, points / 140, false, ci, verbose)
+			elseif(se.applyAuraName == SPELL_AURA_MOD_RANGED_ATTACK_POWER_VERSUS) then
+				v = addDamageValueRaw(v, points / 140, true, ci, verbose)
 			elseif(se.applyAuraName == SPELL_AURA_MOD_INCREASE_ENERGY) then
 				v = addDumpIf(v, points, "Mana+", verbose)
 			elseif(se.applyAuraName == SPELL_AURA_MOD_INCREASE_HEALTH) then
@@ -449,7 +453,7 @@ function positiveSpellPoints(s, verbose)
 	local mods = {};
 	local ci = ClassInfo[STATE.myClassName];
 	local proto = {itemId='nil',name='nil'};
-	v = addItemSpellValue(v, mods, s, proto, verbose);
+	v = addItemSpellValue(v, mods, s, proto, ci, verbose);
 	v = addModValues(v, mods, proto, ci, verbose and 1);
 	return v;
 end
@@ -474,7 +478,7 @@ local function enchValue(enchId, proto, ci, verbose)
 		end
 		if(e.type == ITEM_ENCHANTMENT_TYPE_EQUIP_SPELL) then
 			local s = cSpell(e.spellId);
-			v = addItemSpellValue(v, mods, s, proto, verbose);
+			v = addItemSpellValue(v, mods, s, proto, ci, verbose);
 		end
 		if(e.type == ITEM_ENCHANTMENT_TYPE_STAT) then
 			mods[e.spellId] = (mods[e.spellId] or 0) + e.amount;
@@ -488,7 +492,7 @@ local function addSpellValueFromItem(v, proto, ci, verbose)
 	local mods = {};
 	for i,spell in ipairs(proto.spells) do
 		if(spell.trigger == ITEM_SPELLTRIGGER_ON_EQUIP and spell.id ~= 0) then
-			v = addItemSpellValue(v, mods, cSpell(spell.id), proto, verbose);
+			v = addItemSpellValue(v, mods, cSpell(spell.id), proto, ci, verbose);
 		end
 	end
 	v = addModValues(v, mods, proto, ci, verbose and 1);
