@@ -156,6 +156,10 @@ local function getClickInfo(t, button)
 					send(CMSG_INITIATE_TRADE, {guid=STATE.leader.guid})
 				end
 			end}
+		elseif(ssAlt and ssShift and ssCtrl) then
+			return {description="Drop", f=function()
+				partyChat(gDropItem(itemId))
+			end}
 		end
 	end
 	return nil

@@ -200,6 +200,12 @@ function hSMSG_TRADE_STATUS(p)
 end
 
 function hSMSG_TRADE_STATUS_EXTENDED(p)
+	-- load item proto for future reference (enchanting)
+	local itemId = p.items[TRADE_SLOT_NONTRADED].itemId;
+	if(itemId ~= 0) then
+		itemProtoFromId(itemId);
+	end
+
 	STATE.extendedTradeStatus = p
 	send(CMSG_ACCEPT_TRADE, {padding=0})
 end
@@ -239,8 +245,7 @@ function hSMSG_NAME_QUERY_RESPONSE(p)
 	end
 end
 
-local function dropItem(p)
-	local itemId = tonumber(p.text:sub(6))
+function gDropItem(itemId)
 	local msg = 'Dropped items:'
 	investigateInventory(function(o, bagSlot, slot)
 		if(itemId == o.values[OBJECT_FIELD_ENTRY]) then
@@ -249,7 +254,12 @@ local function dropItem(p)
 				count = o.values[ITEM_FIELD_STACK_COUNT]})
 		end
 	end)
-	reply(p, msg)
+	return msg
+end
+
+local function dropItem(p)
+	local itemId = tonumber(p.text:sub(6))
+	reply(p, gDropItem(itemId))
 end
 
 local function leave(p)
