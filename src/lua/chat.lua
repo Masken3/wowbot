@@ -426,6 +426,7 @@ end
 function gUseItem(itemId)
 	local msg = 'Using item:'
 	local done = false
+	moveStop();
 	investigateInventory(function(o, bagSlot, slot)
 		if(itemId == o.values[OBJECT_FIELD_ENTRY] and not done) then
 			msg = msg..' '..o.guid:hex()
