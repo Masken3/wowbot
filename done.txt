@@ -1,0 +1,54 @@
+* Improved party combat.
+** let everyone know who's tank and healer.	DONE
+** tank prioritizes targets and taunting.	DONE
+** tank stance dances.	DONE
+** tank responds to Skull mark.	DONE
+** we don't have Sap or Polymorph, so no need for others to respond to Skull yet.	DONE
+** non-tanks wait with attacking till target has at least one Sunder.	DONE
+
+* fix before deadmines:
+** DON'T PICKPOCKET DEAD PEOPLE!	DONE
+** also, don't pickpocket anything unless healer has more than 50% mana.	DONE
+** And stay away from other hostiles.
+** fix double-casting heals.	DONE
+ * caused by target's health not updating before SMSG_SPELL_GO.
+** do client-side Charge position update.	BROKE
+** drink.	DONE
+** make drink if needed.	DONE
+** ask mage for drink if needed.	DONE
+** pull.	DONE
+
+** send amTank/amHealer!	DONE
+
+** avoid PvP quests.	DONE
+** rogue: use poison. when?	DONE
+ * maybe whenever an enemy is within 40 yards and we don't have poison effect on our weapons yet.
+
+** now all bots may ignore certain enemies, perhaps those that have been crowd controlled.
+ * need to update enemy list.	DONE
+** use wand instead of melee if possible.	DONE
+ * healing doesn't seem to work well.
+ * mage uses Scorch too much?	DONE
+ * probably due to global cooldown.
+** interrupt enemy spellcasters.	DONE
+** crowd control!
+ * doesn't see target's aura.
+ * fix by looking for generic CC aura effects rather than specific spells.
+ * still double-casting.	FIXED
+ * keeps polymorphing different targets.	DONE
+** world-map change (instance portal, continent shift)	DONE
+** maybe attacking polymorphed ones?	TEST
+** dispel debuffs.	DONE
+
+** Bug: mage makes more water and priest asks for more water, even though they already have some.
+
+** Charge/Intercept: use both.	DONE
+** polymorph mark (moon).	DONE
+** Don't drink until all item info is gathered.	DONE
+** AOE.	DONE
+ * Check position of enemies, efficiency and range of spell.
+** Self-buffs.	DONE
+** Polymorph's Confusion effect sometimes gets dispelled by the server
+ even though the shapeshift remains. Add shapeshift detection to hasCCAura().	DONE
+** Avoid quest givers and finishers guarded by enemies.	DONE
+** don't unlock items if hostiles are nearby.	DONE

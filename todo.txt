@@ -1,0 +1,37 @@
+
+** self/party buffs and enemy-group debuffs like Warrior's Shouts.
+
+for next dungeon:
+** tank doesn't attack normally.	BROKEN, still
+ * seems to be related to taunt and dead enemies.
+ * seems to affect every class, priest more than others,
+** priest sometimes runs away from battle.
+ * but mage and rogue have also exhibited the same kind of odd behaviour:
+ * starts running when it should be casting.
+ * stands still, doesn't do shit.
+ * both behaviours can be dispelled by teleport.
+ * may be bad "meleeling" state.	PARTIALLY FIXED.
+** now seems to affect mostly rogue and tank.
+
+** sap.	TEST
+
+** polymorph doesn't affect some enemies at first.
+ * in 3-enemy battles, only after the first is dead does the second get sheeped.
+
+** PersistentAreaAura spells should have cooldown >= duration.
+** Fix AreaAura spells.
+
+** use mana pots or Self-Energize spells as needed.
+** Inventory GUI: fix updates of items in bags.
+** don't try to equip off-hand items if you already have a 2hander.
+
+* Handle SMSG_SPELLORDAMAGE_IMMUNE; don't try casting that spell on that target again.
+
+** In battle, use useful spells on equipment.
+ * Ex: Fire Hardened Hauberk, 30+ Rage.
+
+** Trigger quest area-explore objectives.
+
+** For each enchant cast, if a trade window isn't open, ask group member bots if they want it.
+ * If they do, open a trade window to one of them and wait for them to put up a suitable item.
+ * If the trade window should close, abort cast.
