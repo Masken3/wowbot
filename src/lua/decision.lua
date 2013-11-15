@@ -957,6 +957,7 @@ end
 
 function hSMSG_LOOT_RELEASE_RESPONSE(p)
 	--print("Loot release "..p.guid:hex());
+	STATE.looting = false;
 end
 
 function follow(mo)
