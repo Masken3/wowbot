@@ -260,7 +260,7 @@ ClassInfo = {
 	Mage = {
 		ranged=true,
 		primary=STAT_INTELLECT,
-		secondaries={STAT_STAMINA},
+		secondaries={STAT_STAMINA, STAT_SPIRIT},
 	},
 	--Druid	-- only feral spec.
 	Priest = {
@@ -396,6 +396,11 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose)
 				-- that requires you to know if you have any spells in this school
 				-- that you're actually using.
 				-- for now, we'll just ignore it.
+
+				-- all schools
+				if(se.miscValue == 0x7E) then
+					v = addDumpIf(v, points*10, "Magic Damage+", verbose)
+				end
 			elseif(se.applyAuraName == SPELL_AURA_MOD_ATTACK_POWER) then
 				v = addDamageValueRaw(v, points / 14, false, ci, verbose)
 			elseif(se.applyAuraName == SPELL_AURA_MOD_RANGED_ATTACK_POWER) then
@@ -541,7 +546,7 @@ function valueOfItem(id, guid, verbose)
 	if(guid) then
 		local o = STATE.knownObjects[guid];
 		---- ignore player-made enchantments, because those can be put on the new item, too.
-		for slot=PERM_ENCHANTMENT_SLOT,(MAX_ENCHANTMENT_SLOT-1) do
+		for slot=PROP_ENCHANTMENT_SLOT_0,(MAX_ENCHANTMENT_SLOT-1) do
 			local idx = ITEM_FIELD_ENCHANTMENT + slot*3;
 			--[[
 			-- ignore temporary enchantments.
