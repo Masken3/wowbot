@@ -316,6 +316,7 @@ end
 local function onCancel()
 	STATE.repeatSpellCast.count = 0
 	send(CMSG_CANCEL_CAST, {spellId=0})
+	STATE.waitingForEnchantResponse = false
 end
 
 function profHandleClickEvent(event)

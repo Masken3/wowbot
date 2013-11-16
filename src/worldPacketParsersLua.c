@@ -894,7 +894,7 @@ void pSMSG_TRADE_STATUS_EXTENDED(pLUA_ARGS) {
 			M(Guid, creatorGuid);
 			M(uint32, charges);
 			M(uint32, suffixFactor);
-			M(uint32, randomProprtyId);
+			M(uint32, randomPropertyId);
 			M(uint32, lockId);
 			M(uint32, maxDurability);
 			M(uint32, durability);

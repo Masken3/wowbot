@@ -129,6 +129,12 @@ if(rawget(_G, 'STATE') == nil) then
 		currentDisenchant = false,	-- itemId.
 		tempSkipDisenchant = false,
 
+		waitingForEnchantResponse = false,	-- set to number of responses we need.
+		enchantResponses = {},
+		enchantResponseCount = 0,	-- number of responses we have.
+		enchantTradeItem = false,
+		tradingPartner = false,	-- or KnownObject player.
+
 		openLockSpells = {},	--miscValue:spellTable.
 
 		-- id:spellTable
@@ -344,11 +350,12 @@ function hSMSG_GROUP_LIST(p)
 				STATE.newLeader = false;
 			end
 		end
+		partyChat('amBot', LANG_ADDON);
 		if(STATE.amTank) then
-			partyChat('amTank');
+			partyChat('amTank', LANG_ADDON);
 		end
 		if(STATE.amHealer) then
-			partyChat('amHealer');
+			partyChat('amHealer', LANG_ADDON);
 		end
 	end
 end

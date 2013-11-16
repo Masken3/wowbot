@@ -109,27 +109,24 @@ function decision(realTime)
 
 	-- continue repeated spell casting.
 	if(STATE.repeatSpellCast.count > 0) then
+		if(STATE.waitingForEnchantResponse) then return; end
 		local s = STATE.knownSpells[STATE.repeatSpellCast.id];
 		if(spellIsOnCooldown(realTime, s)) then return; end
 		setAction("Casting "..s.name..", "..STATE.repeatSpellCast.count.." remain");
 		STATE.repeatSpellCast.count = STATE.repeatSpellCast.count - 1;
 		if(s.Targets == TARGET_FLAG_ITEM) then
-			local itemTarget;
 			local protoTest = spellCanTargetItemProtoTest(s);
-			local f = function(o)
-				local proto = itemProtoFromObject(o);
-				if protoTest(proto) then
-					itemTarget = o;
-					return false;
-				end
-			end
 			-- first, check the trade window's last slot.
 			--print(STATE.tradeStatus, dump(STATE.extendedTradeStatus));
 			if(STATE.tradeStatus == TRADE_STATUS_BACK_TO_TRADE and STATE.extendedTradeStatus) then
-				local itemId = STATE.extendedTradeStatus.items[TRADE_SLOT_NONTRADED].itemId;
+				local item = STATE.extendedTradeStatus.items[TRADE_SLOT_NONTRADED];
+				local itemId = item.itemId;
 				if(itemId ~= 0) then
 					local proto = itemProtoFromId(itemId);
 					if(protoTest(proto)) then
+						objectNameQuery(STATE.tradingPartner, function(name)
+							partyChat(name.." "..itemLinkFromTrade(proto, item).." "..s.name);
+						end)
 						castSpellAtTradeSlot(s.id, TRADE_SLOT_NONTRADED);
 					end
 				end
@@ -139,15 +136,13 @@ function decision(realTime)
 				return;
 			end
 
-			investigateEquipment(f)
-			if(not itemTarget) then
-				investigateInventory(f)
-			end
-			if(not itemTarget) then
-				partyChat("No appropriate target for "..s.name);
+			-- ask party member bots, if any.
+			local e = s.effect[1];
+			if(e.id == SPELL_EFFECT_ENCHANT_ITEM and offerEnchantToBots(s)) then
 				return;
 			end
-			castSpellAtItem(s.id, itemTarget);
+
+			doLocalEnchant(protoTest, s);
 		else
 			castSpellWithoutTarget(STATE.repeatSpellCast.id);
 		end
@@ -318,6 +313,114 @@ function decision(realTime)
 	end
 	setAction("Noting to do...");
 end
+
+
+function offerEnchantToBots(s)
+	local count = 0;
+	print("offerEnchantToBots");
+	for i,m in ipairs(STATE.groupMembers) do
+		local o = STATE.knownObjects[m.guid];
+		if(o and o.bot.isBot) then
+			whisper(o, "offerEnchant "..s.id);
+			count = count + 1;
+		end
+	end
+	print("offerEnchantToBots "..count);
+	if(count > 0) then
+		STATE.waitingForEnchantResponse = count;
+		STATE.enchantResponseCount = 0;
+		STATE.enchantResponses = {};
+		return true;
+	end
+	return false;
+end
+
+-- runs on the receiver bot.
+function handleOfferEnchant(p, spellId)
+	-- calculate remote spell's value.
+	local s = cSpell(spellId);
+	local protoTest = spellCanTargetItemProtoTest(s);
+	local remoteEnchId = s.effect[1].miscValue;
+	print("Enchantment offered. spell="..spellId);
+
+	-- investigateEquipment, search for matching items and compare
+	-- the remote value with whatever local value we have.
+	local highestDiff;
+	investigateEquipment(function(o, bagSlot, slot)
+		local proto = itemProtoFromObject(o);
+		if(protoTest(proto)) then
+			local localEnchId = o.values[ITEM_FIELD_ENCHANTMENT + PERM_ENCHANTMENT_SLOT*3 + ENCHANTMENT_ID_OFFSET];
+			local localValue = 0;
+			if(localEnchId and localEnchId ~= 0) then
+				localValue = enchValue(localEnchId, proto, nil, true);
+			end
+			local remoteValue = enchValue(remoteEnchId, proto, nil, true);
+			print("Item match found. r "..remoteValue.." vs l "..localValue);
+			local diff = remoteValue - localValue;
+			if((not highestDiff) or (diff > highestDiff)) then
+				highestDiff = diff;
+				STATE.enchantTradeItem = {tradeSlot = TRADE_SLOT_NONTRADED, bag = bagSlot, slot = slot};
+			end
+		end
+	end);
+
+	reply(p, "enchantValue "..tostring(highestDiff));
+end
+
+-- runs on the enchanter bot.
+function handleEnchantValue(p, enchantValue)
+	STATE.enchantResponses[p] = enchantValue;
+	STATE.enchantResponseCount = STATE.enchantResponseCount + 1;
+	if(STATE.enchantResponseCount == STATE.waitingForEnchantResponse) then
+		-- choose which one will get the enchant and open a trade window.
+		-- once it has an item in the slot, clear waitingForEnchantResponse,
+		-- up repeatSpellCast.count and call decision(),
+		-- which should cause the spell to be cast.
+		-- values may be less than zero, in which case they already have a better enchant.
+		local targetGuid;
+		local value = 0;
+		for p,v in pairs(STATE.enchantResponses) do
+			if(v > value) then
+				targetGuid = p.senderGuid
+				value = v;
+			end
+		end
+		-- if no one wanted it, do it on our own equipment.
+		if(not targetGuid) then
+			STATE.waitingForEnchantResponse = false;
+			local s = STATE.knownSpells[STATE.repeatSpellCast.id];
+			doLocalEnchant(spellCanTargetItemProtoTest(s), s);
+			return;
+		end
+		local target = STATE.knownObjects[targetGuid];
+		if(targetGuid and not target) then
+			partyChat("ERROR: enchantResponse from unknown object "..targetGuid:hex());
+			return;
+		end
+		initiateTrade(targetGuid);
+	end
+end
+
+function doLocalEnchant(protoTest, s)
+	local itemTarget;
+	local f = function(o)
+		local proto = itemProtoFromObject(o);
+		if protoTest(proto) then
+			itemTarget = o;
+			return false;
+		end
+	end
+	investigateEquipment(f)
+	if(not itemTarget) then
+		investigateInventory(f)
+	end
+	if(not itemTarget) then
+		partyChat("No appropriate target for "..s.name);
+		return;
+	end
+	castSpellAtItem(s.id, itemTarget);
+end
+
 
 function isAlive(o)
 	return ((o.values[UNIT_FIELD_HEALTH] or 0) > 0);

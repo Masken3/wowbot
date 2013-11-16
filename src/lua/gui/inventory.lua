@@ -153,7 +153,7 @@ local function getClickInfo(t, button)
 					-- should cause bot to add the item to the trade window.
 					hSMSG_TRADE_STATUS({status=TRADE_STATUS_OPEN_WINDOW})
 				else
-					send(CMSG_INITIATE_TRADE, {guid=STATE.leader.guid})
+					initiateTrade(STATE.leader.guid);
 				end
 			end}
 		elseif(ssAlt and ssShift and ssCtrl) then

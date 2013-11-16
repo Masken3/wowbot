@@ -1,4 +1,4 @@
-local function reply(p, msg)
+function reply(p, msg)
 	for i,m in ipairs(STATE.groupMembers) do
 		if(p.senderGuid == m.guid) then
 			p.targetName = m.name
@@ -6,6 +6,14 @@ local function reply(p, msg)
 	end
 	p.msg = msg
 	send(CMSG_MESSAGECHAT, p)
+end
+
+local function a(p, cmd, f)
+	if(p.text:startWith(cmd)) then
+		f(p, p.text:sub(#cmd))
+		return true
+	end
+	return false
 end
 
 local function listQuests(p)
@@ -108,13 +116,13 @@ end
 local function giveAll(p)
 	reply(p, 'giving all...')
 	STATE.tradeGiveAll = true
-	send(CMSG_INITIATE_TRADE, {guid=p.senderGuid})
+	initiateTrade(p.senderGuid)
 end
 
 function giveDrinkTo(drinkId, targetGuid)
 	STATE.tradeGiveItems = {[drinkId]=true}
 	-- this should be enough, assuming bots always accept trade.
-	send(CMSG_INITIATE_TRADE, {guid=targetGuid})
+	initiateTrade(targetGuid)
 	STATE.drinkRecipients[targetGuid] = nil
 end
 
@@ -139,7 +147,12 @@ local function giveItem(p)
 	end
 	reply(p, 'giving items...')
 	STATE.tradeGiveItems = items
-	send(CMSG_INITIATE_TRADE, {guid=p.senderGuid})
+	initiateTrade(p.senderGuid)
+end
+
+function initiateTrade(guid)
+	STATE.tradingPartner = STATE.knownObjects[guid]
+	send(CMSG_INITIATE_TRADE, {guid=guid})
 end
 
 function hSMSG_TRADE_STATUS(p)
@@ -158,42 +171,58 @@ function hSMSG_TRADE_STATUS(p)
 			end
 		end)
 		print("giving "..tradeSlot.." items...")
+		print("accept because giving all.")
 		send(CMSG_ACCEPT_TRADE, {padding=0})
-	elseif((p.status == TRADE_STATUS_OPEN_WINDOW) and next(STATE.tradeGiveItems)) then
-		local tradeSlot = 0
-		investigateInventory(function(o, bagSlot, slot)
-			local itemId = o.values[OBJECT_FIELD_ENTRY]
-			if(STATE.tradeGiveItems[itemId]) then
-				send(CMSG_SET_TRADE_ITEM, {tradeSlot = tradeSlot, bag = bagSlot, slot = slot})
-				print(tradeSlot..": "..itemId..' '..o.guid:hex())
-				tradeSlot = tradeSlot + 1
-				if(tradeSlot >= TRADE_SLOT_TRADED_COUNT) then
-					return false
+	elseif(p.status == TRADE_STATUS_OPEN_WINDOW) then
+		if(next(STATE.tradeGiveItems)) then
+			local tradeSlot = 0
+			investigateInventory(function(o, bagSlot, slot)
+				local itemId = o.values[OBJECT_FIELD_ENTRY]
+				if(STATE.tradeGiveItems[itemId]) then
+					send(CMSG_SET_TRADE_ITEM, {tradeSlot = tradeSlot, bag = bagSlot, slot = slot})
+					print(tradeSlot..": "..itemId..' '..o.guid:hex())
+					tradeSlot = tradeSlot + 1
+					if(tradeSlot >= TRADE_SLOT_TRADED_COUNT) then
+						return false
+					end
 				end
-			end
-		end)
-		print("giving "..tradeSlot.." items...", dump(STATE.tradeGiveItems))
-		STATE.tradeGiveItems = {}
-		send(CMSG_ACCEPT_TRADE, {padding=0})
+			end)
+			print("giving "..tradeSlot.." items...", dump(STATE.tradeGiveItems))
+			STATE.tradeGiveItems = {}
+			print("accept because giving "..tradeSlot)
+			send(CMSG_ACCEPT_TRADE, {padding=0})
+		end
+		if(STATE.enchantTradeItem) then
+			send(CMSG_SET_TRADE_ITEM, STATE.enchantTradeItem)
+			print("set enchant trade item.")
+		end
 	elseif(p.status == TRADE_STATUS_TRADE_CANCELED) then
 		print("Trade cancelled!")
 		-- if this was not the drink-giver, we'll just ask again soon.
 		STATE.waitingForDrink = false
 	elseif(p.status == TRADE_STATUS_TRADE_COMPLETE) then
 		print("Trade complete!")
+		-- once we've received the new items, maybeEquip them.
 		STATE.me.updateValuesCallbacks[p] = function(p)
 			investigateInventory(function(o)
 				maybeEquip(o.guid)
 			end)
 		end
+		STATE.enchantTradeItem = false
 		-- if this was not the drink-giver, we'll just ask again soon.
 		STATE.waitingForDrink = false
 	elseif(p.status == TRADE_STATUS_BEGIN_TRADE) then
 		-- player has requested to trade with us. just accept.
 		print("Remote trade initiated!")
 		send(CMSG_BEGIN_TRADE)
+		STATE.tradingPartner = STATE.knownObjects[p.guid]
 	elseif(p.status == TRADE_STATUS_TRADE_ACCEPT) then
-		send(CMSG_ACCEPT_TRADE, {padding=0})
+		if(not STATE.enchantTradeItem) then
+			print("accept because accept.")
+			send(CMSG_ACCEPT_TRADE, {padding=0})
+		end
+	elseif(p.status == TRADE_STATUS_BACK_TO_TRADE) then
+		print("Back to trade.")
 	else
 		print("Trade status "..p.status)
 	end
@@ -201,9 +230,19 @@ end
 
 function hSMSG_TRADE_STATUS_EXTENDED(p)
 	-- load item proto for future reference (enchanting)
-	local itemId = p.items[TRADE_SLOT_NONTRADED].itemId;
+	local item = p.items[TRADE_SLOT_NONTRADED]
+	local itemId = item.itemId
 	if(itemId ~= 0) then
-		itemProtoFromId(itemId);
+		delayedItemProto(itemId, function(proto)
+			if(STATE.waitingForEnchantResponse) then
+				local s = STATE.knownSpells[STATE.repeatSpellCast.id]
+				objectNameQuery(STATE.tradingPartner, function(name)
+					partyChat(name.." "..itemLinkFromTrade(proto, item).." "..s.name)
+				end)
+				castSpellAtTradeSlot(s.id, TRADE_SLOT_NONTRADED)
+				STATE.waitingForEnchantResponse = false
+			end
+		end)
 	end
 
 	STATE.extendedTradeStatus = p
@@ -401,7 +440,7 @@ local function fish(p)
 			return
 		end
 	end
-	STATE.fishingOrientation = STATE.my.location.orientation;
+	STATE.fishingOrientation = STATE.my.location.orientation
 	STATE.fishing = true
 	reply(p, "Started Fishing.")
 end
@@ -426,7 +465,7 @@ end
 function gUseItem(itemId)
 	local msg = 'Using item:'
 	local done = false
-	moveStop();
+	moveStop()
 	investigateInventory(function(o, bagSlot, slot)
 		if(itemId == o.values[OBJECT_FIELD_ENTRY] and not done) then
 			msg = msg..' '..o.guid:hex()
@@ -686,6 +725,12 @@ local function amHealer(p)
 	--print("healer", p.senderGuid:hex())
 end
 
+local function amBot(p)
+	local o = STATE.knownObjects[p.senderGuid]
+	if(not o) then return end
+	o.bot.isBot = true
+end
+
 local function test(p)
 	local targetGuid = guidFromValues(STATE.knownObjects[p.senderGuid], UNIT_FIELD_TARGET)
 	local target = STATE.knownObjects[targetGuid]
@@ -705,6 +750,14 @@ local function chat(p)
 	objectNameQuery(target, function(name)
 		reply(p, "Chatting with "..name)
 	end)
+end
+
+local function offerEnchant(p, sub)
+	handleOfferEnchant(p, tonumber(sub))
+end
+
+local function enchantValue(p, sub)
+	handleEnchantValue(p, tonumber(sub))
 end
 
 function handleChatMessage(p)
@@ -795,12 +848,16 @@ function handleChatMessage(p)
 		amTank(p)
 	elseif(p.text == 'amHealer') then
 		amHealer(p)
+	elseif(p.text == 'amBot') then
+		amBot(p)
 	elseif(p.text:startWith('ec ')) then
 		eliteCombat(p)
 	elseif(p.text == 'test') then
 		test(p)
 	elseif(p.text == 'chat') then
 		chat(p)
+	elseif(a(p, 'offerEnchant ', offerEnchant)) then
+	elseif(a(p, 'enchantValue ', enchantValue)) then
 	else
 		if(p.type == CHAT_MSG_WHISPER or p.type == CHAT_MSG_WHISPER_INFORM) then
 			print("Whisper: "..p.text)
@@ -810,14 +867,17 @@ function handleChatMessage(p)
 	--print("Chat command: "..p.text)
 end
 
-function partyChat(msg)
+function partyChat(msg, language)
+	language = language or LANG_UNIVERSAL
 	print("partyChat("..msg..")")
-	send(CMSG_MESSAGECHAT, {type=CHAT_MSG_PARTY, language=LANG_UNIVERSAL, msg=msg})
+	send(CMSG_MESSAGECHAT, {type=CHAT_MSG_PARTY, language=language, msg=msg})
 end
 
-function whisper(recipient, msg)
+function whisper(recipient, msg, language)
+	language = language or LANG_ADDON
 	objectNameQuery(recipient, function(name)
-		send(CMSG_MESSAGECHAT, {type=CHAT_MSG_WHISPER, language=LANG_ADDON,
+		print("wisper@"..name..": "..msg)
+		send(CMSG_MESSAGECHAT, {type=CHAT_MSG_WHISPER, language=language,
 			msg=msg, targetName=name})
 	end)
 end

@@ -52,3 +52,9 @@
  even though the shapeshift remains. Add shapeshift detection to hasCCAura().	DONE
 ** Avoid quest givers and finishers guarded by enemies.	DONE
 ** don't unlock items if hostiles are nearby.	DONE
+
+** For each enchant cast, if a trade window isn't open, ask group member bots if they want it.
+ * If they do, open a trade window to one of them and wait for them to put up a suitable item.
+ * If the trade window should close, abort cast.
+** We need to know which ones of our party members are bots.
+ * Have them announce it in addon party chat ("amBot"), like "amTank" and "amHealer".

@@ -298,7 +298,7 @@ ClassInfo = {
 	Paladin = {
 		ranged=false,
 		primary=STAT_STRENGTH,	-- Retribution or Holy/Damage
-		secondaries={STAT_STAMINA},
+		secondaries={STAT_STAMINA, STAT_INTELLECT},
 		--[[ Holy/Healing
 		primary=STAT_INTELLECT,
 		secondaries={STAT_SPIRIT, STAT_STAMINA},]]
@@ -410,7 +410,9 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose)
 			elseif(se.applyAuraName == SPELL_AURA_MOD_RANGED_ATTACK_POWER_VERSUS) then
 				v = addDamageValueRaw(v, points / 140, true, ci, verbose)
 			elseif(se.applyAuraName == SPELL_AURA_MOD_INCREASE_ENERGY) then
-				v = addDumpIf(v, points, "Mana+", verbose)
+				if(ci.ranged) then
+					v = addDumpIf(v, points, "Mana+", verbose)
+				end
 			elseif(se.applyAuraName == SPELL_AURA_MOD_INCREASE_HEALTH) then
 				v = addDumpIf(v, points, "Health+", verbose)
 			elseif(se.applyAuraName == SPELL_AURA_MOD_RESISTANCE) then
@@ -463,8 +465,9 @@ function positiveSpellPoints(s, verbose)
 	return v;
 end
 
-local function enchValue(enchId, proto, ci, verbose)
+function enchValue(enchId, proto, ci, verbose)
 	local ench = cSpellItemEnchantment(enchId);
+	ci = ci or ClassInfo[STATE.myClassName];
 	if(not ench) then return 0; end
 
 	local v = 0;
@@ -480,13 +483,17 @@ local function enchValue(enchId, proto, ci, verbose)
 				-- such an enchantment would affect all equipped weapons?
 				-- todo: find out. low prio.
 			end
-		end
-		if(e.type == ITEM_ENCHANTMENT_TYPE_EQUIP_SPELL) then
+		elseif(e.type == ITEM_ENCHANTMENT_TYPE_EQUIP_SPELL) then
 			local s = cSpell(e.spellId);
 			v = addItemSpellValue(v, mods, s, proto, ci, verbose);
-		end
-		if(e.type == ITEM_ENCHANTMENT_TYPE_STAT) then
+		elseif(e.type == ITEM_ENCHANTMENT_TYPE_STAT) then
 			mods[e.spellId] = (mods[e.spellId] or 0) + e.amount;
+		elseif(e.type == ITEM_ENCHANTMENT_TYPE_RESISTANCE) then
+			v = addDumpIf(v, e.amount, "Resistance", verbose);
+		--ITEM_ENCHANTMENT_TYPE_COMBAT_SPELL
+		--ITEM_ENCHANTMENT_TYPE_TOTEM
+		elseif(e.type ~= ITEM_ENCHANTMENT_TYPE_NONE) then
+			print("WARN: unknown enchantment effect "..e.type.." in enchantment "..enchId);
 		end
 	end
 	v = addModValues(v, mods, proto, ci, verbose and 1);
@@ -872,8 +879,13 @@ end
 function itemLinkFromId(id)
 	--|cffffffff|Hitem:2886:0:0:0|h[Crag Boar Rib]|h|r
 	local proto = itemProtoFromId(id);
-	local link = "|cff"..itemColors[proto.Quality].."|H"..id..":0:0:0|h["..proto.name.."]|h|r";
+	local link = "|cff"..itemColors[proto.Quality].."|Hitem:"..id..":0:0:0|h["..proto.name.."]|h|r";
 	return link;
+end
+
+function itemLinkFromTrade(proto, i)
+	return "|cff"..itemColors[proto.Quality].."|Hitem:"..proto.itemId..
+		":"..i.enchantment..":"..i.randomPropertyId..":0|h["..proto.name.."]|h|r";
 end
 
 function isFishingPole(o)
