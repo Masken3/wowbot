@@ -566,7 +566,7 @@ end
 
 -- returns true if we're healing.
 function doHeal(realTime)
-	local healSpell, points = mostEffectiveSpell(realTime, STATE.healingSpells, false);
+	local healSpell, points = mostEffectiveSpell(realTime, STATE.healingSpells, true);
 	if(not healSpell) then return; end
 	-- TODO: if we don't have enough mana to cast the spell, don't try.
 	-- TODO: heal all allies, not just toons.
