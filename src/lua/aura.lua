@@ -151,9 +151,12 @@ local auraEffectIsPositiveTable = {
 	[SPELL_AURA_PERIODIC_HEAL] = positiveEffect,
 	[SPELL_AURA_MOD_MANA_REGEN_INTERRUPT] = positiveEffect,
 	[SPELL_AURA_MOD_HIT_CHANCE] = positiveEffect,
+	[SPELL_AURA_SCHOOL_ABSORB] = positiveEffect,
+	[SPELL_AURA_MOD_MELEE_HASTE] = positiveEffect,
 
 	[SPELL_AURA_MOD_DAMAGE_TAKEN] = negativeEffect,
 	[SPELL_AURA_MOD_ATTACKER_SPELL_CRIT_CHANCE] = negativeEffect,
+	[SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN] = negativeEffect,
 
 	-- always positive
 	[SPELL_AURA_ADD_TARGET_TRIGGER] = alwaysPositive,

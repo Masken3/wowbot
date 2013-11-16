@@ -443,6 +443,10 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose)
 				if(STATE.amTank) then
 					v = addDumpIf(v, points*100, "Block%+", verbose)
 				end
+			elseif(se.applyAuraName == SPELL_AURA_MOD_DODGE_PERCENT) then
+				if(STATE.amTank) then
+					v = addDumpIf(v, points*100, "Dodge%+", verbose)
+				end
 			else
 				print("WARN: unhandled aura "..se.applyAuraName..
 					" on spell="..s.id.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
