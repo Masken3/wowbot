@@ -737,19 +737,24 @@ local function test(p)
 	reply(p, tostring(isTargetOfPartyMember(target)))
 end
 
-local function chat(p)
+local function chatV(p, sub)
+	local chatChoice = tonumber(sub)
 	local targetGuid = guidFromValues(STATE.knownObjects[p.senderGuid], UNIT_FIELD_TARGET)
 	local target = STATE.knownObjects[targetGuid]
 	if(not target) then
 		reply(p, "No valid target!")
 		return
 	end
-	target.bot.chat = true
+	target.bot.chat = chatChoice
 	target.bot.questOverride = true
 	STATE.questFinishers[targetGuid] = target
 	objectNameQuery(target, function(name)
 		reply(p, "Chatting with "..name)
 	end)
+end
+
+local function chat(p, sub)
+	chatV(p, 1)
 end
 
 local function offerEnchant(p, sub)
@@ -856,6 +861,7 @@ function handleChatMessage(p)
 		test(p)
 	elseif(p.text == 'chat') then
 		chat(p)
+	elseif(a(p, 'chat ', chatV)) then
 	elseif(a(p, 'offerEnchant ', offerEnchant)) then
 	elseif(a(p, 'enchantValue ', enchantValue)) then
 	else

@@ -89,7 +89,7 @@ function hSMSG_GOSSIP_MESSAGE(p)
 	local o = STATE.knownObjects[p.guid];
 	if(o.bot.chat) then
 		for i,g in ipairs(p.gossips) do
-			if(i == 1) then
+			if(i == o.bot.chat) then
 				partyChat(g.message);
 				assert(g.coded == 0);
 				send(CMSG_GOSSIP_SELECT_OPTION, {guid=p.guid, gossipListId=g.index});
