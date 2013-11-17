@@ -454,12 +454,16 @@ function spellCanTargetItemProtoTest(s)
 end
 
 local function tempEnchantSpellOnItem(o)
+	return spellOnItem(o, SPELL_EFFECT_ENCHANT_ITEM_TEMPORARY)
+end
+
+function spellOnItem(o, effectId)
 	local proto = itemProtoFromObject(o);
 	if(not proto) then return nil; end
 	for i,is in ipairs(proto.spells) do
 		if(is.trigger == ITEM_SPELLTRIGGER_ON_USE and is.id ~= 0) then
 			local s = cSpell(is.id);
-			if(s.effect[1].id == SPELL_EFFECT_ENCHANT_ITEM_TEMPORARY) then
+			if(s.effect[1].id == effectId) then
 				return s;
 			end
 		end
@@ -479,24 +483,30 @@ function hasTempEnchant(o)
 	return (o.values[ITEM_FIELD_ENCHANTMENT + TEMP_ENCHANTMENT_SLOT*3] or 0) ~= 0;
 end
 
+function useItemOnEquipment(realTime, o, bagSlot, slot, s)
+	local protoTest = spellCanTargetItemProtoTest(s);
+	local didSomething = false;
+	investigateEquipment(function(e)
+		local proto = itemProtoFromObject(e);
+		if(proto and protoTest(proto) and (not hasTempEnchant(e))) then
+			useItemOnItem(realTime, bagSlot, slot, e);
+			didSomething = true;
+			return false;
+		end
+	end);
+	return didSomething;
+end
+
 -- if hostiles are near, apply temporary enchantments, if we have any.
 function doApplyTempEnchant(realTime)
 	if(not hostilesAreNear()) then return false; end
 	-- scan our inventory for enchanter items.
 	local didSomething = false;
 	investigateInventory(function(o, bagSlot, slot)
+		-- if one is found, see if we have any equipment it'd be usable and useful on.
 		local s = tempEnchantSpellOnItem(o);
 		if(s and (not spellIsOnCooldown(realTime, s))) then
-			-- if one is found, see if we have any equipment it'd be usable and useful on.
-			local protoTest = spellCanTargetItemProtoTest(s);
-			investigateEquipment(function(e)
-				local proto = itemProtoFromObject(e);
-				if(proto and protoTest(proto) and (not hasTempEnchant(e))) then
-					useItemOnItem(realTime, bagSlot, slot, e);
-					didSomething = true;
-					return false;
-				end
-			end);
+			didSomething = useItemOnEquipment(realTime, o, bagSlot, slot, s);
 			return false;
 		end
 	end);

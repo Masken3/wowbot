@@ -470,6 +470,7 @@ function gUseItem(itemId)
 		if(itemId == o.values[OBJECT_FIELD_ENTRY] and not done) then
 			msg = msg..' '..o.guid:hex()
 			local proto = itemProtoFromId(itemId)
+			local s = spellOnItem(o, SPELL_EFFECT_ENCHANT_ITEM)
 			if(proto.StartQuest ~= 0) then
 				-- callbacks will start the quest.
 				send(CMSG_QUESTGIVER_QUERY_QUEST, {guid=o.guid, questId=proto.StartQuest})
@@ -493,6 +494,8 @@ function gUseItem(itemId)
 				send(CMSG_SET_AMMO, {itemId=itemId})
 			elseif(itemIsOnCooldown(proto)) then
 				return false
+			elseif(s) then
+				useItemOnEquipment(getRealTime(), o, bagSlot, slot, s)
 			else
 				STATE.casting = getRealTime()
 				send(CMSG_USE_ITEM, {slot = slot, bag = bagSlot, spellCount = 0, targetFlags = 0})
