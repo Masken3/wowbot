@@ -622,7 +622,8 @@ function doMoveToTargetIfNoHostilesAreNear(realTime, mo, maxDist)
 				local p = o.location.position;
 				local distToLine = (a*p.x + b*p.y - c) / ((a^2 + b^2)^0.5);
 				local distToMe = distanceToObject(o);
-				if((distToLine < 40) and (distToMe < 80)) then return nil; end
+				--if((distToLine < 40) and (distToMe < 80)) then return nil; end
+				if(distToMe < 60) then return nil; end
 			end
 		end
 	end
