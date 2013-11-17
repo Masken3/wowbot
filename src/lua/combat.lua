@@ -706,6 +706,7 @@ function doCrowdControl(realTime)
 	-- mustn't be immune to the spell (we can't check this),
 	-- that is not being targeted by any party member.
 	-- elites are preferred.
+	local count = 0;
 	for guid,o in pairs(STATE.enemies) do
 		local info = STATE.knownCreatures[o.values[OBJECT_FIELD_ENTRY]];
 		if(bit32.btest(STATE.ccSpell.TargetCreatureType, creatureTypeMask(info)) and
@@ -730,8 +731,9 @@ function doCrowdControl(realTime)
 				targetInfo = info;
 			end
 		end
+		count = count + 1;
 	end
-	if(target) then
+	if(target and count > 1) then
 		STATE.ccTarget = target;
 		STATE.ccSpell.goCallback = function()
 			target.bot.ccTime = realTime;
