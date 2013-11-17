@@ -74,6 +74,7 @@ DBCs = [
 	'dbcSpellIcon',
 	'dbcItemDisplayInfo',
 	'dbcFactionTemplate',
+	'dbcAreaTrigger',
 ]
 
 DBC_WORKS = DBCs.collect do |d| DbcWork.new(d) end

@@ -117,7 +117,9 @@ function newGameObject(o, info)
 	local pos = goPos(o);
 	o.location.position = pos;
 	local myPos = STATE.myLocation.position;
-	if(info.name == "Water Barrel" or info.name == "Food Crate" or
+	if(info.name == "Water Barrel" or
+		info.name == "Food Crate" or	-- Crate Expectations
+		info.name == "Atal'ai Artifact" or
 		info.name == "Barrel of Milk")
 	then return; end
 	if(not o.bot.reported) then

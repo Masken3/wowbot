@@ -268,6 +268,7 @@ function decision(realTime)
 				partyChat("Dis: "..itemLink(o));
 				-- if disenchant fails, remember that.
 				STATE.currentDisenchant = o;
+				moveStop();
 				castSpellAtItem(STATE.disenchantSpell, o);
 				found = true
 				return false;

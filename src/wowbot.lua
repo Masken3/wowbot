@@ -96,6 +96,8 @@ if(rawget(_G, 'STATE') == nil) then
 		moving = false,
 		moveStartTime = 0,	-- floating point, in seconds. valid if moving == true.
 
+		areaTrigger = false,	-- or AreaTrigger.
+
 		myTarget = false,	-- guid of my target.
 
 		raidIcons = {},	-- raidIconId:guid

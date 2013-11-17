@@ -98,6 +98,77 @@ function fg(guid)
 	return res
 end
 
+-- AreaTrigger Hash function
+local function ath(x)
+	return math.floor(x/100)
+end
+
+local function loadAreaTriggers()
+	local t = {}
+	local function addAT(at)
+		local xv, xm = ath(at.x - at.radius), ath(at.x + at.radius);
+		local yv, ym = ath(at.y - at.radius), ath(at.y + at.radius);
+		local zv, zm = ath(at.z - at.radius), ath(at.z + at.radius);
+		local m = t[at.map] or {};
+		t[at.map] = m;
+		for x = xv,xm do
+			m[x] = m[x] or {};
+			for y = yv,ym do
+				m[x][y] = m[x][y] or {};
+				for z = zv,zm do
+					m[x][y][z] = m[x][y][z] or {};
+					m[x][y][z][at.id] = at;
+				end
+			end
+		end
+	end
+	local count = 0;
+	for at in cAreaTriggers() do
+		addAT(at);
+		count = count + 1;
+	end
+	print("Loaded "..count.." AreaTriggers");
+	return t;
+end
+
+sAreaTriggers = rawget(_G, 'sAreaTriggers') or loadAreaTriggers();
+
+-- returns AreaTrigger table or false.
+local function areaTriggerFromPos(pos)
+	local map = sAreaTriggers[STATE.myLocation.mapId];
+	local at = cAreaTrigger(362);
+	--print("x: "..pos.x..". target: "..at.x + at.radius.." ("..at.radius..")");
+	local x = map[ath(pos.x)];
+	if(not x) then return false; end
+	--print("y: "..pos.y..". target: "..at.y + at.radius);
+	local y = x[ath(pos.y)];
+	if(not y) then return false; end
+	--print("z: "..pos.z..". target: "..at.z + at.radius);
+	local z = y[ath(pos.z)];
+	if(not z) then return false; end
+	for id,at in pairs(z) do
+		-- factor 0.75 to be on the safe side; server does more advanced checking than this,
+		-- and since we only get one try, we don't want to fail.
+		local d = distance3(pos, at);
+		local r = at.radius;
+		--print("Near AT "..id..": "..math.floor(d).." < "..math.floor(r));
+		if(distance3(pos, at) < at.radius * 0.75) then
+			return at;
+		end
+	end
+	return false;
+end
+
+local function sendMovePacket(opcode, data)
+	local at = areaTriggerFromPos(data.pos);
+	if(at and STATE.areaTrigger ~= at) then
+		partyChat("AreaTrigger "..at.id);
+		send(CMSG_AREATRIGGER, {triggerID = at.id});
+	end
+	STATE.areaTrigger = at;
+	send(opcode, data);
+end
+
 function sendMovement(opcode)
 	STATE.moving = false;
 	local data = {
@@ -107,7 +178,7 @@ function sendMovement(opcode)
 		time = 0,
 		fallTime = 0,
 	}
-	send(opcode, data);
+	sendMovePacket(opcode, data);
 end
 
 function stopMoveWithOrientation(o)
@@ -119,7 +190,7 @@ function stopMoveWithOrientation(o)
 		time = 0,
 		fallTime = 0,
 	}
-	send(MSG_MOVE_STOP, data);
+	sendMovePacket(MSG_MOVE_STOP, data);
 end
 
 function updateMyPosition(realTime)
@@ -503,7 +574,7 @@ function doMoveToPoint(realTime, tarPos, tarDist)
 	}
 	STATE.moving = true;
 	--print(dump(data));
-	send(MSG_MOVE_START_FORWARD, data);
+	sendMovePacket(MSG_MOVE_START_FORWARD, data);
 	-- set timer to when we'll arrive, or at most one second.
 	STATE.moveStartTime = realTime;
 	local moveEndTime = STATE.moveStartTime + dist / myRunSpeed();
@@ -589,7 +660,7 @@ function doMoveToTarget(realTime, mo, maxDist)
 		}
 		STATE.moving = true;
 		--print(dump(data));
-		send(MSG_MOVE_START_FORWARD, data);
+		sendMovePacket(MSG_MOVE_START_FORWARD, data);
 		-- set timer to when we'll arrive, or at most one second.
 		STATE.moveStartTime = realTime;
 

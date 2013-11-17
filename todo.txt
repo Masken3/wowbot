@@ -17,6 +17,7 @@ for next dungeon:
 
 ** polymorph doesn't affect some enemies at first.
  * in 3-enemy battles, only after the first is dead does the second get sheeped.
+** Don't cc when there's only one enemy.
 
 ** PersistentAreaAura spells should have cooldown >= duration.
 ** Fix AreaAura spells.
@@ -31,3 +32,5 @@ for next dungeon:
  * Ex: Fire Hardened Hauberk, 30+ Rage.
 
 ** Trigger quest area-explore objectives.
+ * Requires that CMSG_AREATRIGGER be sent when you've entered the area.
+ * We'll need a grid hash map of all area triggers, for quick lookup.

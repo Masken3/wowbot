@@ -10,6 +10,7 @@ extern "C" {
 #include "dbcTalent/dbcTalent.h"
 #include "dbcTalentTab/dbcTalentTab.h"
 #include "dbcSpell/dbcSpell.h"
+#include "dbcAreaTrigger/dbcAreaTrigger.h"
 #include "log.h"
 #include "icon/icon.h"
 
@@ -148,6 +149,24 @@ static int l_icon(lua_State* L) {
 	return 1;
 }
 
+static int litr_areaTriggers(lua_State* L) {
+	AreaTriggers::citr* p = (AreaTriggers::citr*)lua_touserdata(L, lua_upvalueindex(1));
+	if(*p == gAreaTriggers.end()) {
+		return 0;
+	}
+	luaPushAreaTrigger(L, (*p)->second);
+	++(*p);
+	return 1;
+}
+
+static int l_areaTriggers(lua_State* L) {
+	NARG_CHECK(0);
+	AreaTriggers::citr* p = (AreaTriggers::citr*)lua_newuserdata(L, sizeof(AreaTriggers::citr));
+	*p = gAreaTriggers.begin();
+	lua_pushcclosure(L, litr_areaTriggers, 1);
+	return 1;
+}
+
 void registerLuaAuxDBC(lua_State* L) {
 	lua_register(L, "cSkillLineAbilityBySpell", l_skillLineAbilityBySpell);
 
@@ -156,4 +175,6 @@ void registerLuaAuxDBC(lua_State* L) {
 
 	lua_register(L, "cIcon", l_icon);
 	lua_register(L, "cIconRaw", l_iconRaw);
+
+	lua_register(L, "cAreaTriggers", l_areaTriggers);
 }
