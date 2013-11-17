@@ -153,6 +153,7 @@ local auraEffectIsPositiveTable = {
 	[SPELL_AURA_MOD_HIT_CHANCE] = positiveEffect,
 	[SPELL_AURA_SCHOOL_ABSORB] = positiveEffect,
 	[SPELL_AURA_MOD_MELEE_HASTE] = positiveEffect,
+	[SPELL_AURA_DAMAGE_SHIELD] = positiveEffect,
 
 	[SPELL_AURA_MOD_DAMAGE_TAKEN] = negativeEffect,
 	[SPELL_AURA_MOD_ATTACKER_SPELL_CRIT_CHANCE] = negativeEffect,
