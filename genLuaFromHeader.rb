@@ -12,6 +12,10 @@ class GenLuaFromHeaderTask < MultiFileTask
 		@cName = "build/#{name}Lua.c"
 		@hName = "build/#{name}Lua.h"
 		@options = options
+		options[:reverseListEnums] = {} unless(options[:reverseListEnums])
+		options[:reverseListEnums].each do |e|
+			options[:includedEnums].push(e)
+		end
 		# todo: cause rebuild if options change.
 		super(@cName, [@hName])
 	end
@@ -39,6 +43,16 @@ class GenLuaFromHeaderTask < MultiFileTask
 				file.puts "\tlua_pushnumber(L, #{name});"
 				file.puts "\tlua_setglobal(L, \"#{value}\");"
 			end
+		end
+		@options[:reverseListEnums].each do |e|
+			values = enums[e].values
+			file.puts "\tlua_createtable(L, 0, #{values.size});"
+			values.each do |name, value|
+				file.puts "\tlua_pushnumber(L, #{name});"
+				file.puts "\tlua_pushstring(L, \"#{name}\");"
+				file.puts "\tlua_settable(L, -3);"
+			end
+			file.puts "\tlua_setglobal(L, \"#{e}\");"
 		end
 		file.puts "}"
 	end

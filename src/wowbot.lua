@@ -1316,10 +1316,9 @@ end
 
 -- misleading name; also sent when cast succeeds.
 function hSMSG_CAST_FAILED(p)
-	local hex;
 	if(p.result) then
-		hex = string.format("0x%02X", p.result);
-		print("SMSG_CAST_FAILED", tostring(hex), dump(p));
+		local hex = string.format("0x%02X", p.result);
+		print("SMSG_CAST_FAILED", SpellCastResult[p.result], tostring(hex), dump(p));
 
 		if(p.result == 0x0C) then --SPELL_FAILED_CANT_BE_DISENCHANTED
 			PERMASTATE.undisenchantable[STATE.currentDisenchant.values[OBJECT_FIELD_ENTRY]] = true;
