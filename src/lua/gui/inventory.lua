@@ -112,6 +112,11 @@ local function getClickInfo(t, button)
 				PERMASTATE.shouldLoot[itemId] = (not PERMASTATE.shouldLoot[itemId]) or nil
 				saveState()
 			end}
+		elseif(ssAlt and (not ssShift) and ssCtrl) then
+			return {description="Toggle 'undisenchantable'", f=function()
+				PERMASTATE.undisenchantable[itemId] = (not PERMASTATE.undisenchantable[itemId]) or nil
+				saveState()
+			end}
 		elseif(ssShift and (not ssAlt) and (not ssCtrl)) then
 			if(isInventoryItem) then
 				return {description="Store in bank", f=function()
@@ -204,10 +209,13 @@ function drawInvWindow()
 		-- border
 		local itemId = t.proto.itemId
 		local borderColor
-		if(PERMASTATE.shouldLoot[itemId]) then
-			borderColor = 0xffff00	-- yellow
-		elseif(STATE.itemsToSell[itemId]) then
+		if(STATE.itemsToSell[itemId]) then
 			borderColor = 0x00ff00	-- bright green
+		elseif(PERMASTATE.shouldLoot[itemId]) then
+			borderColor = 0xffff00	-- yellow
+		elseif(PERMASTATE.undisenchantable[itemId]) then
+			--borderColor = 0xff0000	-- red
+			borderColor = 0x0000ff	-- blue
 		end
 		if(borderColor) then
 			local r = SDL_Rect(t.r.x-2, t.r.y-2, t.r.w+4, t.r.h+4)
