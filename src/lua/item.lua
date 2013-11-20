@@ -441,11 +441,11 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose)
 				end
 			elseif(se.applyAuraName == SPELL_AURA_MOD_BLOCK_PERCENT) then
 				if(STATE.amTank) then
-					v = addDumpIf(v, points*100, "Block%+", verbose)
+					v = addDumpIf(v, points*(STATE.myLevel^1.5), "Block%+", verbose)
 				end
 			elseif(se.applyAuraName == SPELL_AURA_MOD_DODGE_PERCENT) then
 				if(STATE.amTank) then
-					v = addDumpIf(v, points*100, "Dodge%+", verbose)
+					v = addDumpIf(v, points*(STATE.myLevel^1.5), "Dodge%+", verbose)
 				end
 			else
 				print("WARN: unhandled aura "..se.applyAuraName..

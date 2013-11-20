@@ -166,6 +166,7 @@ function handleOfferReward(p)
 			rewardIndex = i;
 		end
 	end
+	-- todo: don't do this if the quest isn't complete.
 	if(p.rewChoiceItemsCount > 0) then
 		assert(rewardIndex);
 		p.reward = rewardIndex - 1;
