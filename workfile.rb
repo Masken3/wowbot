@@ -81,6 +81,7 @@ work = ExeWork.new do
 			{:includedEnums=>['InventoryType', 'ItemClass', 'ItemSubclassWeapon',
 				'ItemModType',
 				'ItemSubclassContainer',
+				'BagFamily',
 				'ItemPrototypeFlags',
 				'ItemSpelltriggerType',
 				'ItemBondingType',

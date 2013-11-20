@@ -128,6 +128,13 @@ local function getClickInfo(t, button)
 				end}
 			end
 		end
+	elseif(button == SDL_BUTTON_RIGHT and isBankItem) then
+		if(plain and t.proto.InventoryType == INVTYPE_BAG) then
+			return {description="Toggle 'forced bank bag'", f=function()
+				PERMASTATE.forcedBankBags[itemId] = (not PERMASTATE.forcedBankBags[itemId]) or nil
+				saveState()
+			end}
+		end
 	elseif(button == SDL_BUTTON_RIGHT and isInventoryItem) then
 		if(plain) then
 			local d = "Use"
@@ -214,8 +221,9 @@ function drawInvWindow()
 		elseif(PERMASTATE.shouldLoot[itemId]) then
 			borderColor = 0xffff00	-- yellow
 		elseif(PERMASTATE.undisenchantable[itemId]) then
-			--borderColor = 0xff0000	-- red
 			borderColor = 0x0000ff	-- blue
+		elseif(PERMASTATE.forcedBankBags[itemId]) then
+			borderColor = 0xff0000	-- red
 		end
 		if(borderColor) then
 			local r = SDL_Rect(t.r.x-2, t.r.y-2, t.r.w+4, t.r.h+4)

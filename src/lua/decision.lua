@@ -289,6 +289,11 @@ function decision(realTime)
 		return;
 	end
 
+	-- move profession items into profession bags.
+	if(moveProfessionItems()) then
+		return;
+	end
+
 	-- if we can pick locks and have locks to pick, do so.
 	if(doPickLockOnItem(realTime)) then
 		return;
@@ -648,7 +653,9 @@ function doPickLockOnItem(realTime)
 end
 
 local function baseDoBags(bif, iif, minBagCount)
+	--print("baseDoBags "..tostring(minBagCount));
 	if(not STATE.doBags) then
+		--print("STATE.doBags: "..tostring(STATE.doBags));
 		return false;
 	end
 	-- equip bigger bags.
@@ -659,16 +666,28 @@ local function baseDoBags(bif, iif, minBagCount)
 	-- TODO: do the same for bank bags.
 	local smallestBag = nil;
 	local bagCount = 0;
+	local genericBags = {};	-- bagSlot:bag
 	bif(function(bag, bagSlot, slotCount)
 		bagCount = bagCount + 1;
-		if(not smallestBag or smallestBag.count > slotCount) then
+		local proto = itemProtoFromObject(bag);
+		if(not proto) then return false; end
+		if((not smallestBag or smallestBag.count > slotCount) and
+			(not PERMASTATE.forcedBankBags[proto.itemId]))
+		then
 			smallestBag = {count=slotCount, o=bag, bagSlot=bagSlot};
+		end
+		if(proto.subClass == ITEM_SUBCLASS_CONTAINER) then
+			genericBags[bagSlot] = bag;
 		end
 	end);
 	if(minBagCount and bagCount < minBagCount) then
+		print("bagCount: "..bagCount.." minBagCount: "..minBagCount);
 		return false;
 	end
-	if(not smallestBag) then return false; end
+	if(not smallestBag) then
+		print("not smallestBag");
+		return false;
+	end
 	local itemsInSmallestBag = {}	-- o:slot
 	local biggestBag = nil;
 	local freeSlots = {} -- array:{bagSlot,slot}
@@ -682,22 +701,40 @@ local function baseDoBags(bif, iif, minBagCount)
 		end
 		local proto = itemProtoFromObject(o);
 		if(not proto) then
+			print("not proto!");
 			return false;
 		end
-		if(proto.itemClass == ITEM_CLASS_CONTAINER and proto.subClass == ITEM_SUBCLASS_CONTAINER) then
+		if(PERMASTATE.forcedBankBags[proto.itemId]) then
+			print("testing "..proto.name..". iif test: "..tostring(iif == investigateBank));
+		end
+		if(proto.itemClass == ITEM_CLASS_CONTAINER and
+			-- profession bags should only be used in the bank.
+			((proto.subClass == ITEM_SUBCLASS_CONTAINER) or
+			(iif == investigateBank)))
+		then
 			local count = o.values[CONTAINER_FIELD_NUM_SLOTS];
-			if(count > smallestBag.count and ((not biggestBag) or (biggestBag.count < count))) then
+			if(PERMASTATE.forcedBankBags[proto.itemId]) then
+				print("testing "..proto.name..". iif test: "..tostring(iif == investigateBank));
+			end
+			if((PERMASTATE.forcedBankBags[proto.itemId] and
+				(iif == investigateBank)) or
+				((count > smallestBag.count) and
+					((not biggestBag) or
+					(biggestBag.count < count))))
+			then
+				print("biggestBag: "..proto.name.." ("..count.." slots)");
 				biggestBag = {o=o, bagSlot=bagSlot, slot=slot, count=count};
 			end
 		end
 	end, function(bagSlot, slot)
-		if(bagSlot == smallestBag.bagSlot) then
+		if((bagSlot == smallestBag.bagSlot) or (not genericBags[bagSlot])) then
 			return;
 		end
 		freeSlotCount = freeSlotCount + 1
 		freeSlots[freeSlotCount] = {bagSlot=bagSlot, slot=slot};
 	end);
 	if(not biggestBag) then
+		--print("not biggestBag");
 		return false;
 	end
 	if(itemsInSmallestBagCount > freeSlotCount) then
@@ -736,6 +773,72 @@ end
 function doBags()
 	if(baseDoBags(investigateBags, investigateInventory, 4)) then return true; end
 	return baseDoBags(investigateBankBags, investigateBank);
+end
+
+local sItemToBagTypeMap = {
+	-- we don't need to handle these.
+	--[BAG_FAMILY_NONE] = nil,
+	--[BAG_FAMILY_KEYS]
+
+	-- requires non-container itemClass.
+	--[BAG_FAMILY_ARROWS] = ITEM_SUBCLASS_QUIVER,
+	--[BAG_FAMILY_BULLETS] = ITEM_SUBCLASS_AMMO_POUCH,
+
+	[BAG_FAMILY_SOUL_SHARDS] = ITEM_SUBCLASS_SOUL_CONTAINER,
+	[BAG_FAMILY_HERBS] = ITEM_SUBCLASS_HERB_CONTAINER,
+	[BAG_FAMILY_ENCHANTING_SUPP] = ITEM_SUBCLASS_ENCHANTING_CONTAINER,
+	[BAG_FAMILY_ENGINEERING_SUPP] = ITEM_SUBCLASS_ENGINEERING_CONTAINER,
+
+	-- added in patch 2.0.3
+	--ITEM_SUBCLASS_GEM_CONTAINER
+	--ITEM_SUBCLASS_MINING_CONTAINER
+	--ITEM_SUBCLASS_LEATHERWORKING_CONTAINER
+};
+
+local function itemCanGoInBag(o, bag)
+	local op = itemProtoFromObject(o);
+	local bp = itemProtoFromObject(bag);
+	assert(bp.itemClass == ITEM_CLASS_CONTAINER);
+	assert(bp.subClass ~= ITEM_SUBCLASS_CONTAINER);
+	return bp.subClass == sItemToBagTypeMap[o.BagFamily];
+end
+
+function moveProfessionItems()
+	-- first, find all profession bags.
+	local profBags = {};	-- bagSlot:{bag, freeSlots(i:slot)}
+	investigateBankBags(function(bag, bagSlot, slotCount)
+		local proto = itemProtoFromObject(bag);
+		if(not proto) then return false; end
+		if(proto.subClass ~= ITEM_SUBCLASS_CONTAINER) then
+			profBags[bagSlot] = {bag=bag, freeSlots={}};
+		end
+	end);
+	if(not next(profBags)) then return false; end
+	-- then find free slots in the profBags.
+	investigateBank(function(o, bagSlot, slot)
+	end, function(bagSlot, slot)
+		if(profBags[bagSlot]) then
+			table.insert(profBags[bagSlot].freeSlots, slot);
+		end
+	end);
+	--if((freeSlotCount == 0) or (not next(itemsThatCanBeMoved)) then return false; end
+	-- then, find items that would fit in one of the bags that aren't in one.
+	-- and assign them to free slots.
+	local swapCount = 0;
+	investigateBank(function(o, bagSlot, slot)
+		if(not profBags[bagSlot]) then
+			for dstBag,pb in pairs(profBags) do
+				if((#pb.freeSlots > 0) and itemCanGoInBag(o, pb.bag)) then
+					-- use and remove the last free slot.
+					send(CMSG_SWAP_ITEM, {dstbag=dstBag, dstslot=pb.freeSlots[#pb.freeSlots],
+						srcbag=bagSlot, srcslot=slot});
+					table.insert(pb.freeSlots[#pb.freeSlots]);
+					swapCount = swapCount + 1;
+				end
+			end
+		end
+	end);
+	return swapCount > 0;
 end
 
 function getItemCounts()

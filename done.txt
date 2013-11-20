@@ -58,3 +58,7 @@
  * If the trade window should close, abort cast.
 ** We need to know which ones of our party members are bots.
  * Have them announce it in addon party chat ("amBot"), like "amTank" and "amHealer".
+
+** Profession Bags.
+ * Store as many matching items as possible in such bags.
+** Option to force-equip bags.

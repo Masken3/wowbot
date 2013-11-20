@@ -255,6 +255,7 @@ if(rawget(_G, 'STATE') == nil) then
 		-- set of itemIds.
 		undisenchantable = {},
 		shouldLoot = {},
+		forcedBankBags = {},
 	}
 
 	-- type-securing STATE is too much work, but at least we can prevent unregistered members.
