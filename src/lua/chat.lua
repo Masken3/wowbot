@@ -434,6 +434,10 @@ local function fish(p)
 				equip(o.guid, o.values[OBJECT_FIELD_ENTRY], EQUIPMENT_SLOT_MAINHAND)
 				success = true
 			end
+			if(not isFishingPole(o) and hasFishingEnchantment(o)) then
+				forceEquip(o.guid)
+			end
+			-- todo: use bait
 		end)
 		if(not success) then
 			reply(p, "I don't have a Fishing Pole!")

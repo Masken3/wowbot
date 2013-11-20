@@ -515,6 +515,25 @@ local function addSpellValueFromItem(v, proto, ci, verbose)
 	return v;
 end
 
+function hasFishingEnchantment(o)
+	local proto = itemProtoFromObject(o);
+	for i,spell in ipairs(proto.spells) do
+		if(spell.trigger == ITEM_SPELLTRIGGER_ON_EQUIP and spell.id ~= 0) then
+			local s = cSpell(spell.id);
+			for j,e in ipairs(s.effect) do
+				--local points = calcAvgEffectPoints(level, e);
+				if(e.id == SPELL_EFFECT_APPLY_AURA and
+					e.applyAuraName == SPELL_AURA_MOD_SKILL and
+					e.miscValue == 356)	-- Fishing
+				then
+					return true;
+				end
+			end
+		end
+	end
+	return false;
+end
+
 -- only call this function if itemProtoFromId(id) returns non-nil.
 function valueOfItem(id, guid, verbose)
 	local ip = itemProtoFromId(id);
