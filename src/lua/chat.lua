@@ -177,7 +177,7 @@ function hSMSG_TRADE_STATUS(p)
 		if(next(STATE.tradeGiveItems)) then
 			local tradeSlot = 0
 			investigateInventory(function(o, bagSlot, slot)
-				local itemId = o.values[OBJECT_FIELD_ENTRY]
+				local itemId = o.values[OBJECT_FIELD_ENTRY] or 0
 				if(STATE.tradeGiveItems[itemId]) then
 					send(CMSG_SET_TRADE_ITEM, {tradeSlot = tradeSlot, bag = bagSlot, slot = slot})
 					print(tradeSlot..": "..itemId..' '..o.guid:hex())

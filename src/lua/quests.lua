@@ -88,6 +88,11 @@ function hSMSG_GOSSIP_MESSAGE(p)
 	print("SMSG_GOSSIP_MESSAGE", dump(p));
 	local o = STATE.knownObjects[p.guid];
 	if(o.bot.chat) then
+		if(p.questCount == 0 and p.gossipCount == 0) then
+			STATE.questFinishers[p.guid] = nil;
+			STATE.questGivers[p.guid] = nil;
+			return;
+		end
 		for i,g in ipairs(p.gossips) do
 			if(i == o.bot.chat) then
 				partyChat(g.message);

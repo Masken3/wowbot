@@ -601,6 +601,15 @@ local function lineFromPoints(p1, p2)
 	return a, b, c;
 end
 
+function getClosest(c, objects);
+	for i,o in pairs(objects) do
+		if(distanceToObject(o) < distanceToObject(c)) then
+			c = o;
+		end
+	end
+	return c;
+end
+
 -- returns true if we've arrived, false if still moving,
 -- nil if enemies are nearby or it's otherwise impossible to move to target.
 function doMoveToTargetIfNoHostilesAreNear(realTime, mo, maxDist)
@@ -608,12 +617,15 @@ function doMoveToTargetIfNoHostilesAreNear(realTime, mo, maxDist)
 	local tarPos = mo.location.position;
 	local diff = diff3(myPos, tarPos);
 
-	-- our calculations are 2D, so don't move in 3D.
-	if(math.abs(diff.z) > 10) then return nil; end
-
 	-- if we're close enough, ignore hostiles.
 	local dist = length2(diff);
 	if(dist < maxDist) then goto continue; end
+
+	-- our calculations are 2D, so don't move in 3D.
+	if(math.abs(diff.z) > 10) then
+		print("diff.z: "..diff.z);
+		return nil;
+	end
 
 	do
 		local a, b, c = lineFromPoints(myPos, tarPos);
@@ -623,7 +635,10 @@ function doMoveToTargetIfNoHostilesAreNear(realTime, mo, maxDist)
 				local distToLine = (a*p.x + b*p.y - c) / ((a^2 + b^2)^0.5);
 				local distToMe = distanceToObject(o);
 				--if((distToLine < 40) and (distToMe < 80)) then return nil; end
-				if(distToMe < 60) then return nil; end
+				if(distToMe < 60) then
+					print("distToMe: "..distToMe);
+					return nil;
+				end
 			end
 		end
 	end

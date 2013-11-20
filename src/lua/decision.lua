@@ -179,6 +179,7 @@ function decision(realTime)
 	-- if we have quest finishers or givers, go to them.
 	local i, finisher = next(STATE.questFinishers);
 	if(finisher) then
+		finisher = getClosest(finisher, STATE.questFinishers);
 		if(finishQuests(finisher)) then
 			setAction("Finishing quests at "..finisher.guid:hex());
 			return;
@@ -186,6 +187,7 @@ function decision(realTime)
 	end
 	local i, giver = next(STATE.questGivers);
 	if(giver and PERMASTATE.autoQuestGet) then
+		finisher = getClosest(finisher, STATE.questGivers);
 		if(getQuests(giver)) then
 			setAction("Getting quests at "..giver.guid:hex());
 			return;
@@ -636,6 +638,7 @@ function doPickLockOnItem(realTime)
 	investigateInventory(function(o)
 		if(haveSkillToOpenItem(o)) then
 			partyChat("Unlocking "..itemLink(o).."...");
+			moveStop();
 			castSpellAtItem(s.id, o);
 			done = true;
 			return false;
