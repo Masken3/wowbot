@@ -36,10 +36,14 @@ function hSMSG_QUEST_QUERY_RESPONSE(p)
 end
 
 local function wantQuest(q, p)
+	local eom = q.title:find('Egg-O-Matic', 0, true);
+	--print("wantQuest "..q.questId.." "..q.title.." "..tostring(eom));
 	local known = STATE.knownQuests[q.questId];
 	if(q.title:find('Donation') or
+		eom or
 		known.type == QUEST_TYPE_PVP)
 	then
+		print("Do not want: "..q.questId.." "..q.title);
 		local giver = STATE.knownObjects[p.guid];
 		local npcId = giver.values[OBJECT_FIELD_ENTRY];
 		if(giver.bot.questOverride) then return true; end
@@ -280,9 +284,10 @@ local function questItemCheck(itemId, objectiveTestFunction)
 	for i=PLAYER_QUEST_LOG_1_1,PLAYER_QUEST_LOG_LAST_1,3 do
 		local questId = STATE.my.values[i];
 		local state = STATE.my.values[i+1];
-		if(questId and (questId > 0) and ((not state) or (bit32.band(state, 0xFF) == QUEST_STATE_NONE))) then
+		local q = questId and STATE.knownQuests[questId];
+		if(q and ((not state) or (bit32.band(state, 0xFF) == QUEST_STATE_NONE))) then
 			--print("checking active quest "..questId..": ", dump(STATE.knownQuests[questId].objectives));
-			for j, o in ipairs(STATE.knownQuests[questId].objectives) do
+			for j, o in ipairs(q.objectives) do
 				if((o.itemId == itemId) and objectiveTestFunction(o)) then
 					print("found quest "..questId);
 					return true;
@@ -314,4 +319,8 @@ end
 function hSMSG_QUEST_CONFIRM_ACCEPT(p)
 	print("SMSG_QUEST_CONFIRM_ACCEPT", dump(p));
 	send(CMSG_QUEST_CONFIRM_ACCEPT, p);
+end
+
+function hSMSG_QUESTGIVER_QUEST_INVALID(p)
+	print("SMSG_QUESTGIVER_QUEST_INVALID", dump(p));
 end

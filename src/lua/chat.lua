@@ -598,7 +598,7 @@ local function skills(p)
 	reply(p, msg)
 end
 
-local function equip(p)
+local function lEquip(p)
 	local itemId = tonumber(p.text:sub(7))
 	local found = false
 	investigateInventory(function(o, bagSlot, slot)
@@ -837,7 +837,7 @@ function handleChatMessage(p)
 	elseif(p.text == 'skills') then
 		skills(p)
 	elseif(p.text:startWith('equip ')) then
-		equip(p)
+		lEquip(p)
 	elseif(p.text:startWith('spells ')) then
 		spells(p)
 	elseif(p.text == 'n') then

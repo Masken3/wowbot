@@ -1265,3 +1265,8 @@ void pSMSG_ATTACKERSTATEUPDATE(pLUA_ARGS) {
 	M(uint32, damage);
 	// there's more, but we don't need it.
 }
+
+void pSMSG_QUESTGIVER_QUEST_INVALID(pLUA_ARGS) {
+	PL_START;
+	M(uint32, code);	// see QuestFailedReasons in QuestDef.h
+}

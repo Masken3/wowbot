@@ -187,7 +187,7 @@ function decision(realTime)
 	end
 	local i, giver = next(STATE.questGivers);
 	if(giver and PERMASTATE.autoQuestGet) then
-		finisher = getClosest(finisher, STATE.questGivers);
+		giver = getClosest(giver, STATE.questGivers);
 		if(getQuests(giver)) then
 			setAction("Getting quests at "..giver.guid:hex());
 			return;
@@ -681,11 +681,11 @@ local function baseDoBags(bif, iif, minBagCount)
 		end
 	end);
 	if(minBagCount and bagCount < minBagCount) then
-		print("bagCount: "..bagCount.." minBagCount: "..minBagCount);
+		--print("bagCount: "..bagCount.." minBagCount: "..minBagCount);
 		return false;
 	end
 	if(not smallestBag) then
-		print("not smallestBag");
+		--print("not smallestBag");
 		return false;
 	end
 	local itemsInSmallestBag = {}	-- o:slot

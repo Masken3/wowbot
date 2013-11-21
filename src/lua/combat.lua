@@ -108,6 +108,7 @@ local function avgMainhandDamage()
 	if(not weaponGuid) then return 0; end
 	local weapon = STATE.knownObjects[weaponGuid];
 	local proto = itemProtoFromId(weapon.values[OBJECT_FIELD_ENTRY]);
+	if(not proto) then return 0; end
 	local avg = avgItemDamage(proto);
 	local attackPower = STATE.my.values[UNIT_FIELD_ATTACK_POWER] or 0;
 	avg = avg + (attackPower / 14) * normalizationSpeed(proto);
@@ -709,7 +710,7 @@ function doCrowdControl(realTime)
 	local count = 0;
 	for guid,o in pairs(STATE.enemies) do
 		local info = STATE.knownCreatures[o.values[OBJECT_FIELD_ENTRY]];
-		if(bit32.btest(STATE.ccSpell.TargetCreatureType, creatureTypeMask(info)) and
+		if(info and bit32.btest(STATE.ccSpell.TargetCreatureType, creatureTypeMask(info)) and
 			((o.bot.ccTime or 0) + 5 < realTime) and
 			(not hasCrowdControlAura(o)))
 		then
@@ -855,6 +856,7 @@ function shootSpell()
 	local proto = itemProtoFromId(itemIdOfGuid(rangedWeaponGuid));
 	for id,s in pairs(STATE.attackSpells) do
 		if(s.EquippedItemClass == ITEM_CLASS_WEAPON and
+			proto and
 			bit32.btest(s.EquippedItemSubClassMask, 2 ^ proto.subClass))
 		then
 			return s;

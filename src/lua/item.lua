@@ -98,10 +98,32 @@ end
 
 -- returns one of enum EquipmentSlots.
 function itemEquipSlot(proto)
+	print("itemEquipSlot "..proto.name);
+
+	--[[
+	-- rogues must have a dagger in their main hand.
+	if(STATE.myClassName == 'Rogue' and
+		proto.itemClass == ITEM_CLASS_WEAPON)
+	then
+		-- TEMP: rogues must have a dagger in their main hand.
+		if(proto.subClass == ITEM_SUBCLASS_WEAPON_DAGGER) then
+			print("mainhand only.");
+			return EQUIPMENT_SLOT_MAINHAND;
+		elseif(proto.InventoryType == INVTYPE_WEAPONMAINHAND) then
+			print("not mainhand.");
+			return nil;
+		elseif(proto.InventoryType == INVTYPE_WEAPON) then
+			print("offhand only.");
+			return EQUIPMENT_SLOT_OFFHAND;
+		end
+	end
+	--]]
+
 	--print("itemSlotIndex("..proto.InventoryType..")", dump(itemInventoryToEquipmentSlot));
 	if((proto.InventoryType == INVTYPE_WEAPON) and (not canDualWield())) then
 		return EQUIPMENT_SLOT_MAINHAND;
 	end
+	-- tanks may not use 2handers or off-hand items except shields.
 	if(STATE.amTank and (
 		proto.InventoryType == INVTYPE_2HWEAPON or
 		proto.InventoryType == INVTYPE_WEAPONOFFHAND or
@@ -514,6 +536,8 @@ local function addSpellValueFromItem(v, proto, ci, verbose)
 			v = addItemSpellValue(v, mods, cSpell(spell.id), proto, ci, verbose);
 		elseif(spell.trigger == ITEM_SPELLTRIGGER_CHANCE_ON_HIT and spell.id ~= 0) then
 			v = addItemSpellValue(v, mods, cSpell(spell.id), proto, ci, verbose, 0.3);
+		elseif(spell.trigger == ITEM_SPELLTRIGGER_ON_USE) then
+			-- ignore it, since we don't have any code for using such items.
 		elseif(spell.id ~= 0) then
 			local s = cSpell(spell.id);
 			print("WARN: unhandled trigger "..spell.trigger..
@@ -755,7 +779,6 @@ function equip(itemGuid, itemId, slot)
 	print(msg);
 	partyChat(msg);
 
-	-- todo: for items that can go in more than one slot, pick a good one.
 	send(CMSG_AUTOEQUIP_ITEM_SLOT, {itemGuid=itemGuid, dstSlot=slot});
 end
 

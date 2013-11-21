@@ -56,6 +56,7 @@ typedef struct WorldSession WorldSession;
 	m(SMSG_QUEST_CONFIRM_ACCEPT)\
 	m(SMSG_NEW_WORLD)\
 	m(SMSG_ATTACKERSTATEUPDATE)\
+	m(SMSG_QUESTGIVER_QUEST_INVALID)\
 
 #define pLUA_ARGS WorldSession* session, const char* buf, uint16 bufSize
 
