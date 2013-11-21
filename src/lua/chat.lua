@@ -328,7 +328,9 @@ local function gameobject(p)
 	end
 	print("Found "..count.." objects.")
 	if(closestObject) then
-		partyChat(closestObject.guid:hex()..": "..distance3(myPos, closestPos).." yards.")
+		objectNameQuery(closestObject, function(name)
+			partyChat(tostring(name)..": "..distance3(myPos, closestPos).." yards.")
+		end)
 		--send(CMSG_GAMEOBJ_USE, {guid=closestObject.guid})
 		--castSpellAtGO(22810, closestObject)
 

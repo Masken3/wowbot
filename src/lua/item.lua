@@ -377,17 +377,18 @@ local function addModValues(v, mods, p, ci, verbose)
 	return v;
 end
 
-local function addItemSpellValue(v, mods, s, proto, ci, verbose)
+local function addItemSpellValue(v, mods, s, proto, ci, verbose, pointFactor)
 --print(s.name, e.spellId);
+	pointFactor = pointFactor or 1;
 	local level = spellLevel(s);
 	for j,se in ipairs(s.effect) do
-		local points = calcAvgEffectPoints(level, se);
+		local points = calcAvgEffectPoints(level, se) * pointFactor;
 		if(se.id == SPELL_EFFECT_APPLY_AURA) then
 			if(se.applyAuraName == SPELL_AURA_MOD_STAT) then
 				-- for this aura, miscValue is one of the STAT_ defines (0-4).
 				local m = itemModStat[se.miscValue];
 				-- assuming level 0 here. may need modification.
-				mods[m] = (mods[m] or 0) + calcAvgEffectPoints(0, se);
+				mods[m] = (mods[m] or 0) + points;
 			elseif(se.applyAuraName == SPELL_AURA_MOD_DAMAGE_DONE) then
 				-- se.miscValue is schoolMask (1 << enum SpellSchools)
 
@@ -451,6 +452,8 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose)
 				print("WARN: unhandled aura "..se.applyAuraName..
 					" on spell="..s.id.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
 			end
+		elseif(se.id == SPELL_EFFECT_SCHOOL_DAMAGE) then
+			v = addDumpIf(v, points*10, "Damage", verbose)
 		elseif(se.id ~= 0) then
 			print("WARN: unhandled effect "..se.id..
 				" on spell="..s.id.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
@@ -509,6 +512,12 @@ local function addSpellValueFromItem(v, proto, ci, verbose)
 	for i,spell in ipairs(proto.spells) do
 		if(spell.trigger == ITEM_SPELLTRIGGER_ON_EQUIP and spell.id ~= 0) then
 			v = addItemSpellValue(v, mods, cSpell(spell.id), proto, ci, verbose);
+		elseif(spell.trigger == ITEM_SPELLTRIGGER_CHANCE_ON_HIT and spell.id ~= 0) then
+			v = addItemSpellValue(v, mods, cSpell(spell.id), proto, ci, verbose, 0.3);
+		elseif(spell.id ~= 0) then
+			local s = cSpell(spell.id);
+			print("WARN: unhandled trigger "..spell.trigger..
+				" on spell="..s.id.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
 		end
 	end
 	v = addModValues(v, mods, proto, ci, verbose and 1);
