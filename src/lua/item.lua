@@ -98,7 +98,7 @@ end
 
 -- returns one of enum EquipmentSlots.
 function itemEquipSlot(proto)
-	print("itemEquipSlot "..proto.name);
+	--print("itemEquipSlot "..proto.name);
 
 	--[[
 	-- rogues must have a dagger in their main hand.

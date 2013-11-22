@@ -569,7 +569,9 @@ end
 function doHeal(realTime)
 	local healSpell, points = mostEffectiveSpell(realTime, STATE.healingSpells, true);
 	if(not healSpell) then return; end
-	-- TODO: if we don't have enough mana to cast the spell, don't try.
+	-- if an AoE attack would serve us better, do that.
+	if(doAoeHeal(realTime, healSpell, points)) then return true; end
+	-- if we don't have enough mana to cast the spell, don't try.
 	-- TODO: heal all allies, not just toons.
 	for i,m in ipairs(STATE.groupMembers) do
 		local o = STATE.knownObjects[m.guid];
@@ -1151,6 +1153,40 @@ function doAoeAttack(realTime, singleTargetSpell)
 		end
 	end
 	if(s.ppc * targetCount < singleTargetSpell.ppc) then return false; end
+
+	-- Go to ally and cast spell.
+	return doSpell(false, realTime, target, s, 1);
+end
+
+function doAoeHeal(realTime, singleTargetSpell, singleTargetPoints)
+	-- Find our best AoE spell.
+	local s, aoePoints = mostEffectiveSpell(realTime, STATE.aoeHealSpells, true);
+	if(not s) then return false; end
+
+	local radius = cSpellRadius(s.effect[1].radiusIndex).radius;
+
+	-- Figure out how much the AoE spell would heal, given optimum position.
+	local target
+	local healAmountForTarget = 0
+	for i,m in ipairs(STATE.groupMembers) do
+		local o = STATE.knownObjects[m.guid];
+		if(o) then
+			local amount = 0
+			for j,n in pairs(STATE.groupMembers) do
+				local p = STATE.knownObjects[n.guid];
+				if(p and distance3(o.location.position, p.location.position) < radius) then
+					local maxHealth = p.values[UNIT_FIELD_MAXHEALTH];
+					local health = p.values[UNIT_FIELD_HEALTH];
+					amount = amount + math.min(maxHealth - health, aoePoints);
+				end
+			end
+			if(amount > healAmountForTarget) then
+				target = o;
+				healAmountForTarget = amount;
+			end
+		end
+	end
+	if(healAmountForTarget < singleTargetPoints) then return false; end
 
 	-- Go to ally and cast spell.
 	return doSpell(false, realTime, target, s, 1);

@@ -159,6 +159,7 @@ if(rawget(_G, 'STATE') == nil) then
 		enemyDispelSpells = {},
 		sapSpell = false,
 		aoeAttackSpells = {},
+		aoeHealSpells = {},
 
 		pullPosition = false,	-- Position.
 
@@ -1162,6 +1163,17 @@ local function learnSpell(id)
 			end
 			STATE.healingSpells[id] = s;
 		end
+
+		-- aoe heals
+		if(e.id == SPELL_EFFECT_HEAL and
+			(e.implicitTargetA == TARGET_ALL_PARTY_AROUND_CASTER))
+		then
+			if(not STATE.aoeHealSpells[id]) then
+				print("h"..id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
+			end
+			STATE.aoeHealSpells[id] = s;
+		end
+
 		-- disenchant
 		if(e.id == SPELL_EFFECT_DISENCHANT) then
 			STATE.disenchantSpell = id;
