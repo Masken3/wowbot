@@ -44,3 +44,7 @@ for next dungeon:
 ** AoE heal: fix double-casting by updating party member health on SPELL_GO.
 
 ** Handle effects on items from Maraudon.
+
+** Handle two-handed vs main+off item valuation properly.
+
+** Automatically use Salt Shaker and Transmute Arcanite when mats and cooldowns allow.

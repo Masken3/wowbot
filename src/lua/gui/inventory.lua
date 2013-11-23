@@ -128,7 +128,7 @@ local function getClickInfo(t, button)
 				end}
 			end
 		end
-	elseif(button == SDL_BUTTON_RIGHT and isBankItem) then
+	elseif(button == SDL_BUTTON_RIGHT and (isBankItem or isBankBag)) then
 		if(plain and t.proto.InventoryType == INVTYPE_BAG) then
 			return {description="Toggle 'forced bank bag'", f=function()
 				PERMASTATE.forcedBankBags[itemId] = (not PERMASTATE.forcedBankBags[itemId]) or nil
