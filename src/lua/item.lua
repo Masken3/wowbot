@@ -174,6 +174,7 @@ function itemSkillSpell(proto)
 end
 
 
+-- returns false, or slot [, valueDiff]
 function wantToWear(id, guid, verbose)
 	-- this is tricky.
 	-- we don't want to wear anything we can't wear.

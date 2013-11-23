@@ -15,10 +15,11 @@ for next dungeon:
 
 ** sap.	TEST
 
+** Nerf Creeping Sludge (Maraudon)
 
 ** polymorph doesn't affect some enemies at first.
  * in 3-enemy battles, only after the first is dead does the second get sheeped.
-** Don't cc when there's only one enemy.
+** Don't cc when there's only one enemy.	DONE?
 
 ** PersistentAreaAura spells should have cooldown >= duration.
 ** Fix AreaAura spells.
@@ -35,3 +36,11 @@ for next dungeon:
 ** Trigger quest area-explore objectives.
  * Requires that CMSG_AREATRIGGER be sent when you've entered the area.
  * We'll need a grid hash map of all area triggers, for quick lookup.
+
+** Auto-drink useful elixirs near battle.
+
+** Don't stand in the fire!
+
+** AoE heal: fix double-casting by updating party member health on SPELL_GO.
+
+** Handle effects on items from Maraudon.
