@@ -1168,25 +1168,35 @@ function doAoeHeal(realTime, singleTargetSpell, singleTargetPoints)
 	-- Figure out how much the AoE spell would heal, given optimum position.
 	local target
 	local healAmountForTarget = 0
+	local nearbyAllies
 	for i,m in ipairs(STATE.groupMembers) do
 		local o = STATE.knownObjects[m.guid];
 		if(o) then
 			local amount = 0
+			local allies = {}
 			for j,n in pairs(STATE.groupMembers) do
 				local p = STATE.knownObjects[n.guid];
 				if(p and distance3(o.location.position, p.location.position) < radius) then
 					local maxHealth = p.values[UNIT_FIELD_MAXHEALTH];
 					local health = p.values[UNIT_FIELD_HEALTH];
 					amount = amount + math.min(maxHealth - health, aoePoints);
+					allies[o.guid] = o;
 				end
 			end
 			if(amount > healAmountForTarget) then
 				target = o;
 				healAmountForTarget = amount;
+				nearbyAllies = allies;
 			end
 		end
 	end
 	if(healAmountForTarget < singleTargetPoints) then return false; end
+
+	s.goCallback = function()
+		for guid,o in pairs(nearbyAllies) do
+			o.values[UNIT_FIELD_HEALTH] = o.values[UNIT_FIELD_HEALTH] + aoePoints;
+		end
+	end
 
 	-- Go to ally and cast spell.
 	return doSpell(false, realTime, target, s, 1);

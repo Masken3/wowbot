@@ -15,8 +15,6 @@ for next dungeon:
 
 ** sap.	TEST
 
-** Nerf Creeping Sludge (Maraudon)
-
 ** polymorph doesn't affect some enemies at first.
  * in 3-enemy battles, only after the first is dead does the second get sheeped.
 ** Don't cc when there's only one enemy.	DONE?
@@ -40,10 +38,6 @@ for next dungeon:
 ** Auto-drink useful elixirs near battle.
 
 ** Don't stand in the fire!
-
-** AoE heal: fix double-casting by updating party member health on SPELL_GO.
-
-** Handle effects on items from Maraudon.
 
 ** Handle two-handed vs main+off item valuation properly.
 

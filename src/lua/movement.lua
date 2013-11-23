@@ -623,7 +623,9 @@ function doMoveToTargetIfNoHostilesAreNear(realTime, mo, maxDist)
 
 	-- our calculations are 2D, so don't move in 3D.
 	if(math.abs(diff.z) > 10) then
-		print("diff.z: "..diff.z);
+		objectNameQuery(mo, function(name)
+			print("diff.z: "..diff.z.." ("..name..")");
+		end);
 		return nil;
 	end
 
@@ -636,7 +638,9 @@ function doMoveToTargetIfNoHostilesAreNear(realTime, mo, maxDist)
 				local distToMe = distanceToObject(o);
 				--if((distToLine < 40) and (distToMe < 80)) then return nil; end
 				if(distToMe < 60) then
-					print("distToMe: "..distToMe);
+					objectNameQuery(mo, function(name)
+						print("distToMe: "..distToMe.." ("..name..")");
+					end);
 					return nil;
 				end
 			end

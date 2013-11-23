@@ -674,7 +674,7 @@ function objectNameQuery(o, callback)
 		return;
 	end
 	if(isGameObject(o)) then
-		gameObjectInfo(o, function(info)
+		gameObjectInfo(o, function(o, info)
 			callback(info.name);
 		end)
 		return;

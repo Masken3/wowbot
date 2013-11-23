@@ -64,3 +64,8 @@
 ** Option to force-equip bags.
 
 ** AoE Heal.
+** AoE heal: fix double-casting by updating party member health on SPELL_GO.
+
+** Nerf Creeping Sludge (Maraudon)	DONE, as much as possible. Don't know if it works.
+
+** Handle effects on items from Maraudon.

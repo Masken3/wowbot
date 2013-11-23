@@ -802,7 +802,7 @@ function forceEquip(itemGuid)
 	local proto = itemProtoFromId(id);
 	local slot = itemEquipSlot(proto);
 	if(type(slot) == 'table') then
-		slot = slot[2];
+		slot = slot[1];
 	end
 	equip(itemGuid, id, slot);
 end
