@@ -468,7 +468,7 @@ function itemIsOnCooldown(proto)
 	return false
 end
 
-function gUseItem(itemId)
+function gUseItem(itemId, target)
 	local msg = 'Using item:'
 	local done = false
 	moveStop()
@@ -501,7 +501,12 @@ function gUseItem(itemId)
 			elseif(itemIsOnCooldown(proto)) then
 				return false
 			elseif(s) then
-				useItemOnEquipment(getRealTime(), o, bagSlot, slot, s)
+				if(target) then
+					send(CMSG_USE_ITEM, {slot = slot, bag = bagSlot, spellCount = 0,
+						targetFlags = TARGET_FLAG_UNIT, unitTarget = target.guid})
+				else
+					useItemOnEquipment(getRealTime(), o, bagSlot, slot, s)
+				end
 			else
 				STATE.casting = getRealTime()
 				send(CMSG_USE_ITEM, {slot = slot, bag = bagSlot, spellCount = 0, targetFlags = 0})
@@ -513,8 +518,10 @@ function gUseItem(itemId)
 end
 
 local function useItem(p)
+	local targetGuid = guidFromValues(STATE.knownObjects[p.senderGuid], UNIT_FIELD_TARGET)
+	local target = STATE.knownObjects[targetGuid]
 	local itemId = tonumber(p.text:sub(5))
-	reply(p, gUseItem(itemId))
+	reply(p, gUseItem(itemId, target))
 end
 
 local function disenchant(p)
