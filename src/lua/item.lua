@@ -331,6 +331,11 @@ ClassInfo = {
 	},
 }
 
+-- if this returns true, ranged attack power is useless.
+local function isCaster(ci)
+	return ci.ranged and (ci.primary ~= STAT_AGILITY);
+end
+
 local itemModStat = {
 	[STAT_STRENGTH] = ITEM_MOD_STRENGTH,
 	[STAT_AGILITY] = ITEM_MOD_AGILITY,
@@ -357,7 +362,7 @@ local function addDamageValueRaw(v, dps, isRangedDamage, ci, verbose)
 	-- likewise, damage is worthless on ranged weapons for melee characters.
 	-- there are some non-weapon items with damage on them,
 	-- but they're too rare to bother with now.
-	if(isRangedDamage and ci.ranged)
+	if(isRangedDamage and ci.ranged and (not isCaster(ci)))
 	then
 		v = addDumpIf(v, dps * 100, "DPS ranged", verbose);
 	elseif(not isRangedDamage and not ci.ranged) then
@@ -468,15 +473,36 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose, pointFactor)
 					v = addDumpIf(v, points*(STATE.myLevel^1.5), "Block%+", verbose)
 				end
 			elseif(se.applyAuraName == SPELL_AURA_MOD_DODGE_PERCENT) then
-				if(STATE.amTank) then
-					v = addDumpIf(v, points*(STATE.myLevel^1.5), "Dodge%+", verbose)
-				end
+				local factor = 10
+				if(STATE.amTank) then factor = (STATE.myLevel^1.5) end
+				v = addDumpIf(v, points*factor, "Dodge%+", verbose)
+			elseif(se.applyAuraName == SPELL_AURA_PERIODIC_HEAL) then
+				local factor = 10
+				if(STATE.amTank) then factor = 50 end
+				v = addDumpIf(v, points * factor, "HP"..(se.amplitude / 1000), verbose)
+			elseif(se.applyAuraName == SPELL_AURA_MOD_HEALTH_REGEN_IN_COMBAT) then
+				-- this does the exact same thing as SPELL_AURA_PERIODIC_HEAL, with less options.
+				-- weird, eh?
+				local factor = 10
+				if(STATE.amTank) then factor = 50 end
+				v = addDumpIf(v, points * factor, "HP5", verbose)
+			elseif(se.applyAuraName == SPELL_AURA_MOD_POWER_REGEN) then
+				local factor = 1
+				if(isCaster(ci)) then factor = 50 end
+				v = addDumpIf(v, points * factor, "MP5", verbose)
+			elseif(se.applyAuraName == SPELL_AURA_MOD_MOUNTED_SPEED_ALWAYS) then
+				-- pretty worthless.
+				v = addDumpIf(v, points, "Mount speed", verbose)
 			else
 				print("WARN: unhandled aura "..se.applyAuraName..
 					" on spell="..s.id.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
 			end
 		elseif(se.id == SPELL_EFFECT_SCHOOL_DAMAGE) then
-			v = addDumpIf(v, points*10, "Damage", verbose)
+			local factor = 100
+			if(isCaster(ci)) then factor = 10 end
+			v = addDumpIf(v, points*factor, "Damage", verbose)
+		elseif(se.id == SPELL_EFFECT_ADD_EXTRA_ATTACKS) then
+			v = addDamageValueFromItem(v, avgItemDamage(proto)*pointFactor, proto, ci, verbose);
 		elseif(se.id ~= 0) then
 			print("WARN: unhandled effect "..se.id..
 				" on spell="..s.id.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
@@ -536,7 +562,12 @@ local function addSpellValueFromItem(v, proto, ci, verbose)
 		if(spell.trigger == ITEM_SPELLTRIGGER_ON_EQUIP and spell.id ~= 0) then
 			v = addItemSpellValue(v, mods, cSpell(spell.id), proto, ci, verbose);
 		elseif(spell.trigger == ITEM_SPELLTRIGGER_CHANCE_ON_HIT and spell.id ~= 0) then
-			v = addItemSpellValue(v, mods, cSpell(spell.id), proto, ci, verbose, 0.3);
+			-- this proc-factor estimate a very rough, but I don't think the server tells us much about it.
+			-- perhaps we can use statistics to refine an item's proc value after seeing it in action some.
+			local procFactor = 0.1;
+			if(proto.itemClass == ITEM_CLASS_WEAPON) then procFactor = 0.05; end
+			if(proto.itemClass == ITEM_CLASS_ARMOR) then procFactor = 0.3; end
+			v = addItemSpellValue(v, mods, cSpell(spell.id), proto, ci, verbose, procFactor);
 		elseif(spell.trigger == ITEM_SPELLTRIGGER_ON_USE) then
 			-- ignore it, since we don't have any code for using such items.
 		elseif(spell.id ~= 0) then
@@ -770,6 +801,9 @@ function forceEquip(itemGuid)
 	local id = itemIdOfGuid(itemGuid);
 	local proto = itemProtoFromId(id);
 	local slot = itemEquipSlot(proto);
+	if(type(slot) == 'table') then
+		slot = slot[2];
+	end
 	equip(itemGuid, id, slot);
 end
 
