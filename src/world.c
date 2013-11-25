@@ -39,6 +39,7 @@
 #include "SpellAuraDefinesLua.h"
 #include "worldHandlersLua.h"
 #include "ItemLua.h"
+#include "SpellMgrLua.h"
 
 #define DEFAULT_WORLDSERVER_PORT 8085
 
@@ -536,6 +537,7 @@ void initLua(WorldSession* session) {
 	SpellAuraDefinesLua(L);
 	worldHandlersLua(L);
 	ItemLua(L);
+	SpellMgrLua(L);
 }
 
 BOOL luaPcall(lua_State* L, int nargs) {

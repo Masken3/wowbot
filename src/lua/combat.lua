@@ -1065,6 +1065,7 @@ local function matchDispel(realTime, o, s, enemy)
 					effectMask = 2^e.miscValue;
 				end
 				if(bit32.btest(2^aura.Dispel, effectMask) and
+					(aura.id ~= 6819) and	-- Corrupted Stamina. Small effect, continually reapplies itself.
 					(enemy == isPositiveAura(aura)))
 				then
 					objectNameQuery(o, function(name)

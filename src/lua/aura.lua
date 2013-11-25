@@ -180,6 +180,7 @@ local auraEffectIsPositiveTable = {
 	[SPELL_AURA_PREVENTS_FLEEING] = alwaysNegative,
 	[SPELL_AURA_PROC_TRIGGER_DAMAGE] = alwaysNegative,
 	[SPELL_AURA_MOD_PACIFY] = alwaysNegative,
+	[SPELL_AURA_MOD_LANGUAGE] = alwaysNegative,
 
 	-- neither positive or negative.
 	[SPELL_AURA_DUMMY] = function(e) return nil; end,

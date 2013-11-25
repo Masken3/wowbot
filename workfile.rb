@@ -43,6 +43,7 @@ work = ExeWork.new do
 	@SOURCE_TASKS = @REQUIREMENTS = [
 		GenTask.new('Opcodes'),
 		GenTask.new('movementFlags'),
+		GenLuaFromHeaderTask.new('SpellMgr', 'server-code/SpellMgr.h'),
 		GenLuaFromHeaderTask.new('UpdateFields', 'server-code/UpdateFields.h'),
 		GenLuaFromHeaderTask.new('updateBlockFlags', 'src/updateBlockFlags.h'),
 		GenLuaFromHeaderTask.new('SharedDefines', 'server-code/SharedDefines.h',

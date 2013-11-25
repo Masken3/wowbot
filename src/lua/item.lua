@@ -414,9 +414,15 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose, pointFactor)
 		if(se.id == SPELL_EFFECT_APPLY_AURA) then
 			if(se.applyAuraName == SPELL_AURA_MOD_STAT) then
 				-- for this aura, miscValue is one of the STAT_ defines (0-4).
-				local m = itemModStat[se.miscValue];
-				-- assuming level 0 here. may need modification.
-				mods[m] = (mods[m] or 0) + points;
+				if(se.miscValue == -2) then	-- all stats
+					for s,m in pairs(itemModStat) do
+						mods[m] = (mods[m] or 0) + points;
+					end
+				else
+					local m = itemModStat[se.miscValue];
+					-- assuming level 0 here. may need modification.
+					mods[m] = (mods[m] or 0) + points;
+				end
 			elseif(se.applyAuraName == SPELL_AURA_MOD_DAMAGE_DONE) then
 				-- se.miscValue is schoolMask (1 << enum SpellSchools)
 
@@ -454,7 +460,24 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose, pointFactor)
 					v = addDumpIf(v, points*10, "Healing+", verbose)
 				end
 			elseif(se.applyAuraName == SPELL_AURA_PROC_TRIGGER_SPELL) then
-				-- ignore for now
+				-- check all proc flags
+				local procFlags = s.procFlags
+				local flagsOnHit = bit32.bor(PROC_FLAG_TAKEN_MELEE_HIT, PROC_FLAG_TAKEN_MELEE_SPELL_HIT)
+				if(bit32.btest(procFlags, flagsOnHit)) then
+					-- remove the flags
+					procFlags = bit32.band(procFlags, bit32.bnot(flagsOnHit))
+					-- only if we're the tank is it useful to be hit by enemies.
+					if(STATE.amTank) then
+						local hitsPerSecond = 1	-- the approximate hits per second a tank takes.
+						local factor = hitsPerSecond * getDuration(s.DurationIndex, level) * s.procChance / 100
+						v = addItemSpellValue(v, mods, cSpell(se.triggerSpell), proto,
+							ci, verbose, pointFactor)
+					end
+				end
+				if(procFlags ~= 0) then
+					print("WARN: unhandled procFlags 0x"..hex(procFlags)..
+						" on spell="..s.id.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
+				end
 			elseif(se.applyAuraName == SPELL_AURA_MOD_MANA_REGEN_INTERRUPT) then
 				v = addDumpIf(v, points*20, "Casting Mana Regen+%", verbose)
 			elseif(se.applyAuraName == SPELL_AURA_MOD_SKILL) then
@@ -493,6 +516,29 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose, pointFactor)
 			elseif(se.applyAuraName == SPELL_AURA_MOD_MOUNTED_SPEED_ALWAYS) then
 				-- pretty worthless.
 				v = addDumpIf(v, points, "Mount speed", verbose)
+			elseif(se.applyAuraName == SPELL_AURA_DUMMY) then
+				-- does different things depending on spell id.
+				if(s.id == 17670) then	-- Argent Dawn Commission
+					-- required for human players in plaguelands, scholomance and stratholme,
+					-- useless everywhere else.
+				else
+					print("WARN: unhandled dummy effect "..
+						" on spell="..s.id.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
+				end
+			elseif(se.applyAuraName == SPELL_AURA_SCHOOL_ABSORB) then
+				if(STATE.amTank) then
+					-- arbitrary factor
+					v = addDumpIf(v, points * 2, "Damage absorbtion", verbose)
+				end
+			elseif(se.applyAuraName == SPELL_AURA_DAMAGE_SHIELD) then
+				if(STATE.amTank) then
+					-- arbitrary factor
+					v = addDumpIf(v, points*200, "Damage shield", verbose)
+				end
+			elseif(se.applyAuraName == SPELL_AURA_MOD_CRIT_PERCENT) then
+				if(not isCaster(ci)) then
+					v = addDumpIf(v, points*200, "Crit%+", verbose)
+				end
 			else
 				print("WARN: unhandled aura "..se.applyAuraName..
 					" on spell="..s.id.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");

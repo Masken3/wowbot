@@ -42,3 +42,7 @@ for next dungeon:
 ** Handle two-handed vs main+off item valuation properly.
 
 ** Automatically use Salt Shaker and Transmute Arcanite when mats and cooldowns allow.
+
+** Use Slice & Dice.
+
+** Ignore repeatable quests somehow.
