@@ -325,7 +325,7 @@ BOOL readLua(WorldSession* session) {
 			if(!checkLuaFileDates(session))
 				return FALSE;
 		} else {
-			LOG("MAINFILE diff: %li %li\n", s.st_mtime, oldTime);
+			LOG("MAINFILE diff: %li %li\n", (long int)s.st_mtime, (long int)oldTime);
 		}
 	}
 

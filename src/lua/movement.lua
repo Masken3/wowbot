@@ -601,7 +601,7 @@ local function lineFromPoints(p1, p2)
 	return a, b, c;
 end
 
-function getClosest(c, objects);
+function getClosest(c, objects)
 	for i,o in pairs(objects) do
 		if(distanceToObject(o) < distanceToObject(c)) then
 			c = o;
