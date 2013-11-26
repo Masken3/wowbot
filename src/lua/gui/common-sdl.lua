@@ -42,6 +42,8 @@ local function initSDL()
 	SDL.SDL_Init(SDL_INIT_VIDEO)
 	SDLttf.TTF_Init()
 	gFont = SDLttf.TTF_OpenFont("C:/Windows/Fonts/verdana.ttf", 16)
+	--gFont = SDLttf.TTF_OpenFont(cFindFontVerdana(), 16)
+	--gFont = SDLttf.TTF_OpenFont("/usr/share/fonts/truetype/msttcorefonts/Verdana.ttf", 16)
 	SDLimage.IMG_Init(SDL.IMG_INIT_PNG)
 end
 initSDL()

@@ -90,7 +90,6 @@ static int luaPanic(lua_State *L) {
 
 int main(void) {
 	lua_State* L;
-	int res;
 
 	loadDBC();
 	loadAuxDBC();
@@ -99,6 +98,7 @@ int main(void) {
 	{
 		// Initialize Winsock
 		WSADATA wsaData;
+		int res;
 		res = WSAStartup(MAKEWORD(2,2), &wsaData);
 		if (res != 0) {
 			printf("WSAStartup failed: %d\n", res);
