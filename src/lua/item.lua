@@ -414,7 +414,7 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose, pointFactor)
 		if(se.id == SPELL_EFFECT_APPLY_AURA) then
 			if(se.applyAuraName == SPELL_AURA_MOD_STAT) then
 				-- for this aura, miscValue is one of the STAT_ defines (0-4).
-				if(se.miscValue == -2) then	-- all stats
+				if((se.miscValue == -2) or (se.miscValue == -1)) then	-- all stats
 					for s,m in pairs(itemModStat) do
 						mods[m] = (mods[m] or 0) + points;
 					end
@@ -433,7 +433,7 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose, pointFactor)
 				-- for now, we'll just ignore it.
 
 				-- all schools
-				if(se.miscValue == 0x7E) then
+				if(se.miscValue == 0x7E and (not STATE.amHealer)) then
 					v = addDumpIf(v, points*10, "Magic Damage+", verbose)
 				end
 			elseif(se.applyAuraName == SPELL_AURA_MOD_ATTACK_POWER) then
