@@ -19,6 +19,8 @@ function decision(realTime)
 		end
 	end
 
+	if(STATE.looting) then return; end
+
 	updateEnemyPositions(realTime);
 	updateMyPosition(realTime);
 	updateLeaderPosition(realTime);
@@ -313,12 +315,13 @@ function decision(realTime)
 			send(CMSG_CANCEL_CAST, {spellId=0});
 		end
 		setAction("Following leader");
-		follow(STATE.leader);
+		follow(realTime, STATE.leader);
 		--local myValues = STATE.my.values;
 		--print("Following. XP: "..tostring(myValues[PLAYER_XP])..
 			--" / "..tostring(myValues[PLAYER_NEXT_LEVEL_XP]));
 		return;
 	end
+
 	setAction("Noting to do...");
 end
 
@@ -1180,6 +1183,8 @@ function hSMSG_LOOT_RELEASE_RESPONSE(p)
 	STATE.looting = false;
 end
 
-function follow(mo)
-	doMoveToTarget(getRealTime(), mo, FOLLOW_DIST);
+function follow(realTime, mo)
+	-- move apart a little bit.
+	if((distanceToObject(mo) < FOLLOW_DIST) and doMoveApartFromGroup(realTime)) then return; end
+	doMoveToTarget(realTime, mo, FOLLOW_DIST);
 end

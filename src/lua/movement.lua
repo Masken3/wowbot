@@ -27,6 +27,14 @@ local function diff3(a, b)
 	return d
 end
 
+local function add3(a, b)
+	local d = {}
+	d.x = b.x + a.x
+	d.y = b.y + a.y
+	d.z = b.z + a.z
+	return d
+end
+
 -- returns the length of xyz vector v.
 local function length3(v)
 	local square = v.x^2 + v.y^2 + v.z^2
@@ -241,6 +249,8 @@ function hMSG_MOVE_TELEPORT_ACK(p)
 	print("MSG_MOVE_TELEPORT_ACK", dump(p));
 	STATE.myLocation.position = Position.new(p.pos);
 	STATE.myLocation.orientation = p.o;
+
+	STATE.looting = false;
 
 	-- assume all party members moved with you
 	for i,m in ipairs(STATE.groupMembers) do
@@ -558,7 +568,7 @@ function doCombatMoveBehindTarget(realTime, mo)
 end
 
 -- returns true if we're stopped in a proper position, which for this function is never.
-function doMoveToPoint(realTime, tarPos, tarDist)
+function doMoveToPoint(realTime, tarPos)
 	local myPos = STATE.myLocation.position;
 	local diff = diff3(myPos, tarPos);
 	local dist = length2(diff);
@@ -760,4 +770,27 @@ function moveStop()
 		sendMovement(MSG_MOVE_STOP);
 		STATE.moving = false;
 	end
+end
+
+-- move 1 yard away from any group member who is closer than that.
+function doMoveApartFromGroup(realTime)
+	if(realTime < (STATE.my.bot.nextMoveApart or 0)) then return false; end
+	for i,m in ipairs(STATE.groupMembers) do
+		local o = STATE.knownObjects[m.guid];
+		if(o) then
+			local d = diff3(STATE.my.location.position, o.location.position);
+			local l = length3(d);
+			if(l < 1) then
+				-- todo: let length of d be 1, not l.
+				if(l == 0) then
+					d = {x=math.random()*0.3, y=math.random()*0.3, z=0}
+				end
+				setAction('moving apart');
+				doMoveToPoint(realTime, diff3(d, STATE.my.location.position));
+				STATE.my.bot.nextMoveApart = realTime + 0.1;	-- rate limit
+				return true;
+			end
+		end
+	end
+	return false;
 end
