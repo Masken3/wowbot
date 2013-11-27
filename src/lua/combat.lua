@@ -149,7 +149,7 @@ local function comboTarget()
 	return guidFromValues(STATE.me, PLAYER_FIELD_COMBO_TARGET);
 end
 
-local function comboPoints()
+function comboPoints()
 	return bit32.extract(STATE.my.values[PLAYER_FIELD_BYTES] or 0, 8, 8);
 end
 
@@ -274,6 +274,11 @@ function canCastIgnoreStance(s, realTime)
 	return canCastBase(s, realTime, false, spellIsOnCooldown, true);
 end
 
+function requiresComboPoints(s)
+	return bit32.btest(s.AttributesEx,
+		bit32.bor(SPELL_ATTR_EX_REQ_COMBO_POINTS, SPELL_ATTR_EX_REQ_TARGET_COMBO_POINTS));
+end
+
 -- returns false or
 -- level, duration, cost, powerIndex, availablePower.
 function canCastBase(s, realTime, ignoreLowPower, coolDownTest, ignoreStance)
@@ -299,9 +304,7 @@ function canCastBase(s, realTime, ignoreLowPower, coolDownTest, ignoreStance)
 	end
 
 	-- if the spell requires combo points but we don't have any, skip it.
-	if(bit32.btest(s.AttributesEx, SPELL_ATTR_EX_REQ_TARGET_COMBO_POINTS) and
-		comboPoints() == 0)
-	then
+	if(requiresComboPoints(s) and comboPoints() == 0) then
 		if(sLog) then
 			print(s.name.." Needs combo points.");
 		end
@@ -532,12 +535,18 @@ end
 function attackSpell(dist, realTime, enemy)
 	-- look at all our spells and find the best one.
 	-- todo: also look at combatBuffSpells.
+
+	-- first, check direct damage
 	local bestSpell = mostEffectiveSpell(realTime, STATE.attackSpells, true, enemy);
 	if(not bestSpell) then
 		return false;
 	end
 	-- if an AoE attack would serve us better, do that.
 	if(doAoeAttack(realTime, bestSpell)) then return true; end
+
+	-- if any of our self buffs would be better, do that.
+	if(doSelfCombatBuff(realTime, bestSpell)) then return true; end
+
 	return doSpell(dist, realTime, enemy, bestSpell);
 end
 
@@ -596,6 +605,9 @@ local function doBuffSingle(o, realTime, buffSpells)
 			objectNameQuery(o, function(name)
 				setAction("Buffing "..name);
 			end)
+			if(requiresComboPoints(s)) then
+				o = STATE.knownObjects[guidFromValues(STATE.me, UNIT_FIELD_TARGET)];
+			end
 			return doSpell(false, realTime, o, s);
 		else
 			--print("not buffing "..s.name..": "..tostring(h).." "..tostring(c));
@@ -1201,4 +1213,22 @@ function doAoeHeal(realTime, singleTargetSpell, singleTargetPoints)
 
 	-- Go to ally and cast spell.
 	return doSpell(false, realTime, target, s, 1);
+end
+
+-- these buffs can last until the end of combat.
+-- we need statistics on our own attacks to determine their value.
+-- but for now, we'll force-apply them every time we don't have them up.
+local selfCombatBuffEffects = {
+	[SPELL_AURA_MOD_ATTACKSPEED]=true,
+	[SPELL_AURA_MOD_MELEE_HASTE]=true,
+	[SPELL_AURA_MOD_DAMAGE_DONE]=true,
+}
+
+function doSelfCombatBuff(realTime, singleTargetSpell)
+	local estimatedCombatTimeRemaining =
+		STATE.currentCombatRecord.sumEnemyHealth / STATE.averageGroupDps;
+	-- this seems way too simple. :}
+	if(not STATE.me) then return false; end
+	if(doBuffSingle(STATE.me, realTime, STATE.selfBuffSpells)) then return true; end
+	return false;
 end

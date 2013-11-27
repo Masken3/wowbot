@@ -44,5 +44,9 @@ for next dungeon:
 ** Automatically use Salt Shaker and Transmute Arcanite when mats and cooldowns allow.
 
 ** Use Slice & Dice.
+ * Don't use it too much.
 
 ** Ignore repeatable quests somehow.
+
+** Prayer of Fortitude
+ * Cheaper than three casts of PW:F, same effect, double duration.

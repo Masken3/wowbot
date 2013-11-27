@@ -163,6 +163,12 @@ if(rawget(_G, 'STATE') == nil) then
 
 		pullPosition = false,	-- Position.
 
+		inCombat = false,
+		currentCombatRecord = {},	-- {startTime, enemies={guid:startHealth}, sumEnemyHealth}
+		nextCombatRecordId = 1,
+		combatRecords = {},	--id:{sumEnemyHealth, duration, groupDps}
+		averageGroupDps = 1,	-- very low default. bots are likely to use DoTs.
+
 		readyToDrink = false,	-- set to true once all item info is fetched.
 		waitingForDrink = false,
 		conjureDrinkSpell = false,
@@ -859,6 +865,21 @@ local SPELL_ATTACK_EFFECTS = {
 	[SPELL_EFFECT_NORMALIZED_WEAPON_DMG]=true,
 }
 
+local SPELL_DEBUFF_EFFECTS = {
+	-- this and its friends needs statistics on how often enemies are struck by melee/ranged attacks.
+	[SPELL_AURA_MOD_DAMAGE_TAKEN]=true,
+	[SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN]=true,
+	[SPELL_AURA_MOD_RANGED_DAMAGE_TAKEN]=true,
+	[SPELL_AURA_MOD_RANGED_DAMAGE_TAKEN_PCT]=true,
+	[SPELL_AURA_MOD_MELEE_DAMAGE_TAKEN]=true,
+	[SPELL_AURA_MOD_MELEE_DAMAGE_TAKEN_PCT]=true,
+
+	-- DoTs
+	[SPELL_AURA_PERIODIC_DAMAGE]=true,
+	[SPELL_AURA_PERIODIC_DAMAGE_PERCENT]=true,
+	[SPELL_AURA_PERIODIC_LEECH]=true,
+}
+
 local function dumpSpell(s, prefix)
 	print((prefix or '')..s.id, spacify(s.name, 23), spacify(s.rank, 15), unpack(spellEffectNames(s)));
 end
@@ -974,6 +995,7 @@ local function learnSpell(id)
 
 		local buffAuras = {
 			[SPELL_AURA_MOD_ATTACKSPEED]=true,
+			[SPELL_AURA_MOD_MELEE_HASTE]=true,
 			[SPELL_AURA_MOD_DAMAGE_DONE]=true,
 			[SPELL_AURA_MOD_RESISTANCE]=true,
 			[SPELL_AURA_PERIODIC_ENERGIZE]=true,
@@ -1027,7 +1049,10 @@ local function learnSpell(id)
 			(e.implicitTargetA == TARGET_CHAIN_DAMAGE))	-- single enemy
 		then
 			-- DoTs
-			if(e.applyAuraName == SPELL_AURA_PERIODIC_DAMAGE) then
+			if(e.applyAuraName == SPELL_AURA_PERIODIC_DAMAGE or
+				e.applyAuraName == SPELL_AURA_PERIODIC_DAMAGE_PERCENT or
+				e.applyAuraName == SPELL_AURA_PERIODIC_LEECH)
+			then
 				STATE.attackSpells[id] = s;
 			end
 		end
@@ -1336,6 +1361,10 @@ function hSMSG_CAST_FAILED(p)
 		if(p.result == 0x0C) then --SPELL_FAILED_CANT_BE_DISENCHANTED
 			PERMASTATE.undisenchantable[STATE.currentDisenchant.values[OBJECT_FIELD_ENTRY]] = true;
 			saveState();
+		end
+
+		if(p.result == SPELL_FAILED_NO_COMBO_POINTS) then
+			print("comboPoints():", comboPoints());
 		end
 
 		-- custom cooldown to avoid too much spam

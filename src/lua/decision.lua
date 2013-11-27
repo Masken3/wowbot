@@ -21,6 +21,52 @@ function decision(realTime)
 
 	if(STATE.looting) then return; end
 
+	local COMBAT_RECORD_MAX = 5;
+	local c = STATE.currentCombatRecord;
+	if(next(STATE.enemies)) then	-- if we're in combat
+		if(not STATE.inCombat) then	-- and we weren't before
+			-- set up record-keeping.
+			STATE.inCombat = true;
+			c.startTime = realTime;
+			c.sumEnemyHealth = 0;
+			c.enemies = {};
+			for guid,o in pairs(STATE.enemies) do
+				c.enemies[guid] = o.values[UNIT_FIELD_HEALTH];
+				c.sumEnemyHealth = c.sumEnemyHealth + o.values[UNIT_FIELD_HEALTH];
+			end
+		else	-- if we were
+			-- add any new enemies to the record.
+			for guid,o in pairs(STATE.enemies) do
+				if(not c.enemies[guid]) then
+					c.enemies[guid] = o.values[UNIT_FIELD_HEALTH];
+					c.sumEnemyHealth = c.sumEnemyHealth + o.values[UNIT_FIELD_HEALTH];
+				end
+			end
+		end
+	elseif(STATE.inCombat) then	-- if we just left combat
+		STATE.inCombat = false;
+		-- finalize the record of this combat.
+		local record = {
+			duration = realTime - c.startTime,
+			sumEnemyHealth = c.sumEnemyHealth,
+			dps = c.sumEnemyHealth / (realTime - c.startTime),
+		};
+		print("Combat finished:", dump(record));
+		STATE.combatRecords[STATE.nextCombatRecordId] = record;
+		STATE.nextCombatRecordId = STATE.nextCombatRecordId + 1;
+		if(STATE.nextCombatRecordId > COMBAT_RECORD_MAX) then
+			STATE.nextCombatRecordId = 1;
+		end
+		-- and update average group dps.
+		local total = 0;
+		local count = 0;
+		for i,r in ipairs(STATE.combatRecords) do
+			total = total + r.dps;
+			count = count + 1;
+		end
+		STATE.averageGroupDps = (total / count);
+	end
+
 	updateEnemyPositions(realTime);
 	updateMyPosition(realTime);
 	updateLeaderPosition(realTime);
