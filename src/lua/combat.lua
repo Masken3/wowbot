@@ -607,6 +607,9 @@ local function doBuffSingle(o, realTime, buffSpells)
 			end)
 			if(requiresComboPoints(s)) then
 				o = STATE.knownObjects[guidFromValues(STATE.me, UNIT_FIELD_TARGET)];
+				investigateAuras(o, function(s, level)
+					print("Aura: "..s.name.." ("..s.id..") level "..level);
+				end);
 			end
 			return doSpell(false, realTime, o, s);
 		else

@@ -434,7 +434,11 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose, pointFactor)
 
 				-- all schools
 				if(se.miscValue == 0x7E and (not STATE.amHealer)) then
-					v = addDumpIf(v, points*10, "Magic Damage+", verbose)
+					v = addDumpIf(v, points*20, "Magic Damage+", verbose)
+				end
+				-- quick hack
+				if(se.miscValue == 16 and STATE.myClassName == 'Mage') then
+					v = addDumpIf(v, points*20, "Frost Magic Damage+", verbose)
 				end
 			elseif(se.applyAuraName == SPELL_AURA_MOD_ATTACK_POWER) then
 				v = addDamageValueRaw(v, points / 14, false, ci, verbose)
@@ -467,12 +471,17 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose, pointFactor)
 					-- remove the flags
 					procFlags = bit32.band(procFlags, bit32.bnot(flagsOnHit))
 					-- only if we're the tank is it useful to be hit by enemies.
+					local hitsPerSecond
 					if(STATE.amTank) then
-						local hitsPerSecond = 1	-- the approximate hits per second a tank takes.
-						local factor = hitsPerSecond * getDuration(s.DurationIndex, level) * s.procChance / 100
-						v = addItemSpellValue(v, mods, cSpell(se.triggerSpell), proto,
-							ci, verbose, pointFactor)
+						hitsPerSecond = 1	-- the approximate hits per second a tank takes.
+					else
+						-- arbitrary; non-tanks aren't really supposed to get hit at all.
+						hitsPerSecond = 0.02
 					end
+					local triggeredSpell = cSpell(se.triggerSpell)
+					local factor = hitsPerSecond * getDuration(triggeredSpell.DurationIndex, level) * s.procChance / 100
+					v = addItemSpellValue(v, mods, triggeredSpell, proto,
+						ci, verbose, pointFactor * factor)
 				end
 				if(procFlags ~= 0) then
 					print("WARN: unhandled procFlags 0x"..hex(procFlags)..
@@ -538,6 +547,19 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose, pointFactor)
 			elseif(se.applyAuraName == SPELL_AURA_MOD_CRIT_PERCENT) then
 				if(not isCaster(ci)) then
 					v = addDumpIf(v, points*200, "Crit%+", verbose)
+				end
+			elseif(se.applyAuraName == SPELL_AURA_MOD_DECREASE_SPEED) then
+				v = addDumpIf(v, points, "Movement speed%+", verbose)
+			elseif(se.applyAuraName == SPELL_AURA_MOD_MELEE_HASTE) then
+				-- todo: fix value; should be higher for melee classes.
+				v = addDumpIf(v, points, "Haste%+", verbose)
+			elseif(se.applyAuraName == SPELL_AURA_SAFE_FALL) then
+				v = addDumpIf(v, points, "Safe fall%+", verbose)
+			elseif(se.applyAuraName == SPELL_AURA_MOD_STEALTH_LEVEL) then
+				v = addDumpIf(v, points, "Stealth+", verbose)
+			elseif(se.applyAuraName == SPELL_AURA_MOD_HIT_CHANCE) then
+				if(not isCaster(ci)) then
+					v = addDumpIf(v, points*200, "Hit%+", verbose)
 				end
 			else
 				print("WARN: unhandled aura "..se.applyAuraName..
