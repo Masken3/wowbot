@@ -1447,6 +1447,7 @@ end
 local function handleAttackCanceled()
 	STATE.meleeing = false;
 	STATE.casting = false;
+	STATE.looting = false;
 	setAction("not casting. handleAttackCanceled");
 	decision();
 end

@@ -1167,7 +1167,7 @@ function goOpen(realTime, o)
 		local s = STATE.openLockSpells[lockIndex];
 		if(spellIsOnCooldown(realTime, s)) then return; end
 		castSpellAtGO(s.id, o);
-		STATE.looting = true;
+		STATE.looting = o.guid;
 	end
 end
 
@@ -1183,8 +1183,9 @@ end
 function goLoot(o)
 	if(doMoveToTarget(getRealTime(), o, MELEE_DIST)) then
 		if(not STATE.looting) then
+			print("CMSG_LOOT "..o.guid:hex());
 			send(CMSG_LOOT, {guid=o.guid});
-			STATE.looting = true;
+			STATE.looting = o.guid;
 			STATE.looted[o.guid] = true;
 		end
 	end
@@ -1207,29 +1208,61 @@ function hSMSG_LOOT_RESPONSE(p)
 		local proto = itemProtoFromId(item.itemId);
 		if(not proto) then
 			p._quiet = true;
+			STATE.looting = p.guid;	-- make sure we don't go nowheres.
 			STATE.itemDataCallbacks[p] = hSMSG_LOOT_RESPONSE;
 			return;
 		end
-		if((p.lootType ~= LOOT_CORPSE) or
+		local shouldLoot;
+		-- every loot type except corpses are single-user.
+		-- in such cases, if we don't loot every item, the unlooted ones would be lost.
+		if(p.lootType ~= LOOT_CORPSE) then
+			print("Looting item because it's not from a corpse.");
+			shouldLoot = true;
 			-- couldn't find a lootType for items, so doing isUnit check.
-			(not isUnit(STATE.knownObjects[p.guid])) or
-			(item.lootSlotType == LOOT_SLOT_NORMAL) and wantToLoot(item.itemId))
-			-- every loot type except corpses are single-user.
-			-- in such cases, if we don't loot every item, the unlooted ones would be lost.
-		then
+		elseif(not isUnit(STATE.knownObjects[p.guid])) then
+			print("Looting item because it's not from a unit.");
+			shouldLoot = true;
+		elseif(item.lootSlotType ~= LOOT_SLOT_NORMAL) then
+			print("Not looting item because lootSlotType: "..item.lootSlotType);
+			shouldLoot = false;
+		elseif(wantToLoot(item.itemId)) then
+			print("Looting item because we want it.");
+			shouldLoot = true;
+		else
+			print("Not looting item because we don't want it.");
+			shouldLoot = false;
+		end
+		if(shouldLoot) then
 			print("Looting item "..item.itemId.." x"..item.count);
 			send(CMSG_AUTOSTORE_LOOT_ITEM, item);
 		end
 	end
 	send(CMSG_LOOT_RELEASE, p);
-	STATE.looting = false;
-	STATE.lootables[p.guid] = nil;
+	--STATE.looting = false;
+	--STATE.lootables[p.guid] = nil;
 	--STATE.openables[p.guid] = nil;
+
+	-- SMSG_LOOT_RELEASE_RESPONSE doesn't always come.
+	-- Set a timeout in that case.
+	setTimer(function()
+		print("Loot timeout!");
+		if(STATE.looting == p.guid) then
+			partyChat("WARN: Loot timeout!");
+		end
+		stopLooting(p.guid);
+	end, getRealTime() + 1);
+end
+
+function stopLooting(guid)
+	if(STATE.looting == guid) then
+		STATE.looting = false;
+		STATE.lootables[guid] = nil;
+	end
 end
 
 function hSMSG_LOOT_RELEASE_RESPONSE(p)
-	--print("Loot release "..p.guid:hex());
-	STATE.looting = false;
+	print("Loot release "..p.guid:hex());
+	stopLooting(p.guid);
 end
 
 function follow(realTime, mo)
