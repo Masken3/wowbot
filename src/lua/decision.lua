@@ -1145,6 +1145,7 @@ function hSMSG_TRAINER_LIST(p)
 			count = count + 1
 			STATE.training[s.spellId] = p.guid;
 			send(CMSG_TRAINER_BUY_SPELL, {guid=p.guid, spellId=s.spellId});
+			break;
 		end
 	end
 	msg = msg..count.." spells trained."
@@ -1155,6 +1156,8 @@ end
 function hSMSG_TRAINER_BUY_SUCCEEDED(p)
 	assert(STATE.training[p.spellId] == p.guid);
 	STATE.training[p.spellId] = nil;
+	local trainer = STATE.knownObjects[p.guid];
+	trainer.bot.chatting = false;
 	checkTraining(p);
 end
 
