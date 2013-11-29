@@ -100,6 +100,8 @@ if(rawget(_G, 'STATE') == nil) then
 
 		myTarget = false,	-- guid of my target.
 
+		gossipTarget = false,	-- KnownObject.
+
 		raidIcons = {},	-- raidIconId:guid
 
 		attackSpells = {},	-- Spells we know that are useful for attacking other creatures.

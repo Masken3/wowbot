@@ -253,6 +253,7 @@ void enterWorld(WorldSession* session, uint64 guid, uint8 level) {
 	m(SMSG_CANCEL_COMBAT)\
 	m(SMSG_CANCEL_AUTO_REPEAT)\
 	m(SMSG_LOGOUT_COMPLETE)\
+	m(SMSG_GOSSIP_COMPLETE)\
 
 
 static BOOL checkLuaFunction(lua_State* L, const char* name) {

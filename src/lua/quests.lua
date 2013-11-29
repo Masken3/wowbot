@@ -91,6 +91,7 @@ end
 function hSMSG_GOSSIP_MESSAGE(p)
 	print("SMSG_GOSSIP_MESSAGE", dump(p));
 	local o = STATE.knownObjects[p.guid];
+	STATE.gossipTarget = o;
 	if(o.bot.chat) then
 		if(p.questCount == 0 and p.gossipCount == 0) then
 			STATE.questFinishers[p.guid] = nil;
@@ -106,9 +107,21 @@ function hSMSG_GOSSIP_MESSAGE(p)
 			end
 		end
 		o.bot.chat = false;
+		o.bot.chatting = false;
+		partyChat("Chatting complete.")
 		return;
 	end
 	hSMSG_QUESTGIVER_QUEST_LIST(p);
+end
+
+function hSMSG_GOSSIP_COMPLETE()
+	print("SMSG_GOSSIP_COMPLETE");
+	if(STATE.gossipTarget) then
+		STATE.gossipTarget.bot.chat = false;
+		STATE.gossipTarget.bot.chatting = false;
+		send(CMSG_QUESTGIVER_STATUS_QUERY, STATE.gossipTarget);
+		STATE.gossipTarget = false;
+	end
 end
 
 function hSMSG_QUESTGIVER_OFFER_REWARD(p)
