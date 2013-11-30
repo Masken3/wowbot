@@ -404,6 +404,9 @@ static int l_send(lua_State* L) {
 		size = pg(L, buf);
 		data = buf;
 	}
+	if(session->_class == CLASS_PRIEST) {
+		printf("Priest: send %s\n", s);
+	}
 	sendWorld(session, opcode, data, size);
 	return 0;
 }

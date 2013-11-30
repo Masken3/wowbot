@@ -48,14 +48,17 @@ function attack(realTime, enemy)
 		if(attackSpell(dist, realTime, enemy)) then return; end
 	end
 
-	if(not STATE.meleeing) then
-		-- todo: if we have a wand or if we're a hunter with bow and arrows, use those.
+	if(STATE.meleeing ~= enemy.guid) then
+		print("Starting melee because STATE.meleeing: "..tostring(STATE.meleeing));
+		-- if we have a wand or if we're a hunter with bow and arrows, use those.
 		--
 		local ss = shootSpell();
 		if(ss and bit32.btest(ss.AttributesEx2, SPELL_ATTR_EX2_AUTOREPEAT_FLAG)) then
 			setTarget(enemy);
+			print("Target set: "..enemy.guid:hex());
 			if(doSpell(dist, realTime, enemy, ss) and (not STATE.moving)) then
-				STATE.meleeing = true;
+				print("Now shooting "..enemy.guid:hex());
+				STATE.meleeing = enemy.guid;
 			end
 			return;
 		end
@@ -66,7 +69,7 @@ function attack(realTime, enemy)
 			(dist < MELEE_RANGE) and (not STATE.moving))
 		then
 			send(CMSG_ATTACKSWING, {target=enemy.guid});
-			STATE.meleeing = true;
+			STATE.meleeing = enemy.guid;
 		end
 	end
 end
@@ -299,6 +302,13 @@ function canCastBase(s, realTime, ignoreLowPower, coolDownTest, ignoreStance)
 	if((not ignoreStance) and (not haveStanceForSpell(s))) then
 		if(sLog) then
 			print(s.name.." Needs form "..hex(s.Stances).." (have "..myForm..")");
+		end
+		return false;
+	end
+
+	if(not STATE.stealthed and bit32.btest(s.Attributes, SPELL_ATTR_ONLY_STEALTHED)) then
+		if(sLog) then
+			print(s.name.." Needs stealth.");
 		end
 		return false;
 	end
@@ -551,6 +561,7 @@ function attackSpell(dist, realTime, enemy)
 end
 
 function setTarget(t)
+	if(STATE.myTarget == t.guid) then return; end
 	STATE.myTarget = t.guid;
 	send(CMSG_SET_SELECTION, {target=t.guid});
 end
@@ -558,6 +569,10 @@ end
 local function doHealSingle(o, healSpell, points, realTime)
 	local maxHealth = o.values[UNIT_FIELD_MAXHEALTH];
 	local health = o.values[UNIT_FIELD_HEALTH];
+	if(health <= 1) then
+		-- they're dead.
+		return false;
+	end
 	if(((maxHealth - health) >= points) or (health <= (maxHealth/2))) then
 		objectNameQuery(o, function(name)
 			setAction("Healing "..name);
@@ -593,7 +608,7 @@ end
 
 local function doBuffSingle(o, realTime, buffSpells)
 	-- if target is dead, don't bother.
-	if(o.values[UNIT_FIELD_HEALTH] == 0) then return false; end
+	if(o.values[UNIT_FIELD_HEALTH] <= 1) then return false; end
 
 	-- check all auras. if there's one aura of ours they DON'T have, give it.
 	for buffName, s in pairs(buffSpells) do
@@ -606,10 +621,12 @@ local function doBuffSingle(o, realTime, buffSpells)
 				setAction("Buffing "..name);
 			end)
 			if(requiresComboPoints(s)) then
-				o = STATE.knownObjects[guidFromValues(STATE.me, UNIT_FIELD_TARGET)];
-				investigateAuras(o, function(s, level)
-					print("Aura: "..s.name.." ("..s.id..") level "..level);
-				end);
+				local o = STATE.knownObjects[guidFromValues(STATE.me, UNIT_FIELD_TARGET)];
+				if(o) then
+					investigateAuras(o, function(s, level)
+						print("Aura: "..s.name.." ("..s.id..") level "..level);
+					end);
+				end
 			end
 			return doSpell(false, realTime, o, s);
 		else
@@ -621,7 +638,7 @@ end
 
 function doBuff(realTime)
 	-- if we're dead, don't bother.
-	if(STATE.my.values[UNIT_FIELD_HEALTH] == 0) then return false; end
+	if(STATE.my.values[UNIT_FIELD_HEALTH] <= 1) then return false; end
 	-- buff ourselves first.
 	if(doBuffSingle(STATE.me, realTime, STATE.selfBuffSpells)) then return true; end
 	-- check each party member
@@ -1195,8 +1212,11 @@ function doAoeHeal(realTime, singleTargetSpell, singleTargetPoints)
 				if(p and distance3(o.location.position, p.location.position) < radius) then
 					local maxHealth = p.values[UNIT_FIELD_MAXHEALTH];
 					local health = p.values[UNIT_FIELD_HEALTH];
-					amount = amount + math.min(maxHealth - health, aoePoints);
-					allies[o.guid] = o;
+					-- don't bother healing the dead.
+					if(health > 1) then
+						amount = amount + math.min(maxHealth - health, aoePoints);
+						allies[o.guid] = o;
+					end
 				end
 			end
 			if(amount > healAmountForTarget) then

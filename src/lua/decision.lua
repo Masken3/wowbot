@@ -19,7 +19,8 @@ function decision(realTime)
 		end
 	end
 
-	if(STATE.looting) then return; end
+	-- seems to cause freezes.
+	--if(STATE.looting) then return; end
 
 	local COMBAT_RECORD_MAX = 5;
 	local c = STATE.currentCombatRecord;

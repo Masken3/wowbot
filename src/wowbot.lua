@@ -912,12 +912,13 @@ end
 local function learnSpell(id)
 	local s = cSpell(id);
 	if(STATE.myClassName == 'Mage') then
-		dumpSpell(s);
+		--dumpSpell(s);
 	end
 	for i, e in ipairs(s.effect) do
 		--print(e.id, SPELL_ATTACK_EFFECTS[e.id]);
-		if(SPELL_ATTACK_EFFECTS[e.id] and
-			(not bit32.btest(s.Attributes, SPELL_ATTR_ONLY_STEALTHED)))
+		if(SPELL_ATTACK_EFFECTS[e.id] --and
+			--(not bit32.btest(s.Attributes, SPELL_ATTR_ONLY_STEALTHED))
+			)
 		then
 			if(e.implicitTargetA == TARGET_CHAIN_DAMAGE) then
 				newAttackSpell(id, s);
@@ -1010,16 +1011,22 @@ local function learnSpell(id)
 
 		--print("aura: "..e.applyAuraName, dump(buffAuras));
 		if((e.id == SPELL_EFFECT_APPLY_AURA) and
-			(e.implicitTargetA == TARGET_SINGLE_FRIEND))
+			((e.implicitTargetA == TARGET_SINGLE_FRIEND) or
+			(e.implicitTargetA == TARGET_AREAEFFECT_PARTY)
+			))
 		then
 			-- buffs
 			if(buffAuras[e.applyAuraName]) then
-				if(not STATE.buffSpells[s.name]) then
-					dumpSpell(s, "b");
-					STATE.buffSpells[s.name] = s;
-				elseif(STATE.buffSpells[s.name].rank < s.rank) then
-					dumpSpell(s, "b");
-					STATE.buffSpells[s.name] = s;
+				local buffName = tostring(e.applyAuraName).."."..tostring(e.miscValue);
+				local old = STATE.buffSpells[buffName];
+				if(not old) then
+					dumpSpell(s, "b "..buffName.." ");
+					STATE.buffSpells[buffName] = s;
+				elseif((old.effect[1].basePoints < e.basePoints) or
+					((old.effect[1].basePoints == e.basePoints) and (old.DurationIndex < s.DurationIndex)))
+				then
+					dumpSpell(s, "b "..buffName.." ");
+					STATE.buffSpells[buffName] = s;
 				end
 			end
 			-- HoTs
@@ -1431,7 +1438,7 @@ function hSMSG_SPELL_FAILURE(p)
 	local o = STATE.knownObjects[p.casterGuid]
 	if(o) then o.bot.casting = false; end
 
-	if(p.casterGuid == STATE.myGuid) then
+	if(p.casterGuid == STATE.myGuid and p.result ~= 0) then
 		STATE.casting = false;
 		STATE.meleeing = false;
 		setAction("not casting. SMSG_SPELL_FAILURE");
@@ -1478,7 +1485,7 @@ function hSMSG_CANCEL_COMBAT(p)
 end
 function hSMSG_CANCEL_AUTO_REPEAT(p)
 	print("SMSG_CANCEL_AUTO_REPEAT");
-	handleAttackCanceled();
+	--handleAttackCanceled();
 end
 
 function hSMSG_MESSAGECHAT(p)

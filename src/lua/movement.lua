@@ -173,6 +173,7 @@ local function sendMovePacket(opcode, data)
 		partyChat("AreaTrigger "..at.id);
 		send(CMSG_AREATRIGGER, {triggerID = at.id});
 	end
+	STATE.looting = false;
 	STATE.areaTrigger = at;
 	send(opcode, data);
 end
