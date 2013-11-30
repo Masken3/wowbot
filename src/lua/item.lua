@@ -552,6 +552,11 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose, pointFactor)
 					-- arbitrary factor
 					v = addDumpIf(v, points*200, "Damage shield", verbose)
 				end
+			elseif(se.applyAuraName == SPELL_AURA_MOD_DAMAGE_TAKEN) then
+				if(STATE.amTank) then
+					-- arbitrary factor
+					v = addDumpIf(v, -points*200, "Damage taken-", verbose)
+				end
 			elseif(se.applyAuraName == SPELL_AURA_MOD_CRIT_PERCENT) then
 				if(not isCaster(ci)) then
 					v = addDumpIf(v, points*200, "Crit%+", verbose)
