@@ -496,6 +496,14 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose, pointFactor)
 					end
 				elseif(se.miscValue == 356) then	-- Fishing
 					v = addDumpIf(v, points, "Fishing+", verbose)
+				elseif(se.miscValue == 173) then	-- Daggers
+					local factor;
+					if(isCaster(ci)) then
+						factor = 1;
+					else
+						factor = 200;
+					end
+					v = addDumpIf(v, points*factor, "Daggers+", verbose)
 				else
 					print("WARN: unhandled skill "..se.miscValue..
 						" on spell="..s.id.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
@@ -692,6 +700,11 @@ function valueOfItem(id, guid, verbose)
 	-- todo: add a command to set value for a specific resistance. ex: 'itemResValue fire 10'
 	--local avgRes = (p.HolyRes + p.FireRes + p.NatureRes + p.FrostRes + p.ShadowRes + p.ArcaneRes) / 6;
 	--v = v + avgRes * 0;
+	local resistances = {'Holy', 'Fire', 'Nature', 'Frost', 'Shadow', 'Arcane'};
+	for i,r in ipairs(resistances) do
+		r = r..'Res';
+		v = addDumpIf(v, p[r], r, verbose);
+	end
 
 	local ci = ClassInfo[STATE.myClassName];
 
