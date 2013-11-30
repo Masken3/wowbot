@@ -649,8 +649,10 @@ function doMoveToTargetIfNoHostilesAreNear(realTime, mo, maxDist)
 				local distToMe = distanceToObject(o);
 				--if((distToLine < 40) and (distToMe < 80)) then return nil; end
 				if(distToMe < 60) then
-					objectNameQuery(mo, function(name)
-						print("distToMe: "..distToMe.." ("..name..")");
+					objectNameQuery(mo, function(targetName)
+						objectNameQuery(o, function(hostileName)
+							print("would go to "..targetName..", but "..hostileName.." is only "..distToMe.." yards away.");
+						end);
 					end);
 					return nil;
 				end
