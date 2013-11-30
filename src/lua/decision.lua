@@ -1238,11 +1238,13 @@ function hSMSG_LOOT_RESPONSE(p)
 			send(CMSG_AUTOSTORE_LOOT_ITEM, item);
 		end
 	end
+	print("Sending CMSG_LOOT_RELEASE "..p.guid:hex());
 	send(CMSG_LOOT_RELEASE, p);
-	--STATE.looting = false;
-	--STATE.lootables[p.guid] = nil;
-	--STATE.openables[p.guid] = nil;
+	STATE.looting = false;
+	STATE.lootables[p.guid] = nil;
+	STATE.openables[p.guid] = nil;
 
+	--[[
 	-- SMSG_LOOT_RELEASE_RESPONSE doesn't always come.
 	-- Set a timeout in that case.
 	setTimer(function()
@@ -1252,6 +1254,7 @@ function hSMSG_LOOT_RESPONSE(p)
 		end
 		stopLooting(p.guid);
 	end, getRealTime() + 1);
+	--]]
 end
 
 function stopLooting(guid)
@@ -1263,7 +1266,7 @@ end
 
 function hSMSG_LOOT_RELEASE_RESPONSE(p)
 	print("Loot release "..p.guid:hex());
-	stopLooting(p.guid);
+	--stopLooting(p.guid);
 end
 
 function follow(realTime, mo)

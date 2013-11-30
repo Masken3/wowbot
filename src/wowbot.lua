@@ -605,10 +605,16 @@ local function valueUpdated(o, idx)
 		end
 	end
 	-- items
-	if((o == STATE.me and idx >= PLAYER_FIELD_BAG_SLOT_1 and idx <= PLAYER_FIELD_KEYRING_SLOT_LAST) or
-		(isItem(o) and idx >= CONTAINER_FIELD_SLOT_1 and idx <= CONTAINER_FIELD_SLOT_LAST))
+	if((o == STATE.me and (idx >= PLAYER_FIELD_BAG_SLOT_1) and (idx <= PLAYER_FIELD_KEYRING_SLOT_LAST)) or
+		(isItem(o) and (idx >= CONTAINER_FIELD_SLOT_1) and (idx <= CONTAINER_FIELD_SLOT_LAST)))
 	then
 		updateInventoryScreen()
+	end
+
+	if(isItem(o) and idx == ITEM_FIELD_DURABILITY) then
+		objectNameQuery(o, function(name)
+			partyChat("Durability "..o.values[idx].."/"..o.values[ITEM_FIELD_MAXDURABILITY]..": "..name);
+		end);
 	end
 
 	local f = function(b)
@@ -1379,7 +1385,7 @@ function hSMSG_CAST_FAILED(p)
 		-- custom cooldown to avoid too much spam
 		STATE.spellCooldowns[p.spellId] = getRealTime() + 1;
 
-		send(CMSG_CANCEL_CAST, p);
+		--send(CMSG_CANCEL_CAST, p);
 
 		STATE.casting = false;	-- correct?
 		STATE.meleeing = false;	-- correct?

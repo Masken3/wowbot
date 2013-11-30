@@ -49,7 +49,7 @@ function attack(realTime, enemy)
 	end
 
 	if(STATE.meleeing ~= enemy.guid) then
-		print("Starting melee because STATE.meleeing: "..tostring(STATE.meleeing));
+		--print("Starting melee because STATE.meleeing: "..tostring(STATE.meleeing));
 		-- if we have a wand or if we're a hunter with bow and arrows, use those.
 		--
 		local ss = shootSpell();
