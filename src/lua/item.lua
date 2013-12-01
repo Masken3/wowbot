@@ -574,6 +574,8 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose, pointFactor)
 				if(not isCaster(ci)) then
 					v = addDumpIf(v, points*200, "Hit%+", verbose)
 				end
+			elseif(se.applyAuraName == SPELL_AURA_MOD_MECHANIC_RESISTANCE) then
+				v = addDumpIf(v, points, "Effect "..se.miscValue.." resistance%+", verbose)
 			else
 				print("WARN: unhandled aura "..se.applyAuraName..
 					" on spell="..s.id.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
