@@ -9,3 +9,6 @@ INSERT INTO `spell_template` (`id`, `comments`) VALUES (22638, 'Poison Shock Aur
 # Fix quest 'Deadwood of the North'
 INSERT INTO `creature_questrelation` (`id`, `quest`) VALUES (15395, 8461);
 INSERT INTO `creature_involvedrelation` (`id`, `quest`) VALUES (15395, 8461);
+
+# Improve Morrowgrain drop rate.
+UPDATE `item_loot_template` SET `ChanceOrQuestChance`=100, `groupid`=0 WHERE `item`=11040;
