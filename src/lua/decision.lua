@@ -334,13 +334,13 @@ function decision(realTime)
 	end
 	STATE.tempSkipDisenchant = false;
 
-	-- equip better bags
-	if(doBags()) then
+	-- move profession items into profession bags.
+	if(moveProfessionItems()) then
 		return;
 	end
 
-	-- move profession items into profession bags.
-	if(moveProfessionItems()) then
+	-- equip better bags
+	if(doBags()) then
 		return;
 	end
 
@@ -851,7 +851,7 @@ local function itemCanGoInBag(o, bag)
 	local bp = itemProtoFromObject(bag);
 	assert(bp.itemClass == ITEM_CLASS_CONTAINER);
 	assert(bp.subClass ~= ITEM_SUBCLASS_CONTAINER);
-	return bp.subClass == sItemToBagTypeMap[o.BagFamily];
+	return bp.subClass == sItemToBagTypeMap[op.BagFamily];
 end
 
 function moveProfessionItems()
@@ -881,9 +881,10 @@ function moveProfessionItems()
 			for dstBag,pb in pairs(profBags) do
 				if((#pb.freeSlots > 0) and itemCanGoInBag(o, pb.bag)) then
 					-- use and remove the last free slot.
-					send(CMSG_SWAP_ITEM, {dstbag=dstBag, dstslot=pb.freeSlots[#pb.freeSlots],
+					local dstSlot = pb.freeSlots[#pb.freeSlots];
+					send(CMSG_SWAP_ITEM, {dstbag=dstBag, dstslot=dstSlot,
 						srcbag=bagSlot, srcslot=slot});
-					table.insert(pb.freeSlots[#pb.freeSlots]);
+					table.remove(pb.freeSlots, dstSlot);
 					swapCount = swapCount + 1;
 				end
 			end
