@@ -224,6 +224,7 @@ function decision(realTime)
 		goLoot(lootable);
 		return;
 	end
+	STATE.forceLoot = false;
 
 	-- if we have quest finishers or givers, go to them.
 	local i, finisher = next(STATE.questFinishers);
@@ -1220,6 +1221,9 @@ function hSMSG_LOOT_RESPONSE(p)
 			print("Looting item because it's not from a corpse.");
 			shouldLoot = true;
 			-- couldn't find a lootType for items, so doing isUnit check.
+		elseif(STATE.forceLoot) then
+			print("Looting item because we were ordered to.");
+			shouldLoot = true;
 		elseif(not isUnit(STATE.knownObjects[p.guid])) then
 			print("Looting item because it's not from a unit.");
 			shouldLoot = true;

@@ -781,6 +781,24 @@ local function enchantValue(p, sub)
 	handleEnchantValue(p, tonumber(sub))
 end
 
+-- loot everything in the gather radius.
+local function loot(p)
+	local count = 0
+	for guid,o in pairs(STATE.knownObjects) do
+		if(isUnit(o) and
+			bit32.btest(o.values[UNIT_DYNAMIC_FLAGS] or 0, UNIT_DYNFLAG_LOOTABLE) and
+			(distanceToObject(o) < PERMASTATE.gatherRadius))
+		then
+			STATE.lootables[o.guid] = o
+			count = count + 1
+		end
+	end
+	if(count > 0) then
+		STATE.forceLoot = true
+	end
+	reply(p, "Looting "..count.." creatures...")
+end
+
 function handleChatMessage(p)
 	if(not p.text) then return end
 	if(p.text == 'lq') then
@@ -880,6 +898,8 @@ function handleChatMessage(p)
 	elseif(a(p, 'chat ', chatV)) then
 	elseif(a(p, 'offerEnchant ', offerEnchant)) then
 	elseif(a(p, 'enchantValue ', enchantValue)) then
+	elseif(p.text == 'loot') then
+		loot(p)
 	else
 		if(p.type == CHAT_MSG_WHISPER or p.type == CHAT_MSG_WHISPER_INFORM) then
 			print("Whisper: "..p.text)

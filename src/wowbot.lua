@@ -56,6 +56,7 @@ if(rawget(_G, 'STATE') == nil) then
 		knownObjects = {},
 
 		looting = false,
+		forceLoot = false,
 		skinning = false,
 
 		-- set of guids, objects and creatures that have been looted already,
