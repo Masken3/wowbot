@@ -1238,11 +1238,12 @@ function hSMSG_LOOT_RESPONSE(p)
 			send(CMSG_AUTOSTORE_LOOT_ITEM, item);
 		end
 	end
-	print("Sending CMSG_LOOT_RELEASE "..p.guid:hex());
-	send(CMSG_LOOT_RELEASE, p);
+	stopLooting(p);
+	--[[
 	STATE.looting = false;
 	STATE.lootables[p.guid] = nil;
 	STATE.openables[p.guid] = nil;
+	--]]
 
 	--[[
 	-- SMSG_LOOT_RELEASE_RESPONSE doesn't always come.
@@ -1257,16 +1258,25 @@ function hSMSG_LOOT_RESPONSE(p)
 	--]]
 end
 
-function stopLooting(guid)
-	if(STATE.looting == guid) then
+function stopLooting(p)
+	local o = STATE.knownObjects[p.guid];
+	if((not o) or (not o.bot.lootReleased)) then
+		print("Sending CMSG_LOOT_RELEASE "..p.guid:hex());
+		send(CMSG_LOOT_RELEASE, p);
+		if(o) then
+			o.bot.lootReleased = true;
+		end
+		STATE.lootables[p.guid] = nil;
+	end
+	if(STATE.looting == p.guid) then
 		STATE.looting = false;
-		STATE.lootables[guid] = nil;
 	end
 end
 
+-- can be sent even if we didn't send CMSG_LOOT_RELEASE.
 function hSMSG_LOOT_RELEASE_RESPONSE(p)
-	print("Loot release "..p.guid:hex());
-	--stopLooting(p.guid);
+	print("Got Loot release response. "..p.guid:hex());
+	stopLooting(p);
 end
 
 function follow(realTime, mo)
