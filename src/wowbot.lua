@@ -1147,9 +1147,9 @@ local function learnSpell(id)
 			e.implicitTargetA == TARGET_CHAIN_DAMAGE)
 		then
 			local level = spellLevel(s);
-			local duration = getDuration(s.DurationIndex, level);
+			local duration = getDuration(s, level);
 			if(duration > 15 and ((not STATE.ccSpell) or
-				duration > getDuration(STATE.ccSpell.DurationIndex, level)))
+				duration > getDuration(STATE.ccSpell, level)))
 			then
 				print("ccSpell", s.id, s.name, s.rank);
 				STATE.ccSpell = s;

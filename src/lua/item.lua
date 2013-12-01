@@ -479,7 +479,7 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose, pointFactor)
 						hitsPerSecond = 0.02
 					end
 					local triggeredSpell = cSpell(se.triggerSpell)
-					local factor = hitsPerSecond * getDuration(triggeredSpell.DurationIndex, level) * s.procChance / 100
+					local factor = hitsPerSecond * getDuration(triggeredSpell, level) * s.procChance / 100
 					v = addItemSpellValue(v, mods, triggeredSpell, proto,
 						ci, verbose, pointFactor * factor)
 				end

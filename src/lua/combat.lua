@@ -23,8 +23,8 @@ function calcAvgEffectPoints(level, e)
 end
 
 -- in seconds.
-function getDuration(index, level)
-	local sd = cSpellDuration(index);
+function getDuration(spell, level)
+	local sd = cSpellDuration(spell.DurationIndex);
 	if(not sd) then return 0; end
 	local dur = sd.base + sd.perLevel * level;
 	if(dur > sd.max) then dur = sd.max; end
@@ -191,7 +191,7 @@ local function spellPoints(s, level)
 			e.applyAuraName == SPELL_AURA_PERIODIC_TRIGGER_SPELL)
 		then
 			local ts = cSpell(e.triggerSpell);
-			local duration = getDuration(s.DurationIndex, level);
+			local duration = getDuration(s, level);
 			local multiplier = duration / (e.amplitude / 1000);
 			points = points + spellPoints(ts, level) * multiplier;
 		end
@@ -199,7 +199,7 @@ local function spellPoints(s, level)
 		if(e.id == SPELL_EFFECT_PERSISTENT_AREA_AURA and
 			e.applyAuraName == SPELL_AURA_PERIODIC_DAMAGE)
 		then
-			local duration = getDuration(s.DurationIndex, level);
+			local duration = getDuration(s, level);
 			local multiplier = duration / (e.amplitude / 1000);
 			points = points + calcAvgEffectPoints(level, e) * multiplier;
 		end
@@ -331,7 +331,7 @@ function canCastBase(s, realTime, ignoreLowPower, coolDownTest, ignoreStance)
 	end
 
 	level = spellLevel(s);
-	duration = getDuration(s.DurationIndex, level);
+	duration = getDuration(s, level);
 	cost = spellCost(s, level, duration);
 
 	if(s.powerType == POWER_HEALTH) then
@@ -616,6 +616,7 @@ local function doBuffSingle(o, realTime, buffSpells)
 		--sLog = true;
 		local c = canCast(s, realTime);
 		sLog = false;
+		-- todo: if this is a party buff, don't cast it unless all party members are alive and present.
 		if(not h and c) then
 			objectNameQuery(o, function(name)
 				setAction("Buffing "..name);
@@ -1098,6 +1099,7 @@ local function matchDispel(realTime, o, s, enemy)
 				end
 				if(bit32.btest(2^aura.Dispel, effectMask) and
 					(aura.id ~= 6819) and	-- Corrupted Stamina. Small effect, continually reapplies itself.
+					(getDuration(aura, level) > 10) and-- if the duration is less than 10 seconds, don't bother.
 					(enemy == isPositiveAura(aura)))
 				then
 					objectNameQuery(o, function(name)
