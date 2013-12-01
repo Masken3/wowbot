@@ -158,6 +158,7 @@ local auraEffectIsPositiveTable = {
 	[SPELL_AURA_MOD_DECREASE_SPEED] = positiveEffect,	-- paradoxical, but values are negative.
 	[SPELL_AURA_MOD_MELEE_HASTE] = positiveEffect,
 	[SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE] = positiveEffect,
+	[SPELL_AURA_MOD_TOTAL_STAT_PERCENTAGE] = positiveEffect,
 
 	[SPELL_AURA_MOD_DAMAGE_TAKEN] = negativeEffect,
 	[SPELL_AURA_MOD_ATTACKER_SPELL_CRIT_CHANCE] = negativeEffect,
