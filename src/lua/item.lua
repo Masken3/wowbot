@@ -398,10 +398,10 @@ local function addModValues(v, mods, p, ci, verbose)
 	v = addDumpIf(v, primaryStatValue * 20 + combinedSecondaryStatValue * 10, "Stats", verbose);
 
 	if(ci.primary == STAT_INTELLECT or hasSecondaryIntellect) then
-		v = addDumpIf(v, mods[ITEM_MOD_MANA] or 0, "Mana", verbose);
+		v = addDumpIf(v, mods[ITEM_MOD_MANA] or 0, "Mana", verbose and 1);
 	end
 
-	v = addDumpIf(v, mods[ITEM_MOD_HEALTH] or 0, "Health", verbose);
+	v = addDumpIf(v, mods[ITEM_MOD_HEALTH] or 0, "Health", verbose and 1);
 	return v;
 end
 
@@ -708,7 +708,7 @@ function valueOfItem(id, guid, verbose)
 	local resistances = {'Holy', 'Fire', 'Nature', 'Frost', 'Shadow', 'Arcane'};
 	for i,r in ipairs(resistances) do
 		r = r..'Res';
-		v = addDumpIf(v, p[r], r, verbose);
+		v = addDumpIf(v, p[r], r, verbose and 1);
 	end
 
 	local ci = ClassInfo[STATE.myClassName];
