@@ -1200,6 +1200,10 @@ local function wantToLoot(itemId)
 end
 
 function hSMSG_LOOT_RESPONSE(p)
+	local o = STATE.knownObjects[p.guid];
+	if(o) then
+		o.bot.lootReleased = false;
+	end
 	if(not p._quiet) then
 		print("SMSG_LOOT_RESPONSE", dump(p));
 	end
