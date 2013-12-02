@@ -159,6 +159,7 @@ local auraEffectIsPositiveTable = {
 	[SPELL_AURA_MOD_MELEE_HASTE] = positiveEffect,
 	[SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE] = positiveEffect,
 	[SPELL_AURA_MOD_TOTAL_STAT_PERCENTAGE] = positiveEffect,
+	[SPELL_AURA_MOD_RANGED_ATTACK_POWER] = positiveEffect,
 
 	[SPELL_AURA_MOD_DAMAGE_TAKEN] = negativeEffect,
 	[SPELL_AURA_MOD_ATTACKER_SPELL_CRIT_CHANCE] = negativeEffect,
@@ -177,7 +178,6 @@ local auraEffectIsPositiveTable = {
 	[SPELL_AURA_MOD_STALKED] = alwaysNegative,
 	[SPELL_AURA_PERIODIC_DAMAGE_PERCENT] = alwaysNegative,
 	[SPELL_AURA_PERIODIC_DAMAGE] = alwaysNegative,
-	[SPELL_AURA_MOD_DECREASE_SPEED] = alwaysNegative,
 	[SPELL_AURA_TRANSFORM] = alwaysNegative,
 	[SPELL_AURA_MOD_CONFUSE] = alwaysNegative,
 	[SPELL_AURA_MOD_FEAR] = alwaysNegative,
@@ -190,6 +190,7 @@ local auraEffectIsPositiveTable = {
 	[SPELL_AURA_DUMMY] = function(e) return nil; end,
 	[SPELL_AURA_PROC_TRIGGER_SPELL] = function(e) return nil; end,
 	[SPELL_AURA_PERIODIC_TRIGGER_SPELL] = function(e) return nil; end,
+	[SPELL_AURA_MOD_SCALE] = function(e) return nil; end,
 
 	[SPELL_AURA_MECHANIC_IMMUNITY] = function(e)
 		return not negativeMechanicImmunities[e.miscValue];
@@ -198,17 +199,21 @@ local auraEffectIsPositiveTable = {
 	[SPELL_AURA_ADD_PCT_MODIFIER] = modEffect,
 };
 
+function isPositiveAuraEffect(e)
+	local f = auraEffectIsPositiveTable[e.applyAuraName]
+	if(not f) then
+		error("Unhandled aura "..e.applyAuraName);
+	end
+	return f(e);
+end
+
 function isPositiveAura(s)
 	if(bit32.btest(s.AttributesEx, SPELL_ATTR_EX_NEGATIVE)) then return false; end
 	-- assuming here that if the spell has at least one positive effect, it's good.
 	local hasPositiveEffect = false;
 	for i, e in ipairs(s.effect) do
 		if(e.id == SPELL_EFFECT_APPLY_AURA) then
-			local f = auraEffectIsPositiveTable[e.applyAuraName]
-			if(not f) then
-				error("Unhandled aura "..e.applyAuraName);
-			end
-			local res = f(e);
+			local res = isPositiveAuraEffect(e);
 			if(res == true) then
 				hasPositiveEffect = true;
 			elseif((res ~= false) and (hasPositiveEffect ~= true)) then

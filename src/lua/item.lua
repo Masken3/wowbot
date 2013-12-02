@@ -405,6 +405,36 @@ local function addModValues(v, mods, p, ci, verbose)
 	return v;
 end
 
+local targetFriendliness = {
+	[TARGET_SELF] = true,
+	[TARGET_RANDOM_ENEMY_CHAIN_IN_AREA] = false,
+	[TARGET_RANDOM_FRIEND_CHAIN_IN_AREA] = true,
+	[TARGET_PET] = true,
+	[TARGET_CHAIN_DAMAGE] = false,
+	[TARGET_ALL_ENEMY_IN_AREA] = false,
+	[TARGET_ALL_ENEMY_IN_AREA_INSTANT] = false,
+	[TARGET_ALL_PARTY_AROUND_CASTER] = true,
+	[TARGET_SINGLE_FRIEND] = true,
+	[TARGET_ALL_ENEMY_IN_AREA_CHANNELED] = false,
+	[TARGET_ALL_FRIENDLY_UNITS_AROUND_CASTER] = true,
+	[TARGET_ALL_FRIENDLY_UNITS_IN_AREA] = true,
+	[TARGET_MINION] = true,
+	[TARGET_ALL_PARTY] = true,
+	[TARGET_ALL_PARTY_AROUND_CASTER_2] = true,
+	[TARGET_SINGLE_PARTY] = true,
+	[TARGET_ALL_HOSTILE_UNITS_AROUND_CASTER] = false,
+	[TARGET_AREAEFFECT_PARTY] = true,
+	[TARGET_SELF_FISHING] = true,
+	[TARGET_TOTEM_EARTH] = true,
+	[TARGET_TOTEM_WATER] = true,
+	[TARGET_TOTEM_AIR] = true,
+	[TARGET_TOTEM_FIRE] = true,
+	[TARGET_CHAIN_HEAL] = true,
+	[TARGET_CURRENT_ENEMY_COORDINATES] = false,
+	[TARGET_ALL_RAID_AROUND_CASTER] = true,
+	[TARGET_SINGLE_FRIEND_2] = true,
+}
+
 local function addItemSpellValue(v, mods, s, proto, ci, verbose, pointFactor)
 --print(s.name, e.spellId);
 	pointFactor = pointFactor or 1;
@@ -412,6 +442,17 @@ local function addItemSpellValue(v, mods, s, proto, ci, verbose, pointFactor)
 	for j,se in ipairs(s.effect) do
 		local points = calcAvgEffectPoints(level, se) * pointFactor;
 		if(se.id == SPELL_EFFECT_APPLY_AURA) then
+			-- modify point value depending on the friendliness of the effect and the target.
+			local isFriendlyTarget = targetFriendliness[se.implicitTargetA];
+			if(isFriendlyTarget == nil) then
+				error("Unhandled targeting on"..
+					" on spell="..s.id.." ("..s.name.."), item="..proto.itemId.." ("..proto.name..")");
+			end
+			local isPositiveEffect = isPositiveAuraEffect(se);
+			if((not isPositiveEffect) and (not isFriendlyTarget)) then
+				points = -points;
+			end
+
 			if(se.applyAuraName == SPELL_AURA_MOD_STAT) then
 				-- for this aura, miscValue is one of the STAT_ defines (0-4).
 				if((se.miscValue == -2) or (se.miscValue == -1)) then	-- all stats
