@@ -15,3 +15,11 @@ UPDATE `item_loot_template` SET `ChanceOrQuestChance`=100, `groupid`=0 WHERE `it
 
 # Improve Chillwind Horn drop rate.
 UPDATE `creature_loot_template` SET `ChanceOrQuestChance`=-100 WHERE `item`=12444;
+
+# Fix Firestar's Libram quests.
+# Previously, they were set to autocomplete, making it impossible to get the items from the Dark Coffer.
+UPDATE `quest_template` SET `Method`=2 WHERE `entry`=4463 LIMIT 1;
+UPDATE `quest_template` SET `Method`=2 WHERE `entry`=4481 LIMIT 1;
+UPDATE `quest_template` SET `Method`=2 WHERE `entry`=4482 LIMIT 1;
+UPDATE `quest_template` SET `Method`=2 WHERE `entry`=4483 LIMIT 1;
+UPDATE `quest_template` SET `Method`=2 WHERE `entry`=4484 LIMIT 1;
