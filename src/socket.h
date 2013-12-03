@@ -31,6 +31,9 @@ typedef int Socket;
 // 0 on remote disconnect, <0 on error.
 int receiveExact(Socket, void* dst, size_t dstSize) __attribute__ ((warn_unused_result));
 
+// returns > 0 on success, 0 on timeout. exits on error.
+int receiveExactWithTimeout(Socket sock, void* dst, size_t dstSize, uint seconds);
+
 void sendAndReceiveExact(Socket, const char* src, size_t srcSize,
 	void* dst, size_t dstSize);
 #ifdef __cplusplus
@@ -45,9 +48,13 @@ Socket connectNewSocket(const char* address, ushort port) __attribute__ ((warn_u
 
 struct SocketControl;
 
-typedef void (*SocketTimerCallback)(double t, struct SocketControl*);
-typedef void (*SocketDataCallback)(struct SocketControl*, int result);
+// return 0 to continue the loop, non-zero to break it.
+// runSocketControl() returns the value this function returned.
+// it's your responsibility to close any sockets left open.
+typedef int (*SocketTimerCallback)(double t, struct SocketControl*);
+typedef int (*SocketDataCallback)(struct SocketControl*, int result);
 
+// dataCallback will be called when dstSize bytes have been received and written to dst.
 typedef struct SocketControl {
 	Socket sock;
 	void* dst;
@@ -61,6 +68,7 @@ typedef struct SocketControl {
 	uint dstPos;
 } SocketControl;
 
-void runSocketControl(SocketControl*, int count) __attribute__ ((noreturn));
+// count is the length of the array pointed to by p.
+int runSocketControl(SocketControl* p, int count);
 
 #endif	//SOCKET_H

@@ -36,7 +36,7 @@ typedef struct WorldSession {
 	SocketControl* sc;
 } WorldSession;
 
-void runWorlds(WorldSession* sessions, int toonCount) __attribute__ ((noreturn));
+void runWorlds(WorldSession* sessions, int toonCount);
 
 void initLua(WorldSession*);
 BOOL readLua(WorldSession*);

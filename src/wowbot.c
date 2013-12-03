@@ -32,15 +32,22 @@ static void startSession(WorldSession* session, const char* authAddress) {
 		exit(1);
 	}
 
-	LOG("Connecting...\n");
-	session->authSock = connectNewSocket(authAddress, DEFAULT_REALMSERVER_PORT);
-	if(session->authSock == INVALID_SOCKET) {
-		exit(1);
-	}
-	LOG("Connected.\n");
+	while(1) {
+		LOG("Connecting...\n");
+		session->authSock = connectNewSocket(authAddress, DEFAULT_REALMSERVER_PORT);
+		if(session->authSock == INVALID_SOCKET) {
+			exit(1);
+		}
+		LOG("Connected.\n");
 
-	authenticate(session);
-	//dumpRealmList(session->authSock, NULL);
+		if(authenticate(session)) {
+			//dumpRealmList(session->authSock, NULL);
+			return;
+		} else {
+			LOG("Auth timeout.\n");
+			closesocket(session->authSock);
+		}
+	}
 }
 
 // global

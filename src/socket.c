@@ -39,6 +39,23 @@ int receiveExact(Socket sock, void* dst, size_t dstSize) {
 	return dstSize;
 }
 
+static int rewtData(struct SocketControl* sc, int result) {
+	return sc->dstSize;
+}
+static int rewtTimer(double t, struct SocketControl* sc) {
+	return -1;
+}
+
+int receiveExactWithTimeout(Socket sock, void* dst, size_t dstSize, uint seconds) {
+	SocketControl sc = { sock, dst, dstSize, rewtData, rewtTimer, NULL, getRealTime() + seconds, 0 };
+	int res = runSocketControl(&sc, 1);
+	if(res < 0) {
+		return 0;
+	} else {
+		return res;
+	}
+}
+
 void sendExact(Socket sock, const char* src, size_t srcSize) {
 	int res;
 	//LOG("send %i\n", srcSize);
@@ -112,7 +129,7 @@ Socket connectNewSocket(const char* address, ushort port) {
 	return sock;
 }
 
-void runSocketControl(SocketControl* scs, int count) {
+int runSocketControl(SocketControl* scs, int count) {
 	for(int i=0; i<count; i++) {
 		SocketControl* sc = scs+i;
 		sc->dstPos = 0;
@@ -148,7 +165,9 @@ void runSocketControl(SocketControl* scs, int count) {
 			if(diff <= 0) {
 				SocketTimerCallback cb = timerControl->timerCallback;
 				timerControl->timerCallback = NULL;
-				cb(realTime, timerControl);
+				res = cb(realTime, timerControl);
+				if(res)
+					return res;
 				continue;
 			}
 
@@ -179,7 +198,9 @@ void runSocketControl(SocketControl* scs, int count) {
 					sc->dstPos += res;
 					if(sc->dstPos == sc->dstSize) {
 						sc->dstPos = 0;
-						sc->dataCallback(sc, res);
+						res = sc->dataCallback(sc, res);
+						if(res)
+							return res;
 					}
 				} else {
 					if (res == 0) {
@@ -187,7 +208,9 @@ void runSocketControl(SocketControl* scs, int count) {
 					} else {
 						printf("recv failed: %d.\n", SOCKET_ERRNO);
 					}
-					sc->dataCallback(sc, res);
+					res = sc->dataCallback(sc, res);
+					if(res)
+						return res;
 				}
 			}
 		}

@@ -9,7 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-void authenticate(WorldSession* session) {
+int authenticate(WorldSession* session) {
 	Socket sock = session->authSock;
 	sAuthLogonChallenge_S lcs;
 	sAuthLogonProof_C lpc;
@@ -32,18 +32,23 @@ void authenticate(WorldSession* session) {
 	CalculateLogonProof(&lcs, &lpc, session->accountName, session->password, M2, session->key);
 	// send proof
 	{
+		int res;
 		lpc.cmd = CMD_AUTH_LOGON_PROOF;
 		sendAndReceiveExact(sock, (char*)&lpc, sizeof(lpc), &lps1, sizeof(lps1));
 		LOG("proof received. cmd %02x, code %02x\n", lps1.cmd, lps1.error);
 		if(lps1.error == 0) {
-			if(receiveExact(sock, serverM2, sizeof(serverM2)) <= 0)
-				exit(1);
+			res = receiveExactWithTimeout(sock, serverM2, sizeof(serverM2), 1);
+			assert(res >= 0);
+			if(res == 0)
+				return 0;
 			LOG("M2 %smatch.\n", memcmp(M2, serverM2, 20) ? "mis" : "");
 		}
-		if(receiveExact(sock, &accountFlags, sizeof(accountFlags)) <= 0)
-			exit(1);
+		res = receiveExactWithTimeout(sock, &accountFlags, sizeof(accountFlags), 1);
+		if(res == 0)
+			return 0;
 		LOG("accountFlags: %08X\n", accountFlags);
 	}
+	return 1;
 }
 
 char* dumpRealmList(Socket sock, const char* targetRealmName) {

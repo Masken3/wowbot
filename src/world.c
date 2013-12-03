@@ -44,14 +44,14 @@
 #define DEFAULT_WORLDSERVER_PORT 8085
 
 static void handleServerPacket(WorldSession*, ServerPktHeader, char* buf);
-static void luaTimerCallback(double t, SocketControl*);
+static int luaTimerCallback(double t, SocketControl*);
 static void connectToWorld(WorldSession* session);
 static void reconnect(SocketControl* sc, WorldSession* session);
 static WorldSession* lua_getSession(lua_State* L);
 
 static const int BUFSIZE = 1024 * 64;
 
-static void worldDataCallback(SocketControl* sc, int result) {
+static int worldDataCallback(SocketControl* sc, int result) {
 	WorldSession* session = (WorldSession*)sc->user;
 	if(result < 0) {
 		exit(1);
@@ -59,7 +59,7 @@ static void worldDataCallback(SocketControl* sc, int result) {
 	if(result == 0) {
 		LOG("Disconnected. Reconnecting...\n");
 		reconnect(sc, session);
-		return;
+		return 0;
 	}
 	// if we got a header...
 	if(sc->dst == &session->sph) {
@@ -73,14 +73,14 @@ static void worldDataCallback(SocketControl* sc, int result) {
 		} else {
 			handleServerPacket(session, session->sph, session->buf);
 		}
-		return;
+		return 0;
 	}
 	// if we got the meat of a packet...
 	if(sc->dst == &session->buf) {
 		sc->dst = &session->sph;
 		sc->dstSize = sizeof(session->sph);
 		handleServerPacket(session, session->sph, session->buf);
-		return;
+		return 0;
 	}
 	// no other dst:s are acceptable.
 	assert(0);
@@ -452,12 +452,13 @@ static int l_removeTimer(lua_State* L) {
 	return 0;
 }
 
-static void luaTimerCallback(double t, SocketControl* sc) {
+static int luaTimerCallback(double t, SocketControl* sc) {
 	WorldSession* session = (WorldSession*)sc->user;
 	lua_State* L = session->L;
 	lua_getglobal(L, "luaTimerCallback");
 	lua_pushnumber(L, t);
 	luaPcall(L, 1);
+	return 0;
 }
 
 static int l_spellEffectName(lua_State* L) {
