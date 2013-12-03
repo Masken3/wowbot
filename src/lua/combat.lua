@@ -1097,9 +1097,12 @@ local function matchDispel(realTime, o, s, enemy)
 				else
 					effectMask = 2^e.miscValue;
 				end
+				local duration = getDuration(aura, level);
 				if(bit32.btest(2^aura.Dispel, effectMask) and
 					(aura.id ~= 6819) and	-- Corrupted Stamina. Small effect, continually reapplies itself.
-					(getDuration(aura, level) > 10) and-- if the duration is less than 10 seconds, don't bother.
+					((duration > 10) or-- if the duration is less than 10 seconds, don't bother.
+						-- unless it's a fear or stun effect more than one second long.
+						((duration > 1) and ccAuras[e.applyAuraName])) and
 					(enemy == isPositiveAura(aura)))
 				then
 					objectNameQuery(o, function(name)
