@@ -160,6 +160,8 @@ local auraEffectIsPositiveTable = {
 	[SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE] = positiveEffect,
 	[SPELL_AURA_MOD_TOTAL_STAT_PERCENTAGE] = positiveEffect,
 	[SPELL_AURA_MOD_RANGED_ATTACK_POWER] = positiveEffect,
+	[SPELL_AURA_MOD_INCREASE_SWIM_SPEED] = positiveEffect,
+	[SPELL_AURA_MOD_CRIT_PERCENT] = positiveEffect,
 
 	[SPELL_AURA_MOD_DAMAGE_TAKEN] = negativeEffect,
 	[SPELL_AURA_MOD_ATTACKER_SPELL_CRIT_CHANCE] = negativeEffect,
