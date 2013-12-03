@@ -1291,5 +1291,10 @@ end
 function follow(realTime, mo)
 	-- move apart a little bit.
 	if((distanceToObject(mo) < FOLLOW_DIST) and doMoveApartFromGroup(realTime)) then return; end
+
+	-- avoid spam
+	if(STATE.lastFollowTime > (realTime - 0.2)) then return; end
+	STATE.lastFollowTime = realTime;
+
 	doMoveToTarget(realTime, mo, FOLLOW_DIST);
 end

@@ -96,6 +96,7 @@ if(rawget(_G, 'STATE') == nil) then
 		me = false,	-- == my.
 		moving = false,
 		moveStartTime = 0,	-- floating point, in seconds. valid if moving == true.
+		lastFollowTime = 0,
 
 		areaTrigger = false,	-- or AreaTrigger.
 
